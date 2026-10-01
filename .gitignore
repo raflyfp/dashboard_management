@@ -1,0 +1,46 @@
+# ============================================================
+# .gitignore - Management Monitoring Dashboard (Express.js)
+# ============================================================
+
+# 1. Dependensi Node.js (Ukuran besar, tidak perlu di-push)
+node_modules/
+jspm_packages/
+
+# 2. File Konfigurasi Sensitif & Kunci API
+# PENTING: Jangan push .env karena berisi API Key rahasia!
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Pengecualian: Tetap lacak file contoh konfigurasi
+!.env.example
+
+# 3. Log & Catatan Debug
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 4. File Sistem Operasi & Cache Editor
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor IDE (Opsional)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 5. File Sementara & Backup
+*.tmp
+*.temp
+*.swp
+*.bak

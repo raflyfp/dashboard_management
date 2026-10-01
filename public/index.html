@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNA Medika - Management Monitoring Dashboard</title>
+
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono untuk angka -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Stylesheet Tema Flat SNA Medika -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+    <div class="dashboard-wrapper">
+
+        <!-- ============================================================ -->
+        <!-- 1. HEADER UTAMA (TEMA SNA MEDIKA - FLAT TERANG)              -->
+        <!-- ============================================================ -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <!-- Logo Resmi SNA Medika -->
+                <div class="brand-logo-wrapper">
+                    <img src="/img/logo-sna-medika.jpg" alt="Logo SNA Medika" class="brand-logo-img">
+                </div>
+
+                <div class="system-title">
+                    <div class="title-row">
+                        <h1>MANAGEMENT MONITORING DASHBOARD</h1>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Controls & Digital Clock -->
+            <div class="header-right">
+                <div class="clock-box">
+                    <div class="clock-time" id="digitalClock">--:--:--</div>
+                    <div class="clock-date" id="digitalDate">Memuat tanggal...</div>
+                </div>
+
+                <div class="header-actions">
+                    <!-- Tombol Manual Refresh dengan Countdown Timer -->
+                    <button id="btnRefresh" class="action-btn" title="Perbarui Data Sekarang">
+                        <i class="fa-solid fa-rotate" id="refreshIcon"></i>
+                        <span class="countdown-text" id="refreshTimer">15s</span>
+                    </button>
+
+                    <!-- Tombol Fullscreen Layar TV -->
+                    <button id="btnFullscreen" class="action-btn" title="Mode Layar Penuh (TV)">
+                        <i class="fa-solid fa-expand" id="fullscreenIcon"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- 2. GRID 10 KARTU (5 KARTU DI ATAS, 5 KARTU DI BAWAH)          -->
+        <!-- ============================================================ -->
+        <main class="main-content">
+            <div class="cards-grid-10">
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 1 - CARD 1: LAYANAN IT (TICKETING LIVE)        -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-it" id="card-IT">
+                    <div class="card-header">
+                        <div class="service-icon-box it-theme">
+                            <i class="fa-solid fa-laptop-code"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>Layanan IT</h2>
+                            <span class="service-sub">Software & Jaringan</span>
+                        </div>
+                        <span class="service-status-pill status-live">Live</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress it-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar it-ring-bar" id="ringBarIT" cx="50" cy="50"
+                                        r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentIT">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Penyelesaian</span>
+                                <span class="gauge-sub-label" id="selesaiLabelIT">86 Selesai</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Total</span>
+                                <span class="metric-number" id="totalIT">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Selesai</span>
+                                <span class="metric-number" id="selesaiIT">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Belum</span>
+                                <span class="metric-number" id="belumIT">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment bar-open" id="barOpenIT" style="width: 0%" title="Open"></div>
+                                <div class="bar-segment bar-progress" id="barProgressIT" style="width: 0%"
+                                    title="In Progress"></div>
+                                <div class="bar-segment bar-checking" id="barCheckingIT" style="width: 0%"
+                                    title="Checking"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span><i class="legend-dot dot-open"></i> O: <b id="openCountIT">0</b></span>
+                                <span><i class="legend-dot dot-progress"></i> P: <b id="progressCountIT">0</b></span>
+                                <span><i class="legend-dot dot-checking"></i> C: <b id="checkingCountIT">0</b></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail it-btn" onclick="openTicketModal('IT', 'Layanan IT')">
+                            <span>Lihat Tiket</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 1 - CARD 2: LAYANAN TEKNIK (TICKETING LIVE)    -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-tk" id="card-TK">
+                    <div class="card-header">
+                        <div class="service-icon-box tk-theme">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>Layanan Teknik</h2>
+                            <span class="service-sub">Mesin & Utilitas</span>
+                        </div>
+                        <span class="service-status-pill status-live">Live</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress tk-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar tk-ring-bar" id="ringBarTK" cx="50" cy="50"
+                                        r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentTK">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Penyelesaian</span>
+                                <span class="gauge-sub-label" id="selesaiLabelTK">259 Selesai</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Total</span>
+                                <span class="metric-number" id="totalTK">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Selesai</span>
+                                <span class="metric-number" id="selesaiTK">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Belum</span>
+                                <span class="metric-number" id="belumTK">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment bar-open" id="barOpenTK" style="width: 0%" title="Open"></div>
+                                <div class="bar-segment bar-progress" id="barProgressTK" style="width: 0%"
+                                    title="In Progress"></div>
+                                <div class="bar-segment bar-checking" id="barCheckingTK" style="width: 0%"
+                                    title="Checking"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span><i class="legend-dot dot-open"></i> O: <b id="openCountTK">0</b></span>
+                                <span><i class="legend-dot dot-progress"></i> P: <b id="progressCountTK">0</b></span>
+                                <span><i class="legend-dot dot-checking"></i> C: <b id="checkingCountTK">0</b></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail tk-btn" onclick="openTicketModal('TK', 'Layanan Teknik')">
+                            <span>Lihat Tiket</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 1 - CARD 3: LAYANAN GA (TICKETING LIVE)        -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-ga" id="card-GA">
+                    <div class="card-header">
+                        <div class="service-icon-box ga-theme">
+                            <i class="fa-solid fa-building-user"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>Layanan GA</h2>
+                            <span class="service-sub">Gedung & Sarpras</span>
+                        </div>
+                        <span class="service-status-pill status-live">Live</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress ga-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar ga-ring-bar" id="ringBarGA" cx="50" cy="50"
+                                        r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentGA">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Penyelesaian</span>
+                                <span class="gauge-sub-label" id="selesaiLabelGA">93 Selesai</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Total</span>
+                                <span class="metric-number" id="totalGA">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Selesai</span>
+                                <span class="metric-number" id="selesaiGA">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Belum</span>
+                                <span class="metric-number" id="belumGA">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment bar-open" id="barOpenGA" style="width: 0%" title="Open"></div>
+                                <div class="bar-segment bar-progress" id="barProgressGA" style="width: 0%"
+                                    title="In Progress"></div>
+                                <div class="bar-segment bar-checking" id="barCheckingGA" style="width: 0%"
+                                    title="Checking"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span><i class="legend-dot dot-open"></i> O: <b id="openCountGA">0</b></span>
+                                <span><i class="legend-dot dot-progress"></i> P: <b id="progressCountGA">0</b></span>
+                                <span><i class="legend-dot dot-checking"></i> C: <b id="checkingCountGA">0</b></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ga-btn" onclick="openTicketModal('GA', 'Layanan GA')">
+                            <span>Lihat Tiket</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 1 - CARD 4: PELAPORAN KAIZEN                   -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-external card-kaizen" id="card-KAIZEN">
+                    <div class="card-header">
+                        <div class="service-icon-box kaizen-theme">
+                            <i class="fa-solid fa-lightbulb"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>Pelaporan Kaizen</h2>
+                            <span class="service-sub">Ide & Improvement</span>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress kaizen-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar kaizen-ring-bar" id="ringBarKAIZEN" cx="50" cy="50"
+                                        r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentKAIZEN">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Realisasi</span>
+                                <span class="gauge-sub-label">0 Terlaksana</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Total Ide</span>
+                                <span class="metric-number" id="totalKAIZEN">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Selesai</span>
+                                <span class="metric-number" id="selesaiKAIZEN">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Review</span>
+                                <span class="metric-number" id="belumKAIZEN">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment" style="width: 100%; background: #e2e8f0;"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span>Aplikasi Kaizen Standby</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn"
+                            onclick="openAppModal('Pelaporan Kaizen', 'Modul Kaizen siap dihubungkan melalui API endpoint atau database.')">
+                            <span>Detail Modul</span>
+                            <i class="fa-solid fa-up-right-from-square"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 1 - CARD 5: E-SYSTEM / ERP                    -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-external card-esys" id="card-ESYS">
+                    <div class="card-header">
+                        <div class="service-icon-box esys-theme">
+                            <i class="fa-solid fa-server"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>E-System ERP</h2>
+                            <span class="service-sub">Core Enterprise</span>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress esys-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar esys-ring-bar" id="ringBarESYS" cx="50" cy="50"
+                                        r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentESYS">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Task Status</span>
+                                <span class="gauge-sub-label">0 Closed</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Transaksi</span>
+                                <span class="metric-number" id="totalESYS">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Berhasil</span>
+                                <span class="metric-number" id="selesaiESYS">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Pending</span>
+                                <span class="metric-number" id="belumESYS">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment" style="width: 100%; background: #e2e8f0;"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span>Koneksi ERP Siap</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn"
+                            onclick="openAppModal('E-System ERP', 'Modul Enterprise Resource Planning siap dihubungkan.')">
+                            <span>Detail Modul</span>
+                            <i class="fa-solid fa-up-right-from-square"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 2 - CARD 6: SIMRS & EMR (REKAM MEDIS)         -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-external card-simrs" id="card-SIMRS">
+                    <div class="card-header">
+                        <div class="service-icon-box simrs-theme">
+                            <i class="fa-solid fa-hospital"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>SIMRS & EMR</h2>
+                            <span class="service-sub">Rekam Medis & Pasien</span>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress simrs-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar simrs-ring-bar" id="ringBarSIMRS" cx="50" cy="50"
+                                        r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentSIMRS">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Kelengkapan</span>
+                                <span class="gauge-sub-label">0 Resume Selesai</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Pasien</span>
+                                <span class="metric-number" id="totalSIMRS">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Dilayani</span>
+                                <span class="metric-number" id="selesaiSIMRS">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Antrean</span>
+                                <span class="metric-number" id="belumSIMRS">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment" style="width: 100%; background: #e2e8f0;"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span>Sistem EMR Siap Integrasi</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn"
+                            onclick="openAppModal('SIMRS & EMR', 'Modul SIMRS & Rekam Medis Elektronik siap dihubungkan.')">
+                            <span>Detail Modul</span>
+                            <i class="fa-solid fa-up-right-from-square"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 2 - CARD 7: FARMASI & DEPO OBAT               -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-external card-farmasi" id="card-FARMASI">
+                    <div class="card-header">
+                        <div class="service-icon-box farmasi-theme">
+                            <i class="fa-solid fa-pills"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>Farmasi & Obat</h2>
+                            <span class="service-sub">Resep & Logistik Obat</span>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress farmasi-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar farmasi-ring-bar" id="ringBarFARMASI" cx="50"
+                                        cy="50" r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentFARMASI">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Pelayanan</span>
+                                <span class="gauge-sub-label">0 Resep Selesai</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Resep</span>
+                                <span class="metric-number" id="totalFARMASI">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Selesai</span>
+                                <span class="metric-number" id="selesaiFARMASI">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Menunggu</span>
+                                <span class="metric-number" id="belumFARMASI">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment" style="width: 100%; background: #e2e8f0;"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span>Aplikasi Farmasi Standby</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn"
+                            onclick="openAppModal('Farmasi & Obat', 'Modul Dispensing Resep & Stok Obat siap dihubungkan.')">
+                            <span>Detail Modul</span>
+                            <i class="fa-solid fa-up-right-from-square"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 2 - CARD 8: LAB & DIAGNOSTIK                  -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-external card-lab" id="card-LAB">
+                    <div class="card-header">
+                        <div class="service-icon-box lab-theme">
+                            <i class="fa-solid fa-flask-vial"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>Lab & Radiologi</h2>
+                            <span class="service-sub">Hasil Sampel & Rontgen</span>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress lab-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar lab-ring-bar" id="ringBarLAB" cx="50" cy="50"
+                                        r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentLAB">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Validasi</span>
+                                <span class="gauge-sub-label">0 Hasil Rilis</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Pemeriksaan</span>
+                                <span class="metric-number" id="totalLAB">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Selesai</span>
+                                <span class="metric-number" id="selesaiLAB">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Proses</span>
+                                <span class="metric-number" id="belumLAB">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment" style="width: 100%; background: #e2e8f0;"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span>Aplikasi LIS / RIS Standby</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn"
+                            onclick="openAppModal('Laboratorium & Radiologi', 'Modul Laboratorium & Radiologi siap dihubungkan.')">
+                            <span>Detail Modul</span>
+                            <i class="fa-solid fa-up-right-from-square"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 2 - CARD 9: KEUANGAN & KASIR                  -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-external card-billing" id="card-BILLING">
+                    <div class="card-header">
+                        <div class="service-icon-box billing-theme">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>Keuangan & Kasir</h2>
+                            <span class="service-sub">Billing & Klaim BPJS</span>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress billing-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar billing-ring-bar" id="ringBarBILLING" cx="50"
+                                        cy="50" r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentBILLING">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Realisasi</span>
+                                <span class="gauge-sub-label">0 Lunas/Klaim</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Billing</span>
+                                <span class="metric-number" id="totalBILLING">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Lunas</span>
+                                <span class="metric-number" id="selesaiBILLING">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Pending</span>
+                                <span class="metric-number" id="belumBILLING">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment" style="width: 100%; background: #e2e8f0;"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span>Aplikasi Kasir Siap Integrasi</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn"
+                            onclick="openAppModal('Keuangan & Kasir', 'Modul Keuangan, Kasir & Verifikasi Klaim siap dihubungkan.')">
+                            <span>Detail Modul</span>
+                            <i class="fa-solid fa-up-right-from-square"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- BARIS 2 - CARD 10: SDM & PERSONALIA                 -->
+                <!-- ---------------------------------------------------- -->
+                <section class="service-card card-external card-sdm" id="card-SDM">
+                    <div class="card-header">
+                        <div class="service-icon-box sdm-theme">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <div class="service-meta">
+                            <h2>SDM & Personalia</h2>
+                            <span class="service-sub">Presensi & Kinerja Staf</span>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="gauge-and-percent">
+                            <div class="circular-progress sdm-progress">
+                                <svg class="progress-ring" viewBox="0 0 100 100">
+                                    <circle class="progress-ring-bg" cx="50" cy="50" r="40" />
+                                    <circle class="progress-ring-bar sdm-ring-bar" id="ringBarSDM" cx="50" cy="50"
+                                        r="40" />
+                                </svg>
+                                <div class="gauge-content">
+                                    <span class="gauge-percent" id="percentSDM">0%</span>
+                                </div>
+                            </div>
+                            <div class="gauge-text-side">
+                                <span class="gauge-label">Kehadiran</span>
+                                <span class="gauge-sub-label">0 Staf Hadir</span>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item total-item">
+                                <span class="metric-title">Karyawan</span>
+                                <span class="metric-number" id="totalSDM">0</span>
+                            </div>
+                            <div class="metric-item success-item">
+                                <span class="metric-title">Hadir</span>
+                                <span class="metric-number" id="selesaiSDM">0</span>
+                            </div>
+                            <div class="metric-item pending-item">
+                                <span class="metric-title">Izin/Cuti</span>
+                                <span class="metric-number" id="belumSDM">0</span>
+                            </div>
+                        </div>
+
+                        <div class="status-breakdown">
+                            <div class="breakdown-bar">
+                                <div class="bar-segment" style="width: 100%; background: #e2e8f0;"></div>
+                            </div>
+                            <div class="breakdown-legend">
+                                <span>Aplikasi HRD Standby</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn"
+                            onclick="openAppModal('SDM & Personalia', 'Modul Kepegawaian, Presensi & Cuti Karyawan siap dihubungkan.')">
+                            <span>Detail Modul</span>
+                            <i class="fa-solid fa-up-right-from-square"></i>
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- ============================================================ -->
+        <!-- 3. RUNNING TICKER / ATTENTION ALERTS (BAGIAN BAWAH LAYAR)     -->
+        <!-- ============================================================ -->
+        <footer class="dashboard-footer">
+            <div class="ticker-badge">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Info Layanan</span>
+            </div>
+            <div class="ticker-content" id="tickerWrapper">
+                <div class="ticker-items" id="tickerList">
+                    <span class="ticker-item"><i class="fa-solid fa-spinner fa-spin"></i> Menghubungkan ke API
+                        Ticketing...</span>
+                </div>
+            </div>
+            <div class="footer-system-status">
+                <span class="status-badge" id="systemStatusBadge">
+                    <i class="fa-solid fa-circle-nodes"></i> API Connected
+                </span>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 4. MODAL DIALOG DAFTAR SEMUA TIKET PER LAYANAN (FLAT PUTIH)  -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="ticketModal" aria-hidden="true">
+        <div class="modal-card">
+
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon" id="modalServiceIcon"><i class="fa-solid fa-ticket"></i></div>
+                    <div>
+                        <h3 id="modalServiceTitle">Daftar Tiket</h3>
+                        <p id="modalServiceSubtitle">Menampilkan riwayat dan tiket operasional</p>
+                    </div>
+                </div>
+
+                <div class="modal-header-actions">
+                    <!-- Filter Tab: Semua / Selesai / Belum Selesai -->
+                    <div class="filter-pills">
+                        <button class="filter-pill active" data-filter="all" onclick="filterModalTickets('all')">Semua
+                            Tiket</button>
+                        <button class="filter-pill" data-filter="selesai"
+                            onclick="filterModalTickets('selesai')">Selesai</button>
+                        <button class="filter-pill" data-filter="belum" onclick="filterModalTickets('belum')">Belum
+                            Selesai</button>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="ticketSearchInput" placeholder="Cari No Tiket / Judul / Pelapor..."
+                            oninput="handleSearchTickets(this.value)">
+                    </div>
+
+                    <!-- Close Button -->
+                    <button class="modal-close-btn" onclick="closeTicketModal()" title="Tutup">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabel Daftar Tiket -->
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="tickets-table">
+                        <thead>
+                            <tr>
+                                <th>No. Tiket</th>
+                                <th>Judul Permintaan / Kerusakan</th>
+                                <th>Kategori</th>
+                                <th>Pelapor</th>
+                                <th>Petugas Penanggung Jawab</th>
+                                <th>Status</th>
+                                <th>Waktu Lapor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticketsTableBody">
+                            <tr>
+                                <td colspan="7" class="loading-state">
+                                    <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat data tiket...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-stats" id="modalStatsText">
+                    Menampilkan 0 tiket
+                </div>
+                <button class="btn-secondary" onclick="closeTicketModal()">Tutup</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal Informasi Modul Eksternal -->
+    <div class="modal-overlay" id="appModal" aria-hidden="true">
+        <div class="modal-card modal-card-sm">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon"><i class="fa-solid fa-circle-info" style="color: var(--sna-blue);"></i>
+                    </div>
+                    <div>
+                        <h3 id="appModalTitle">Informasi Modul</h3>
+                        <p id="appModalSubtitle">Status Integrasi Aplikasi</p>
+                    </div>
+                </div>
+                <button class="modal-close-btn" onclick="closeAppModal()" title="Tutup"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="integration-notice">
+                    <i class="fa-solid fa-plug-circle-check"
+                        style="font-size: 2.5rem; color: var(--sna-blue); margin-bottom: 0.75rem; display: block;"></i>
+                    <h4>Modul Siap Terhubung ke Sistem Anda</h4>
+                    <p id="appModalDesc">Modul ini sudah dipersiapkan di backend Express. Anda tinggal menyambungkan
+                        endpoint API atau query database aplikasi ini ke server.js.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div></div>
+                <button class="btn-secondary" onclick="closeAppModal()">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Utama Dashboard -->
+    <script src="/js/app.js"></script>
+</body>
+
+</html>

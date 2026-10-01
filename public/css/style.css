@@ -1,0 +1,955 @@
+/* ====================================================================
+   SNA MEDIKA - MANAGEMENT MONITORING DASHBOARD (10 CARDS FLAT THEME)
+   Desain: FLAT DESIGN, TEMA TERANG (LIGHT), TANPA GRADASI
+   Susunan: 5 Card Baris Atas, 5 Card Baris Bawah (Total 10 Modul)
+   Warna Korporat SNA Medika: Merah (#d92534), Biru (#0f5ca8), Abu-abu (#5c6571)
+   ==================================================================== */
+
+:root {
+    /* Palet Utama SNA Medika (Flat Solid Colors) */
+    --sna-red: #d92534;
+    --sna-red-light: #fef2f2;
+    --sna-red-border: #fecaca;
+
+    --sna-blue: #0f5ca8;
+    --sna-blue-light: #eff6ff;
+    --sna-blue-border: #bfdbfe;
+
+    --sna-gray: #5c6571;
+    --sna-gray-light: #f1f5f9;
+    --sna-gray-border: #cbd5e1;
+
+    /* Background & Permukaan Flat Terang */
+    --bg-page: #f1f5f9;
+    --bg-card: #ffffff;
+    --border-color: #e2e8f0;
+    --border-dark: #cbd5e1;
+
+    /* Tipografi Flat Kontras Tinggi */
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+
+    /* Aksen Solid Layanan IT (Flat Blue) */
+    --it-color: #0f5ca8;
+    --it-bg: #eff6ff;
+    --it-border: #bfdbfe;
+
+    /* Aksen Solid Layanan Teknik (Flat Amber) */
+    --tk-color: #d97706;
+    --tk-bg: #fffbeb;
+    --tk-border: #fde68a;
+
+    /* Aksen Solid Layanan GA (Flat Emerald) */
+    --ga-color: #059669;
+    --ga-bg: #ecfdf5;
+    --ga-border: #a7f3d0;
+
+    /* Modul Eksternal Flat */
+    --kaizen-color: #7c3aed;
+    --esys-color: #2563eb;
+    --simrs-color: #d92534;
+    --farmasi-color: #0d9488;
+    --lab-color: #0284c7;
+    --billing-color: #ea580c;
+    --sdm-color: #475569;
+
+    /* Status Tiket (Solid Flat Colors) */
+    --status-success: #16a34a;
+    --status-success-bg: #dcfce7;
+    --status-warning: #d97706;
+    --status-warning-bg: #fef3c7;
+    --status-danger: #dc2626;
+    --status-danger-bg: #fee2e2;
+    --status-info: #2563eb;
+    --status-info-bg: #dbeafe;
+
+    /* Font Family */
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Radius & Bayangan Flat Bersih */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --shadow-flat: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* ====================================================================
+   1. RESET & DASAR FLAT
+   ==================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Wrapper Dashboard Kompak */
+.dashboard-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0.85rem 1.25rem;
+    gap: 0.85rem;
+}
+
+/* ====================================================================
+   2. HEADER UTAMA (TEMA SNA MEDIKA - FLAT TERANG)
+   ==================================================================== */
+.dashboard-header {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 0.65rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    box-shadow: var(--shadow-flat);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Logo Resmi SNA Medika */
+.brand-logo-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+}
+
+.brand-logo-img {
+    height: 44px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.system-title .title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.system-title h1 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    color: var(--text-primary);
+}
+
+.live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--status-success-bg);
+    border: 1px solid var(--status-success);
+    color: var(--status-success);
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--status-success);
+}
+
+/* Global Summary Pills (Flat Solid Kompak) */
+.header-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.summary-pill {
+    background: var(--bg-page);
+    border: 1px solid var(--border-color);
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 82px;
+}
+
+.summary-pill .pill-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.summary-pill .pill-value {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 0.05rem;
+}
+
+.pill-success { background: #f0fdf4; border-color: #bbf7d0; }
+.pill-success .pill-value { color: #16a34a; }
+
+.pill-warning { background: #fffbeb; border-color: #fde68a; }
+.pill-warning .pill-value { color: #d97706; }
+
+.pill-accent { background: var(--sna-blue-light); border-color: var(--sna-blue-border); }
+.pill-accent .pill-value { color: var(--sna-blue); }
+
+/* Digital Clock & Controls */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.clock-box {
+    text-align: right;
+    border-right: 1px solid var(--border-color);
+    padding-right: 1rem;
+}
+
+.clock-time {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--sna-red);
+    letter-spacing: 0.5px;
+}
+
+.clock-date {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.action-btn {
+    background: var(--bg-page);
+    border: 1px solid var(--border-dark);
+    color: var(--text-secondary);
+    padding: 0.45rem 0.75rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.action-btn:hover {
+    background: #e2e8f0;
+    color: var(--text-primary);
+}
+
+.countdown-text {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* ====================================================================
+   3. GRID 10 KARTU (5 KOLOM DI ATAS, 5 KOLOM DI BAWAH)
+   ==================================================================== */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.cards-grid-10 {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+    flex: 1;
+}
+
+/* Kartu Layanan Dasar (Flat White Kompak) */
+.service-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 0.95rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    box-shadow: var(--shadow-flat);
+    min-height: 290px;
+}
+
+/* Garis Border Atas Solid Sesuai Divisi */
+.card-it { border-top: 3px solid var(--it-color); }
+.card-tk { border-top: 3px solid var(--tk-color); }
+.card-ga { border-top: 3px solid var(--ga-color); }
+.card-kaizen { border-top: 3px solid var(--kaizen-color); }
+.card-esys { border-top: 3px solid var(--esys-color); }
+.card-simrs { border-top: 3px solid var(--simrs-color); }
+.card-farmasi { border-top: 3px solid var(--farmasi-color); }
+.card-lab { border-top: 3px solid var(--lab-color); }
+.card-billing { border-top: 3px solid var(--billing-color); }
+.card-sdm { border-top: 3px solid var(--sdm-color); }
+
+/* Tema Aksen Warna Flat */
+.it-theme { background: var(--it-bg); color: var(--it-color); }
+.tk-theme { background: var(--tk-bg); color: var(--tk-color); }
+.ga-theme { background: var(--ga-bg); color: var(--ga-color); }
+.kaizen-theme { background: #f5f3ff; color: var(--kaizen-color); }
+.esys-theme { background: #eff6ff; color: var(--esys-color); }
+.simrs-theme { background: #fff1f2; color: var(--simrs-color); }
+.farmasi-theme { background: #f0fdfa; color: var(--farmasi-color); }
+.lab-theme { background: #f0f9ff; color: var(--lab-color); }
+.billing-theme { background: #fff7ed; color: var(--billing-color); }
+.sdm-theme { background: #f8fafc; color: var(--sdm-color); }
+
+/* Ring Bar Aksen */
+.it-ring-bar { stroke: var(--it-color); }
+.tk-ring-bar { stroke: var(--tk-color); }
+.ga-ring-bar { stroke: var(--ga-color); }
+.kaizen-ring-bar { stroke: var(--kaizen-color); }
+.esys-ring-bar { stroke: var(--esys-color); }
+.simrs-ring-bar { stroke: var(--simrs-color); }
+.farmasi-ring-bar { stroke: var(--farmasi-color); }
+.lab-ring-bar { stroke: var(--lab-color); }
+.billing-ring-bar { stroke: var(--billing-color); }
+.sdm-ring-bar { stroke: var(--sdm-color); }
+
+/* Tombol Aksen Flat */
+.it-btn { background: var(--it-color); color: #fff; }
+.tk-btn { background: var(--tk-color); color: #fff; }
+.ga-btn { background: var(--ga-color); color: #fff; }
+.ext-btn { background: #ffffff; color: var(--text-secondary); border: 1px solid var(--border-dark); }
+.ext-btn:hover { background: #f1f5f9; color: var(--text-primary); }
+
+/* Header Kartu Kompak */
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.service-icon-box {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.service-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.service-meta h2 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.service-sub {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.service-status-pill {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.status-live { background: var(--status-success-bg); color: var(--status-success); }
+.status-standby { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+
+/* ====================================================================
+   4. BODY KARTU KOMPAK
+   ==================================================================== */
+.card-body {
+    margin: 0.65rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+/* Progress Ring & Persentase Samping */
+.gauge-and-percent {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.1rem 0;
+}
+
+.circular-progress {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+}
+
+.progress-ring {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.progress-ring-bg {
+    fill: none;
+    stroke: #e2e8f0;
+    stroke-width: 9;
+}
+
+.progress-ring-bar {
+    fill: none;
+    stroke-width: 9;
+    stroke-linecap: round;
+    /* Keliling lingkaran r=40 adalah 2 * PI * 40 = 251.32 */
+    stroke-dasharray: 251.32;
+    stroke-dashoffset: 251.32;
+    transition: stroke-dashoffset 0.8s ease-in-out;
+}
+
+.gauge-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.gauge-percent {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.gauge-text-side {
+    display: flex;
+    flex-direction: column;
+}
+
+.gauge-label {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.gauge-sub-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+/* 3 Metrik Inti Flat Kompak */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+}
+
+.metric-item {
+    background: var(--bg-page);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.35rem 0.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.metric-title {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.metric-number {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 0.05rem;
+}
+
+.success-item .metric-number { color: var(--status-success); }
+.pending-item .metric-number { color: var(--status-warning); }
+
+/* Status Breakdown Flat Kompak */
+.status-breakdown {
+    background: var(--bg-page);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.55rem;
+}
+
+.breakdown-bar {
+    width: 100%;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 0.35rem;
+}
+
+.bar-segment {
+    height: 100%;
+    transition: width 0.5s ease;
+}
+
+.bar-open { background-color: #dc2626; }
+.bar-progress { background-color: #2563eb; }
+.bar-checking { background-color: #d97706; }
+
+.breakdown-legend {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    margin-right: 0.15rem;
+    vertical-align: middle;
+}
+
+.dot-open { background-color: #dc2626; }
+.dot-progress { background-color: #2563eb; }
+.dot-checking { background-color: #d97706; }
+
+.breakdown-legend b {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+/* Footer Kartu & Tombol Aksi */
+.card-footer {
+    margin-top: auto;
+}
+
+.btn-detail {
+    width: 100%;
+    padding: 0.45rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    border: none;
+}
+
+/* ====================================================================
+   5. RUNNING TICKER (FOOTER)
+   ==================================================================== */
+.dashboard-footer {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--shadow-flat);
+}
+
+.ticker-badge {
+    background: var(--sna-red-light);
+    border: 1px solid var(--sna-red-border);
+    color: var(--sna-red);
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+.ticker-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    height: 24px;
+    display: flex;
+    align-items: center;
+}
+
+.ticker-items {
+    display: inline-flex;
+    align-items: center;
+    gap: 2rem;
+    white-space: nowrap;
+    animation: tickerScroll 40s linear infinite;
+}
+
+.ticker-items:hover {
+    animation-play-state: paused;
+}
+
+@keyframes tickerScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+.ticker-item {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.ticker-item b {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+.status-badge {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #16a34a;
+    padding: 0.25rem 0.55rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* ====================================================================
+   6. MODAL DAFTAR TIKET & MODAL INFORMASI
+   ==================================================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    padding: 2rem;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-card {
+    background: #ffffff;
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 1150px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.modal-card-sm {
+    max-width: 500px;
+}
+
+.integration-notice {
+    text-align: center;
+    padding: 1.5rem 1rem;
+}
+
+.integration-notice h4 {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.integration-notice p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.modal-header {
+    padding: 0.95rem 1.35rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    background: #fafafa;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+}
+
+.modal-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.modal-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.modal-title-group h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.modal-title-group p {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.filter-pills {
+    display: flex;
+    background: #e2e8f0;
+    padding: 0.2rem;
+    border-radius: var(--radius-sm);
+}
+
+.filter-pill {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 0.3rem 0.65rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.filter-pill.active {
+    background: var(--sna-blue);
+    color: #ffffff;
+}
+
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-box i {
+    position: absolute;
+    left: 0.65rem;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.search-box input {
+    background: #ffffff;
+    border: 1px solid var(--border-dark);
+    color: var(--text-primary);
+    padding: 0.35rem 0.75rem 0.35rem 1.9rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    width: 190px;
+    outline: none;
+}
+
+.modal-close-btn {
+    background: #ffffff;
+    border: 1px solid var(--border-dark);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.15rem 1.35rem;
+    background: #ffffff;
+}
+
+.tickets-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+.tickets-table th {
+    background: #f8fafc;
+    color: var(--text-secondary);
+    font-weight: 700;
+    text-align: left;
+    padding: 0.65rem 0.8rem;
+    border-bottom: 2px solid var(--border-color);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+}
+
+.tickets-table td {
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.tickets-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.ticket-number {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--sna-blue);
+}
+
+.badge-status {
+    display: inline-block;
+    padding: 0.18rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-open { background: var(--status-danger-bg); color: var(--status-danger); border: 1px solid #fca5a5; }
+.badge-progress { background: var(--status-info-bg); color: var(--status-info); border: 1px solid #93c5fd; }
+.badge-checking { background: var(--status-warning-bg); color: var(--status-warning); border: 1px solid #fde68a; }
+.badge-closed, .badge-done { background: var(--status-success-bg); color: var(--status-success); border: 1px solid #86efac; }
+.badge-draft { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.badge-pending { background: #f3e8ff; color: #7c3aed; border: 1px solid #d8b4fe; }
+
+.modal-footer {
+    padding: 0.8rem 1.35rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fafafa;
+}
+
+.modal-stats {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.btn-secondary {
+    background: #ffffff;
+    border: 1px solid var(--border-dark);
+    color: var(--text-primary);
+    padding: 0.4rem 1rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ====================================================================
+   7. MODE LAYAR PENUH (TV FULLSCREEN) & RESPONSIVE BREAKPOINTS
+   ==================================================================== */
+:fullscreen .dashboard-wrapper,
+.fullscreen-active .dashboard-wrapper {
+    padding: 1rem 1.5rem;
+    height: 100vh;
+}
+
+:fullscreen .cards-grid-10,
+.fullscreen-active .cards-grid-10 {
+    height: calc(100vh - 145px);
+}
+
+@media (max-width: 1400px) {
+    .cards-grid-10 {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+@media (max-width: 1100px) {
+    .cards-grid-10 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .header-summary {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .cards-grid-10 {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    .header-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
