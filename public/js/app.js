@@ -24,8 +24,9 @@ const state = {
     timerId: null,          // Referensi interval timer
     isFetching: false,      // Penanda sedang memuat
     currentServiceModal: null, // Layanan yang sedang dibuka di modal
-    currentModalFilter: 'all',  // Filter di modal: all / selesai / belum
+    currentModalFilter: 'all',  // Filter di modal: all / selesai / belum / ditolak
     modalRawTickets: [],    // Data mentah tiket yang sedang dibuka
+    servicesData: null,     // Cache data statistik 10 layanan terakhir
 };
 
 // ====================================================================
@@ -155,6 +156,9 @@ async function fetchDashboardStats(force = false) {
             throw new Error(data.message || 'Gagal memuat data dari server');
         }
 
+        // Simpan data layanan ke state lokal
+        state.servicesData = data.layanan;
+
         // Render Data ke Tampilan
         renderGlobalKPI(data.kpi_global);
         renderServiceCards(data.layanan);
@@ -210,53 +214,30 @@ function renderServiceCards(layanan) {
         animateCounter(`selesai${code}`, item.selesai);
         animateCounter(`belum${code}`, item.belum_selesai);
 
-        // 2. Persentase & Circular Gauge Ring
+        // Keterangan Tambahan: Ditolak & Total Tiket Valid yang Diproses
+        const ditolakEl = document.getElementById(`ditolak${code}`);
+        if (ditolakEl) {
+            ditolakEl.textContent = `${item.ditolak || 0} ditolak`;
+            ditolakEl.style.display = item.ditolak > 0 ? 'inline-block' : 'none';
+        }
+
+        const efektifEl = document.getElementById(`efektif${code}`);
+        if (efektifEl) {
+            efektifEl.textContent = `/ ${item.total_efektif || item.total_tiket} valid`;
+        }
+
+        // 2. Persentase & Progress Bar Fill
         const percent = item.persentase_selesai || 0;
         const percentEl = document.getElementById(`percent${code}`);
         if (percentEl) {
             percentEl.textContent = `${percent}%`;
         }
 
-        // Update Label Jumlah Selesai samping lingkaran
-        const selesaiLabel = document.getElementById(`selesaiLabel${code}`);
-        if (selesaiLabel) {
-            selesaiLabel.textContent = `${item.selesai || 0} Selesai`;
+        // Update lebar progress bar di bawah angka persentase
+        const barFill = document.getElementById(`barFill${code}`);
+        if (barFill) {
+            barFill.style.width = `${percent}%`;
         }
-
-        // Update SVG Progress Ring
-        const ringBar = document.getElementById(`ringBar${code}`);
-        if (ringBar) {
-            const offset = RING_CIRCUMFERENCE - (percent / 100) * RING_CIRCUMFERENCE;
-            ringBar.style.strokeDashoffset = offset;
-        }
-
-        // 3. Status Mini Breakdown (Open, In Progress, Checking)
-        const details = item.status_detail || { open: 0, in_progress: 0, checking: 0 };
-        const openVal = details.open || 0;
-        const progVal = details.in_progress || 0;
-        const chkVal = details.checking || 0;
-        const totalAktif = openVal + progVal + chkVal;
-
-        // Update Angka
-        const openEl = document.getElementById(`openCount${code}`);
-        const progEl = document.getElementById(`progressCount${code}`);
-        const chkEl = document.getElementById(`checkingCount${code}`);
-        const aktifLabel = document.getElementById(`aktifLabel${code}`);
-
-        if (openEl) openEl.textContent = openVal;
-        if (progEl) progEl.textContent = progVal;
-        if (chkEl) chkEl.textContent = chkVal;
-        if (aktifLabel) aktifLabel.textContent = `${item.belum_selesai} Belum Selesai`;
-
-        // Update Lebar Bar Segment (Persentase terhadap tiket belum selesai)
-        const barOpen = document.getElementById(`barOpen${code}`);
-        const barProg = document.getElementById(`barProgress${code}`);
-        const barChk = document.getElementById(`barChecking${code}`);
-
-        const divisor = totalAktif > 0 ? totalAktif : 1;
-        if (barOpen) barOpen.style.width = `${(openVal / divisor) * 100}%`;
-        if (barProg) barProg.style.width = `${(progVal / divisor) * 100}%`;
-        if (barChk) barChk.style.width = `${(chkVal / divisor) * 100}%`;
     });
 }
 
@@ -329,20 +310,37 @@ async function openTicketModal(serviceCode, serviceTitle) {
     const subEl = document.getElementById('modalServiceSubtitle');
     const iconEl = document.getElementById('modalServiceIcon');
     const searchInput = document.getElementById('ticketSearchInput');
+    const ditolakCountEl = document.getElementById('modalDitolakCount');
 
-    if (titleEl) titleEl.textContent = `Daftar Tiket: ${serviceTitle}`;
-    if (subEl) subEl.textContent = `Riwayat dan tiket operasional untuk unit ${serviceCode}`;
+    // Ambil data statistik layanan dari memori
+    const sData = (state.servicesData && state.servicesData[serviceCode]) || {};
+    const totalTiket = sData.total_tiket || 0;
+    const selesaiTiket = sData.selesai || 0;
+    const belumTiket = sData.belum_selesai || 0;
+    const ditolakTiket = sData.ditolak || 0;
+    const efektifTiket = sData.total_efektif || Math.max(0, totalTiket - ditolakTiket);
+    const persentase = sData.persentase_selesai || 0;
+
+    if (titleEl) titleEl.textContent = `${serviceTitle}`;
+    if (subEl) {
+        subEl.innerHTML = `Total: <b>${totalTiket}</b> &bull; Diproses: <b>${efektifTiket}</b> (Selesai: <span style="color:#10b981; font-weight:700;">${selesaiTiket}</span> [${persentase}%], Belum: <span style="color:#f59e0b; font-weight:700;">${belumTiket}</span>) &bull; Ditolak: <span style="color:#ef4444; font-weight:700;">${ditolakTiket}</span>`;
+    }
+
+    if (ditolakCountEl) {
+        ditolakCountEl.textContent = ditolakTiket;
+    }
+
     if (searchInput) searchInput.value = '';
 
-    // Reset tombol filter aktif
+    // Reset tombol filter aktif ke 'all'
     document.querySelectorAll('.filter-pill').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-filter') === 'all');
     });
 
     // Sesuaikan icon modal
     if (iconEl) {
-        if (serviceCode === 'IT') iconEl.innerHTML = '<i class="fa-solid fa-laptop-code" style="color: #06b6d4;"></i>';
-        else if (serviceCode === 'TK') iconEl.innerHTML = '<i class="fa-solid fa-screwdriver-wrench" style="color: #f59e0b;"></i>';
+        if (serviceCode === 'IT') iconEl.innerHTML = '<i class="fa-solid fa-laptop-code" style="color: #0f5ca8;"></i>';
+        else if (serviceCode === 'TK') iconEl.innerHTML = '<i class="fa-solid fa-screwdriver-wrench" style="color: #d97706;"></i>';
         else if (serviceCode === 'GA') iconEl.innerHTML = '<i class="fa-solid fa-building-user" style="color: #10b981;"></i>';
     }
 
@@ -361,8 +359,9 @@ async function loadModalTickets(serviceCode, filterStatus) {
         let queryStatus = 'all';
         if (filterStatus === 'selesai') queryStatus = 'selesai';
         if (filterStatus === 'belum') queryStatus = 'belum';
+        if (filterStatus === 'ditolak') queryStatus = 'ditolak';
 
-        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=60`;
+        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=100`;
         const response = await fetch(url);
         const json = await response.json();
 
@@ -435,7 +434,14 @@ function renderTicketsTable(tickets) {
 
     tbody.innerHTML = tickets.map(t => {
         const badgeInfo = getStatusBadge(t.status, t.status_label);
-        const kategoriBadge = t.kategori ? `<span style="text-transform: capitalize; color: #94a3b8;">${t.kategori}</span>` : '-';
+
+        // Aturan: Jika kategori belum diisi atau 'biasa' -> tampilkan strip '-'
+        const rawKat = (t.kategori || '').trim();
+        const isBiasaOrEmpty = !rawKat || rawKat.toLowerCase() === 'biasa' || rawKat === '-';
+        const kategoriBadge = !isBiasaOrEmpty 
+            ? `<span class="badge-kategori">${escapeHtml(rawKat)}</span>` 
+            : `<span class="kategori-dash">-</span>`;
+
         const tgl = t.tanggal || t.created_at || '-';
 
         return `
@@ -489,6 +495,9 @@ function getStatusBadge(status, customLabel) {
     const s = (status || '').toLowerCase();
     if (s === 'closed' || s === 'done') {
         return { label: customLabel || 'Selesai', cssClass: 'badge-closed' };
+    }
+    if (s === 'rejected' || s === 'ditolak') {
+        return { label: customLabel || 'Ditolak', cssClass: 'badge-rejected' };
     }
     if (s === 'open') {
         return { label: customLabel || 'Open', cssClass: 'badge-open' };

@@ -1,12 +1,11 @@
 /* ====================================================================
-   SNA MEDIKA - MANAGEMENT MONITORING DASHBOARD (10 CARDS FLAT THEME)
-   Desain: FLAT DESIGN, TEMA TERANG (LIGHT), TANPA GRADASI
-   Susunan: 5 Card Baris Atas, 5 Card Baris Bawah (Total 10 Modul)
-   Warna Korporat SNA Medika: Merah (#d92534), Biru (#0f5ca8), Abu-abu (#5c6571)
+   SNA MEDIKA - MANAGEMENT MONITORING DASHBOARD (10 CARDS COMPACT FLAT)
+   Desain: FLAT DESIGN, TEMA TERANG (LIGHT), TANPA GRADASI, TANPA SPACE KOSONG
+   Persentase Besar & Jelas, 3 Metrik (Total, Selesai, Belum), Tombol Detail
    ==================================================================== */
 
 :root {
-    /* Palet Utama SNA Medika (Flat Solid Colors) */
+    /* Palet Utama SNA Medika */
     --sna-red: #d92534;
     --sna-red-light: #fef2f2;
     --sna-red-border: #fecaca;
@@ -30,22 +29,10 @@
     --text-secondary: #475569;
     --text-muted: #64748b;
 
-    /* Aksen Solid Layanan IT (Flat Blue) */
+    /* Aksen Warna Tiap Layanan (Solid Flat) */
     --it-color: #0f5ca8;
-    --it-bg: #eff6ff;
-    --it-border: #bfdbfe;
-
-    /* Aksen Solid Layanan Teknik (Flat Amber) */
     --tk-color: #d97706;
-    --tk-bg: #fffbeb;
-    --tk-border: #fde68a;
-
-    /* Aksen Solid Layanan GA (Flat Emerald) */
     --ga-color: #059669;
-    --ga-bg: #ecfdf5;
-    --ga-border: #a7f3d0;
-
-    /* Modul Eksternal Flat */
     --kaizen-color: #7c3aed;
     --esys-color: #2563eb;
     --simrs-color: #d92534;
@@ -100,7 +87,7 @@ html, body {
     display: flex;
     flex-direction: column;
     padding: 0.85rem 1.25rem;
-    gap: 0.85rem;
+    gap: 0.75rem;
 }
 
 /* ====================================================================
@@ -109,8 +96,8 @@ html, body {
 .dashboard-header {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 0.65rem 1.25rem;
+    border-radius: var(--radius-md);
+    padding: 0.6rem 1.25rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -133,7 +120,7 @@ html, body {
 }
 
 .brand-logo-img {
-    height: 44px;
+    height: 42px;
     width: auto;
     object-fit: contain;
     display: block;
@@ -171,48 +158,6 @@ html, body {
     border-radius: 50%;
     background-color: var(--status-success);
 }
-
-/* Global Summary Pills (Flat Solid Kompak) */
-.header-summary {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-}
-
-.summary-pill {
-    background: var(--bg-page);
-    border: 1px solid var(--border-color);
-    padding: 0.35rem 0.75rem;
-    border-radius: var(--radius-md);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 82px;
-}
-
-.summary-pill .pill-label {
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    font-weight: 700;
-}
-
-.summary-pill .pill-value {
-    font-family: var(--font-mono);
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-top: 0.05rem;
-}
-
-.pill-success { background: #f0fdf4; border-color: #bbf7d0; }
-.pill-success .pill-value { color: #16a34a; }
-
-.pill-warning { background: #fffbeb; border-color: #fde68a; }
-.pill-warning .pill-value { color: #d97706; }
-
-.pill-accent { background: var(--sna-blue-light); border-color: var(--sna-blue-border); }
-.pill-accent .pill-value { color: var(--sna-blue); }
 
 /* Digital Clock & Controls */
 .header-right {
@@ -252,7 +197,7 @@ html, body {
     border: 1px solid var(--border-dark);
     color: var(--text-secondary);
     padding: 0.45rem 0.75rem;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 0.85rem;
     display: inline-flex;
@@ -284,24 +229,22 @@ html, body {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 0.75rem;
-    flex: 1;
 }
 
-/* Kartu Layanan Dasar (Flat White Kompak) */
+/* Kartu Layanan Dasar (Kompak, Rapat, Tanpa Ruang Kosong) */
 .service-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 0.85rem 0.95rem;
+    padding: 0.75rem 0.85rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    position: relative;
     box-shadow: var(--shadow-flat);
-    min-height: 290px;
+    min-height: 0; /* Menghilangkan tinggi kosong yang melompong */
 }
 
-/* Garis Border Atas Solid Sesuai Divisi */
+/* Border Atas Solid */
 .card-it { border-top: 3px solid var(--it-color); }
 .card-tk { border-top: 3px solid var(--tk-color); }
 .card-ga { border-top: 3px solid var(--ga-color); }
@@ -313,10 +256,53 @@ html, body {
 .card-billing { border-top: 3px solid var(--billing-color); }
 .card-sdm { border-top: 3px solid var(--sdm-color); }
 
-/* Tema Aksen Warna Flat */
-.it-theme { background: var(--it-bg); color: var(--it-color); }
-.tk-theme { background: var(--tk-bg); color: var(--tk-color); }
-.ga-theme { background: var(--ga-bg); color: var(--ga-color); }
+/* Header Kartu */
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.service-icon-box {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.card-title-group h2 {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.service-status-pill {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.12rem 0.4rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.status-live { background: var(--status-success-bg); color: var(--status-success); }
+.status-standby { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+
+/* Icon Background Themes */
+.it-theme { background: var(--sna-blue-light); color: var(--it-color); }
+.tk-theme { background: #fffbeb; color: var(--tk-color); }
+.ga-theme { background: #ecfdf5; color: var(--ga-color); }
 .kaizen-theme { background: #f5f3ff; color: var(--kaizen-color); }
 .esys-theme { background: #eff6ff; color: var(--esys-color); }
 .simrs-theme { background: #fff1f2; color: var(--simrs-color); }
@@ -325,257 +311,143 @@ html, body {
 .billing-theme { background: #fff7ed; color: var(--billing-color); }
 .sdm-theme { background: #f8fafc; color: var(--sdm-color); }
 
-/* Ring Bar Aksen */
-.it-ring-bar { stroke: var(--it-color); }
-.tk-ring-bar { stroke: var(--tk-color); }
-.ga-ring-bar { stroke: var(--ga-color); }
-.kaizen-ring-bar { stroke: var(--kaizen-color); }
-.esys-ring-bar { stroke: var(--esys-color); }
-.simrs-ring-bar { stroke: var(--simrs-color); }
-.farmasi-ring-bar { stroke: var(--farmasi-color); }
-.lab-ring-bar { stroke: var(--lab-color); }
-.billing-ring-bar { stroke: var(--billing-color); }
-.sdm-ring-bar { stroke: var(--sdm-color); }
-
-/* Tombol Aksen Flat */
-.it-btn { background: var(--it-color); color: #fff; }
-.tk-btn { background: var(--tk-color); color: #fff; }
-.ga-btn { background: var(--ga-color); color: #fff; }
-.ext-btn { background: #ffffff; color: var(--text-secondary); border: 1px solid var(--border-dark); }
-.ext-btn:hover { background: #f1f5f9; color: var(--text-primary); }
-
-/* Header Kartu Kompak */
-.card-header {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.service-icon-box {
-    width: 34px;
-    height: 34px;
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-.service-meta {
-    flex: 1;
-    min-width: 0;
-}
-
-.service-meta h2 {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.service-sub {
-    font-size: 0.7rem;
-    color: var(--text-secondary);
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.service-status-pill {
-    font-size: 0.62rem;
-    font-weight: 700;
-    padding: 0.15rem 0.4rem;
-    border-radius: 4px;
-    text-transform: uppercase;
-}
-
-.status-live { background: var(--status-success-bg); color: var(--status-success); }
-.status-standby { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
-
 /* ====================================================================
-   4. BODY KARTU KOMPAK
+   4. BODY KARTU: HERO PERSENTASE BESAR & 3 METRIK
    ==================================================================== */
 .card-body {
-    margin: 0.65rem 0;
+    margin: 0.5rem 0;
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
+    gap: 0.5rem;
 }
 
-/* Progress Ring & Persentase Samping */
-.gauge-and-percent {
+/* Hero Persentase Besar & Jelas */
+.percent-hero {
+    background: #fafafa;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.45rem 0.65rem;
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.1rem 0;
+    flex-direction: column;
+    gap: 0.3rem;
 }
 
-.circular-progress {
-    position: relative;
-    width: 64px;
-    height: 64px;
-    flex-shrink: 0;
+.percent-number-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
 }
 
-.progress-ring {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-}
-
-.progress-ring-bg {
-    fill: none;
-    stroke: #e2e8f0;
-    stroke-width: 9;
-}
-
-.progress-ring-bar {
-    fill: none;
-    stroke-width: 9;
-    stroke-linecap: round;
-    /* Keliling lingkaran r=40 adalah 2 * PI * 40 = 251.32 */
-    stroke-dasharray: 251.32;
-    stroke-dashoffset: 251.32;
-    transition: stroke-dashoffset 0.8s ease-in-out;
-}
-
-.gauge-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-}
-
-.gauge-percent {
+.percent-val {
     font-family: var(--font-mono);
-    font-size: 0.95rem;
+    font-size: 1.85rem;
     font-weight: 800;
-    color: var(--text-primary);
     line-height: 1;
 }
 
-.gauge-text-side {
-    display: flex;
-    flex-direction: column;
-}
-
-.gauge-label {
-    font-size: 0.68rem;
-    color: var(--text-muted);
+.percent-lbl {
+    font-size: 0.72rem;
     font-weight: 700;
+    color: var(--text-secondary);
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.gauge-sub-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    font-family: var(--font-mono);
+/* Warna Teks Persentase Sesuai Divisi */
+.it-text { color: var(--it-color); }
+.tk-text { color: var(--tk-color); }
+.ga-text { color: var(--ga-color); }
+.kaizen-text { color: var(--kaizen-color); }
+.esys-text { color: var(--esys-color); }
+.simrs-text { color: var(--simrs-color); }
+.farmasi-text { color: var(--farmasi-color); }
+.lab-text { color: var(--lab-color); }
+.billing-text { color: var(--billing-color); }
+.sdm-text { color: var(--sdm-color); }
+
+/* Progress Bar Track & Fill */
+.progress-bar-track {
+    width: 100%;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
 }
 
-/* 3 Metrik Inti Flat Kompak */
-.metrics-grid {
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s ease;
+}
+
+.it-fill { background-color: var(--it-color); }
+.tk-fill { background-color: var(--tk-color); }
+.ga-fill { background-color: var(--ga-color); }
+.kaizen-fill { background-color: var(--kaizen-color); }
+.esys-fill { background-color: var(--esys-color); }
+.simrs-fill { background-color: var(--simrs-color); }
+.farmasi-fill { background-color: var(--farmasi-color); }
+.lab-fill { background-color: var(--lab-color); }
+.billing-fill { background-color: var(--billing-color); }
+.sdm-fill { background-color: var(--sdm-color); }
+
+/* 3 Metrik Inti (Total, Selesai, Belum) */
+.metrics-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0.35rem;
 }
 
-.metric-item {
+.metric-box {
     background: var(--bg-page);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    padding: 0.35rem 0.25rem;
+    border-radius: 6px;
+    padding: 0.35rem 0.2rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
 }
 
-.metric-title {
+.m-lbl {
     font-size: 0.65rem;
-    color: var(--text-secondary);
-    font-weight: 600;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
-.metric-number {
+.m-val {
     font-family: var(--font-mono);
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: var(--text-primary);
     margin-top: 0.05rem;
+    line-height: 1.2;
 }
 
-.success-item .metric-number { color: var(--status-success); }
-.pending-item .metric-number { color: var(--status-warning); }
+.text-success { color: var(--status-success) !important; }
+.text-warning { color: var(--status-warning) !important; }
+.text-rejected { color: #dc2626 !important; }
 
-/* Status Breakdown Flat Kompak */
-.status-breakdown {
-    background: var(--bg-page);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    padding: 0.4rem 0.55rem;
-}
-
-.breakdown-bar {
-    width: 100%;
-    height: 5px;
-    background: #cbd5e1;
-    border-radius: 3px;
-    overflow: hidden;
-    display: flex;
-    margin-bottom: 0.35rem;
-}
-
-.bar-segment {
-    height: 100%;
-    transition: width 0.5s ease;
-}
-
-.bar-open { background-color: #dc2626; }
-.bar-progress { background-color: #2563eb; }
-.bar-checking { background-color: #d97706; }
-
-.breakdown-legend {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.65rem;
-    color: var(--text-secondary);
-}
-
-.legend-dot {
-    display: inline-block;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    margin-right: 0.15rem;
-    vertical-align: middle;
-}
-
-.dot-open { background-color: #dc2626; }
-.dot-progress { background-color: #2563eb; }
-.dot-checking { background-color: #d97706; }
-
-.breakdown-legend b {
-    color: var(--text-primary);
-    font-family: var(--font-mono);
+/* Sub-teks pada Box Metrik (misal: "31 ditolak", "/ 161 valid") */
+.m-sub {
+    font-size: 0.62rem;
+    font-weight: 600;
+    margin-top: 0.15rem;
+    line-height: 1;
+    white-space: nowrap;
+    text-align: center;
 }
 
 /* Footer Kartu & Tombol Aksi */
 .card-footer {
-    margin-top: auto;
+    margin-top: 0;
 }
 
 .btn-detail {
     width: 100%;
     padding: 0.45rem 0.75rem;
-    border-radius: var(--radius-sm);
+    border-radius: 6px;
     font-size: 0.78rem;
     font-weight: 700;
     display: flex;
@@ -583,7 +455,21 @@ html, body {
     justify-content: space-between;
     cursor: pointer;
     border: none;
+    transition: background 0.15s ease;
 }
+
+/* Tombol Aksen Flat */
+.it-btn { background: var(--it-color); color: #fff; }
+.it-btn:hover { background: #0c4a86; }
+
+.tk-btn { background: var(--tk-color); color: #fff; }
+.tk-btn:hover { background: #b45309; }
+
+.ga-btn { background: var(--ga-color); color: #fff; }
+.ga-btn:hover { background: #047857; }
+
+.ext-btn { background: #ffffff; color: var(--text-secondary); border: 1px solid var(--border-dark); }
+.ext-btn:hover { background: #f1f5f9; color: var(--text-primary); }
 
 /* ====================================================================
    5. RUNNING TICKER (FOOTER)
@@ -592,7 +478,7 @@ html, body {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 0.5rem 1rem;
+    padding: 0.45rem 1rem;
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -603,13 +489,13 @@ html, body {
     background: var(--sna-red-light);
     border: 1px solid var(--sna-red-border);
     color: var(--sna-red);
-    padding: 0.25rem 0.6rem;
+    padding: 0.2rem 0.55rem;
     border-radius: var(--radius-sm);
     font-size: 0.72rem;
     font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.35rem;
     white-space: nowrap;
 }
 
@@ -617,7 +503,7 @@ html, body {
     flex: 1;
     overflow: hidden;
     position: relative;
-    height: 24px;
+    height: 22px;
     display: flex;
     align-items: center;
 }
@@ -656,7 +542,7 @@ html, body {
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
     color: #16a34a;
-    padding: 0.25rem 0.55rem;
+    padding: 0.2rem 0.5rem;
     border-radius: var(--radius-sm);
     font-size: 0.72rem;
     font-weight: 700;
@@ -793,6 +679,19 @@ html, body {
     color: #ffffff;
 }
 
+.filter-pill.pill-danger {
+    color: #b91c1c;
+}
+
+.filter-pill.pill-danger:hover {
+    background: #fee2e2;
+}
+
+.filter-pill.pill-danger.active {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+}
+
 .search-box {
     position: relative;
     display: flex;
@@ -885,6 +784,25 @@ html, body {
 .badge-closed, .badge-done { background: var(--status-success-bg); color: var(--status-success); border: 1px solid #86efac; }
 .badge-draft { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 .badge-pending { background: #f3e8ff; color: #7c3aed; border: 1px solid #d8b4fe; }
+.badge-rejected { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+/* Badge Kategori Tiket */
+.badge-kategori {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.kategori-dash {
+    color: #94a3b8;
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
 
 .modal-footer {
     padding: 0.8rem 1.35rem;
@@ -919,11 +837,6 @@ html, body {
     height: 100vh;
 }
 
-:fullscreen .cards-grid-10,
-.fullscreen-active .cards-grid-10 {
-    height: calc(100vh - 145px);
-}
-
 @media (max-width: 1400px) {
     .cards-grid-10 {
         grid-template-columns: repeat(5, 1fr);
@@ -933,9 +846,6 @@ html, body {
 @media (max-width: 1100px) {
     .cards-grid-10 {
         grid-template-columns: repeat(3, 1fr);
-    }
-    .header-summary {
-        display: none;
     }
 }
 

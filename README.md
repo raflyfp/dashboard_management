@@ -37,24 +37,36 @@ Dashboard monitoring real-time untuk manajemen operasional yang menampilkan perf
 
 ---
 
-## 📁 Struktur Folder Project
+## 📁 Struktur Folder Project (Modular Backend Standar Industri)
 
-Struktur dibuat bersih dan terstandarisasi agar sangat mudah dipahami programmer junior:
+Struktur telah dipisahkan secara modular agar sangat mudah di-maintain dan di-scale oleh developer junior:
 
 ```text
 dashboard_management/
-├── .env                     # File konfigurasi utama (Port, API URL, API Key)
-├── .env.example             # Contoh template konfigurasi
-├── package.json             # Dependensi Node.js (express, axios, dotenv)
-├── server.js                # Backend Express (API Proxy, Cache, Static Hosting)
+├── config/
+│   └── app.config.js        # Konfigurasi terpusat (membaca .env)
+├── services/
+│   └── ticketingService.js  # Komunikasi & pemanggilan API Ticketing Laravel
+├── routes/
+│   └── dashboardRoutes.js   # Endpoint Express (/api/dashboard/stats & /tickets)
 ├── public/                  # Frontend Web Statis
-│   ├── index.html           # Struktur layout HTML5 dashboard
-│   ├── css/
-│   │   └── style.css        # Desain visual, dark mode, animasi & responsif
-│   └── js/
-│       └── app.js           # Logika frontend, auto-polling, counter, modal
-└── README.md                # Panduan dokumentasi lengkap
+│   ├── index.html           # Struktur layout antarmuka dashboard
+│   ├── css/style.css        # Desain flat tema SNA Medika
+│   └── js/app.js            # Auto-polling, render persentase, counter & modal
+├── .env                     # File konfigurasi utama (Port, API URL, API Key)
+├── .env.example             # Contoh template konfigurasi aman
+├── server.js                # Server utama Express (ringkas & bersih)
+└── package.json             # Script start & dev (hot reload)
 ```
+
+---
+
+## ⚡ Mode Pengembangan (Live Auto-Reload):
+Jalankan perintah ini saat sedang mengedit kode:
+```bash
+npm run dev
+```
+Fitur ini menggunakan bawaan **Node.js watch mode** (`node --watch server.js`). Server akan **otomatis me-restart sendiri** setiap kali Anda menyimpan perubahan file backend tanpa perlu mematikan dan menyalakan terminal secara manual.
 
 ---
 
@@ -70,8 +82,7 @@ PORT=3000
 TICKETING_API_URL=http://127.0.0.1:8002/api/v1
 
 # API Key resmi sistem ticketing
-TICKETING_API_KEY=tk_live_UQ6LbgRmq2dSldzeTuSkZbAezAr1aDaV
-
+TICKETING_API_KEY=
 # Durasi Cache internal Express (detik) untuk efisiensi beban server
 CACHE_TTL_SECONDS=5
 
