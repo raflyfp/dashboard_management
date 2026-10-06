@@ -40,23 +40,19 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // Pasang rute API Dashboard
 app.use('/api/dashboard', dashboardRoutes);
 
-// Health check endpoint
+// Health check endpoint (General System Status)
 app.get('/api/health', async (req, res) => {
-    let apiStatus = 'unknown';
+    let isOperational = false;
     try {
         const ping = await ticketingService.ping();
-        apiStatus = ping?.status === 'online' ? 'online' : 'connected';
-    } catch (e) {
-        apiStatus = 'offline (' + e.message + ')';
+        isOperational = ping?.status === 'online';
+    } catch {
+        isOperational = false;
     }
 
     res.json({
-        status: 'ok',
+        status: isOperational ? 'operational' : 'degraded',
         uptime_seconds: Math.floor(process.uptime()),
-        ticketing_api: {
-            url: config.ticketing.baseUrl,
-            status: apiStatus
-        },
         timestamp: new Date().toISOString()
     });
 });

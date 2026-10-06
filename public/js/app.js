@@ -163,7 +163,7 @@ async function fetchDashboardStats(force = false) {
         renderGlobalKPI(data.kpi_global);
         renderServiceCards(data.layanan);
         renderAttentionTicker(data.perlu_perhatian);
-        updateSystemStatus(true, data._cached ? 'Cached' : 'Live Sync');
+        updateSystemStatus(true, Boolean(data._cached));
 
         // Reset hitung mundur setelah fetch manual
         state.countdownTimer = state.refreshInterval;
@@ -171,7 +171,7 @@ async function fetchDashboardStats(force = false) {
 
     } catch (error) {
         console.error('Error saat fetch dashboard stats:', error);
-        updateSystemStatus(false, 'Gagal Sinkronisasi');
+        updateSystemStatus(false);
     } finally {
         state.isFetching = false;
         if (refreshIcon) {
@@ -281,20 +281,22 @@ function renderAttentionTicker(tickets) {
 }
 
 // ====================================================================
-// 9. STATUS KONEKSI SISTEM
+// 9. STATUS KONEKSI SISTEM (OPERATIONAL STATUS)
 // ====================================================================
-function updateSystemStatus(isOnline, label) {
+function updateSystemStatus(isOnline, isCached = false) {
     const badge = document.getElementById('systemStatusBadge');
     if (!badge) return;
 
+    badge.style.color = '';
+    badge.style.borderColor = '';
+
     if (isOnline) {
-        badge.innerHTML = `<i class="fa-solid fa-circle-nodes"></i> API Online (${label})`;
-        badge.style.color = '#34d399';
-        badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        badge.className = 'status-badge';
+        const label = isCached ? 'Sistem Normal (Sync)' : 'Sistem Operasional';
+        badge.innerHTML = `<span class="status-dot"></span> ${label}`;
     } else {
-        badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> API Terputus (${label})`;
-        badge.style.color = '#f87171';
-        badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+        badge.className = 'status-badge status-offline';
+        badge.innerHTML = `<span class="status-dot"></span> Terputus`;
     }
 }
 
