@@ -239,6 +239,39 @@ const subconService = {
             total_pcs: b.total_pcs || 0,
         }));
 
+        // Petakan relasi barang ke nama subcon dari data pengerjaan
+        const defaultSubconNama = perSubcon[0]?.nama_lokasi || 'SIMAN';
+        const barangSubconMap = new Map();
+
+        allPengerjaan.forEach(p => {
+            const sName = p.subcon_nama || defaultSubconNama;
+            if (p.barang_id) {
+                const idKey = String(p.barang_id);
+                if (!barangSubconMap.has(idKey)) barangSubconMap.set(idKey, new Set());
+                barangSubconMap.get(idKey).add(sName);
+            }
+            if (p.kode_barang) {
+                const codeKey = String(p.kode_barang);
+                if (!barangSubconMap.has(codeKey)) barangSubconMap.set(codeKey, new Set());
+                barangSubconMap.get(codeKey).add(sName);
+            }
+        });
+
+        const enrichedPerBarang = perBarang.map(b => {
+            const fromId = b.barang_id ? barangSubconMap.get(String(b.barang_id)) : null;
+            const fromCode = b.kode_barang ? barangSubconMap.get(String(b.kode_barang)) : null;
+            const subconSet = new Set([
+                ...(fromId ? Array.from(fromId) : []),
+                ...(fromCode ? Array.from(fromCode) : []),
+            ]);
+            const namaSubcon = subconSet.size > 0 ? Array.from(subconSet).join(', ') : (b.nama_subcon || defaultSubconNama);
+
+            return {
+                ...b,
+                nama_subcon: namaSubcon,
+            };
+        });
+
         const resultPayload = {
             range,
             tanggal_mulai: startDate,
@@ -255,7 +288,7 @@ const subconService = {
             daily_chart: dailyChart,
             per_barang_chart: perBarangChart,
             per_subcon: perSubcon,
-            per_barang: perBarang,
+            per_barang: enrichedPerBarang,
             karyawan: karyawanList,
             pengerjaan: allPengerjaan,
             total_transaksi_detail: allPengerjaan.length,

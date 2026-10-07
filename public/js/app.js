@@ -179,7 +179,7 @@ async function fetchDashboardStats(force = false) {
         // Render Data ke Tampilan
         renderGlobalKPI(data.kpi_global);
         renderServiceCards(data.layanan);
-        renderAttentionTicker(data.perlu_perhatian);
+        renderKpiTrackerTicker(data);
         updateSystemStatus(true, Boolean(data._cached));
 
         // Reset hitung mundur setelah fetch manual
@@ -206,7 +206,7 @@ function renderGlobalKPI(kpi) {
     animateCounter('globalTotalTickets', kpi.total_tiket);
     animateCounter('globalCompletedTickets', kpi.total_selesai);
     animateCounter('globalPendingTickets', kpi.total_belum_selesai);
-    
+
     const percentEl = document.getElementById('globalPercentage');
     if (percentEl) {
         percentEl.textContent = `${kpi.persentase_selesai}%`;
@@ -280,42 +280,117 @@ function renderServiceCards(layanan) {
 }
 
 // ====================================================================
-// 8. RENDER RUNNING TICKER PERHATIAN MANAJEMEN
+// 8. RENDER RUNNING TICKER TARGET & CAPAIAN HARIAN (KPI TRACKER DIREKSI)
 // ====================================================================
-function renderAttentionTicker(tickets) {
+function renderKpiTrackerTicker(data) {
     const listEl = document.getElementById('tickerList');
     if (!listEl) return;
 
-    if (!tickets || tickets.length === 0) {
+    if (!data) {
         listEl.innerHTML = `
             <span class="ticker-item">
-                <i class="fa-solid fa-circle-check" style="color: #34d399;"></i> 
-                Semua layanan beroperasi lancar. Tidak ada tiket darurat yang pending lama saat ini.
+                <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> 
+                Semua sistem dan lini operasional aktif termonitor normal.
             </span>
         `;
         return;
     }
 
-    // Bangun elemen berjalan (marquee ticker)
-    const itemsHtml = tickets.map(t => {
-        const tagClass = `tag-${t.service.toLowerCase()}`;
-        const jamDurasi = Math.floor(t.durasi_menit / 60);
-        const menitSisa = t.durasi_menit % 60;
-        const waktuTeks = jamDurasi > 0 ? `${jamDurasi} jam ${menitSisa} mnt` : `${menitSisa} mnt`;
+    const kpi = data.kpi_global || {};
+    const layanan = data.layanan || {};
+    const subcon = layanan.SUBCON || {};
 
-        return `
+    const items = [];
+
+    // 1. Capaian Produksi Subcon
+    const totalPcs = Number(subcon.total_output_pcs || 0).toLocaleString('id-ID');
+    const namaSubcon = subcon.subcon_nama || 'SIMAN';
+    const totalKaryawan = subcon.total_karyawan || 26;
+    items.push(`
+        <span class="ticker-item">
+            <i class="fa-solid fa-boxes-packing" style="color: #6366f1;"></i>
+            <span>Produksi Subcon:</span>
+            <b style="color: #6366f1;">${totalPcs} PCS</b>
+            <span class="ticker-kpi-sub">(Mitra ${namaSubcon} • ${totalKaryawan} Tenaga Kerja)</span>
+        </span>
+    `);
+
+    // 2. Capaian Tiket Operasional Selesai
+    const selesaiTiket = kpi.total_selesai || 0;
+    const totalTiket = kpi.total_efektif || kpi.total_tiket || 0;
+    items.push(`
+        <span class="ticker-item">
+            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i>
+            <span>Tiket Selesai:</span>
+            <b style="color: #10b981;">${selesaiTiket} Tiket</b>
+            <span class="ticker-kpi-sub">(dari total ${totalTiket} tiket)</span>
+        </span>
+    `);
+
+    // 3. Tingkat Respon / Efektivitas Layanan
+    // const persentase = kpi.persentase_selesai || 0;
+    // items.push(`
+    //     <span class="ticker-item">
+    //         <i class="fa-solid fa-bullseye" style="color: #0284c7;"></i>
+    //         <span>Tingkat Respon Layanan:</span>
+    //         <b style="color: #0284c7;">${persentase}%</b>
+    //     </span>
+    // `);
+
+    // 4. Tiket Dalam Proses
+    const pendingTiket = kpi.total_belum_selesai || 0;
+    items.push(`
+        <span class="ticker-item">
+            <i class="fa-solid fa-clock-rotate-left" style="color: #f59e0b;"></i>
+            <span>Tiket Dalam Proses:</span>
+            <b style="color: #d97706;">${pendingTiket} Tiket</b>
+        </span>
+    `);
+
+    // 5. Realisasi Per Divisi Operasional (IT, TK, GA)
+    if (layanan.IT) {
+        items.push(`
             <span class="ticker-item">
-                <span class="tag ${tagClass}">${t.service}</span>
-                <b>[${t.no_tiket}]</b> 
-                <span>${escapeHtml(t.judul)}</span>
-                <span style="color: #f87171;"><i class="fa-regular fa-clock"></i> Menggantung: ${waktuTeks}</span>
-                <span style="color: #94a3b8;">Pelapor: ${escapeHtml(t.pelapor)}</span>
+                <span class="tag tag-it">IT</span>
+                <b>${layanan.IT.selesai}/${layanan.IT.total_tiket} Selesai</b>
+                <span class="ticker-kpi-sub">(${layanan.IT.persentase_selesai}%)</span>
             </span>
-        `;
-    }).join(' &bull; ');
+        `);
+    }
+    if (layanan.TK) {
+        items.push(`
+            <span class="ticker-item">
+                <span class="tag tag-tk">TK</span>
+                <b>${layanan.TK.selesai}/${layanan.TK.total_tiket} Selesai</b>
+                <span class="ticker-kpi-sub">(${layanan.TK.persentase_selesai}%)</span>
+            </span>
+        `);
+    }
+    if (layanan.GA) {
+        items.push(`
+            <span class="ticker-item">
+                <span class="tag tag-ga">GA</span>
+                <b>${layanan.GA.selesai}/${layanan.GA.total_tiket} Selesai</b>
+                <span class="ticker-kpi-sub">(${layanan.GA.persentase_selesai}%)</span>
+            </span>
+        `);
+    }
 
+    const itemsHtml = items.join(' &bull; ');
     // Gandakan konten agar animasi marquee meluncur mulus tanpa terputus
     listEl.innerHTML = itemsHtml + ' &bull; ' + itemsHtml;
+}
+
+// Fallback alias jika masih ada pemanggilan lama
+function renderAttentionTicker(ticketsOrData) {
+    if (ticketsOrData && ticketsOrData.kpi_global) {
+        renderKpiTrackerTicker(ticketsOrData);
+    } else {
+        renderKpiTrackerTicker({
+            kpi_global: state.kpiGlobalData,
+            layanan: state.servicesData,
+        });
+    }
 }
 
 // ====================================================================
@@ -478,8 +553,8 @@ function renderTicketsTable(tickets) {
         // Aturan: Jika kategori belum diisi atau 'biasa' -> tampilkan strip '-'
         const rawKat = (t.kategori || '').trim();
         const isBiasaOrEmpty = !rawKat || rawKat.toLowerCase() === 'biasa' || rawKat === '-';
-        const kategoriBadge = !isBiasaOrEmpty 
-            ? `<span class="badge-kategori">${escapeHtml(rawKat)}</span>` 
+        const kategoriBadge = !isBiasaOrEmpty
+            ? `<span class="badge-kategori">${escapeHtml(rawKat)}</span>`
             : `<span class="kategori-dash">-</span>`;
 
         const tgl = t.tanggal || t.created_at || '-';
@@ -718,7 +793,7 @@ async function switchSubconRange(range) {
 }
 
 /**
- * Mengganti Tab Konten Detail (Pengerjaan Barang / Tracking Karyawan / Mitra Subcon / Riwayat)
+ * Mengganti Tab Konten Detail (Pengerjaan Barang / Mitra Subcon)
  */
 function switchSubconTab(tab) {
     state.currentSubconTab = tab;
@@ -726,9 +801,7 @@ function switchSubconTab(tab) {
     // Update active state tab buttons
     const tabBtns = {
         barang: document.getElementById('tabBtnBarang'),
-        karyawan: document.getElementById('tabBtnKaryawan'),
         subcon: document.getElementById('tabBtnSubcon'),
-        riwayat: document.getElementById('tabBtnRiwayat'),
     };
 
     Object.keys(tabBtns).forEach(k => {
@@ -738,9 +811,7 @@ function switchSubconTab(tab) {
     // Update active state tab panels
     const tabPanels = {
         barang: document.getElementById('tabPanelBarang'),
-        karyawan: document.getElementById('tabPanelKaryawan'),
         subcon: document.getElementById('tabPanelSubcon'),
-        riwayat: document.getElementById('tabPanelRiwayat'),
     };
 
     Object.keys(tabPanels).forEach(k => {
@@ -764,13 +835,10 @@ function handleSubconSearch(query) {
 function renderSubconModalData(data) {
     if (!data) return;
 
-    // 1. Render 4 KPI Mini
+    // 1. Render 3 KPI Mini
     const kpi = data.kpi || {};
     const totalPcsEl = document.getElementById('modalKpiTotalPcs');
     if (totalPcsEl) totalPcsEl.textContent = Number(kpi.total_output_pcs || 0).toLocaleString('id-ID');
-
-    const totalDurasiEl = document.getElementById('modalKpiTotalDurasi');
-    if (totalDurasiEl) totalDurasiEl.textContent = kpi.total_durasi_formatted || '0 Menit';
 
     const modalSubconEl = document.getElementById('modalKpiTotalSubcon');
     if (modalSubconEl) {
@@ -782,17 +850,6 @@ function renderSubconModalData(data) {
     if (modalKaryawanEl) {
         const totalKaryawan = kpi.total_karyawan_aktif || 26;
         modalKaryawanEl.textContent = `${totalKaryawan}`;
-    }
-
-    // Fallback jika ID lama masih ada
-    const karyawanEl = document.getElementById('modalKpiKaryawan');
-    if (karyawanEl) {
-        karyawanEl.textContent = `${kpi.sudah_mengisi || 0} / ${kpi.total_karyawan_aktif || 0} orang`;
-    }
-
-    const belumEl = document.getElementById('modalKpiBelumMengisi');
-    if (belumEl) {
-        belumEl.textContent = `${kpi.belum_mengisi || 0} orang`;
     }
 
     // 2. Update Label Badge & Judul Grafik
@@ -818,14 +875,8 @@ function renderSubconModalData(data) {
     const countBarangEl = document.getElementById('countBarang');
     if (countBarangEl) countBarangEl.textContent = (data.per_barang || []).length;
 
-    const countKaryawanEl = document.getElementById('countKaryawan');
-    if (countKaryawanEl) countKaryawanEl.textContent = (data.karyawan || []).length;
-
     const countSubconEl = document.getElementById('countSubcon');
     if (countSubconEl) countSubconEl.textContent = (data.per_subcon || []).length;
-
-    const countRiwayatEl = document.getElementById('countRiwayat');
-    if (countRiwayatEl) countRiwayatEl.textContent = (data.pengerjaan || []).length;
 
     // 5. Render Data Tabel dengan Filter
     renderSubconFilteredTables();
@@ -943,42 +994,22 @@ function renderSubconFilteredTables() {
     const allBarang = state.subconRawData.per_barang || [];
     const filteredBarang = !q ? allBarang : allBarang.filter(b =>
         (b.nama_barang && b.nama_barang.toLowerCase().includes(q)) ||
-        (b.kode_barang && b.kode_barang.toLowerCase().includes(q))
+        (b.kode_barang && b.kode_barang.toLowerCase().includes(q)) ||
+        (b.nama_subcon && b.nama_subcon.toLowerCase().includes(q))
     );
     renderSubconBarangTable(filteredBarang);
 
-    // 2. Filter Tabel Tracking Karyawan
-    const allKaryawan = state.subconRawData.karyawan || [];
-    const filteredKaryawan = !q ? allKaryawan : allKaryawan.filter(k =>
-        (k.nama_karyawan && k.nama_karyawan.toLowerCase().includes(q)) ||
-        (k.no_karyawan && k.no_karyawan.toLowerCase().includes(q)) ||
-        (k.status && k.status.toLowerCase().includes(q)) ||
-        (k.lokasi_subcon?.nama && k.lokasi_subcon.nama.toLowerCase().includes(q))
-    );
-    renderSubconKaryawanTable(filteredKaryawan);
-
-    // 3. Filter Tabel Subcon
+    // 2. Filter Tabel Subcon
     const allSubcon = state.subconRawData.per_subcon || [];
     const filteredSubcon = !q ? allSubcon : allSubcon.filter(s =>
         (s.nama_lokasi && s.nama_lokasi.toLowerCase().includes(q)) ||
         (s.alamat && s.alamat.toLowerCase().includes(q))
     );
     renderSubconVendorTable(filteredSubcon);
-
-    // 4. Filter Tabel Riwayat
-    const allRiwayat = state.subconRawData.pengerjaan || [];
-    const filteredRiwayat = !q ? allRiwayat : allRiwayat.filter(r =>
-        (r.nama_barang && r.nama_barang.toLowerCase().includes(q)) ||
-        (r.kode_barang && r.kode_barang.toLowerCase().includes(q)) ||
-        (r.nama_karyawan && r.nama_karyawan.toLowerCase().includes(q)) ||
-        (r.no_karyawan && r.no_karyawan.toLowerCase().includes(q)) ||
-        (r.subcon_nama && r.subcon_nama.toLowerCase().includes(q))
-    );
-    renderSubconRiwayatTable(filteredRiwayat);
 }
 
 /**
- * Render Tabel 1: Pengerjaan Per Barang (Tanpa Kolom Transaksi)
+ * Render Tabel 1: Pengerjaan Per Barang (Kolom: Nama Subcon)
  */
 function renderSubconBarangTable(items) {
     const tbody = document.getElementById('subconBarangTableBody');
@@ -1003,8 +1034,10 @@ function renderSubconBarangTable(items) {
             <td class="text-right" style="font-family: var(--font-mono); font-weight: 800; color: var(--subcon-color);">
                 ${Number(b.total_pcs || 0).toLocaleString('id-ID')} PCS
             </td>
-            <td class="text-right" style="font-weight: 600; color: var(--status-success);">
-                ${escapeHtml(b.total_durasi_formatted || '0 Menit')}
+            <td>
+                <span class="badge-status badge-closed" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-weight: 600;">
+                    <i class="fa-solid fa-industry" style="color: var(--subcon-color); margin-right: 4px;"></i>${escapeHtml(b.nama_subcon || b.subcon_nama || 'SIMAN')}
+                </span>
             </td>
             <td class="text-center" style="font-weight: 600; color: var(--text-secondary);">
                 ${b.total_karyawan || 0} orang
@@ -1014,55 +1047,7 @@ function renderSubconBarangTable(items) {
 }
 
 /**
- * Render Tabel 2: Tracking Karyawan Harian (Sudah vs Belum Setor)
- */
-function renderSubconKaryawanTable(karyawanList) {
-    const tbody = document.getElementById('subconKaryawanTableBody');
-    if (!tbody) return;
-
-    if (!karyawanList || karyawanList.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="loading-state" style="color: var(--text-muted);">
-                    <i class="fa-solid fa-users"></i> Tidak ada data karyawan yang sesuai filter.
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    tbody.innerHTML = karyawanList.map(k => {
-        const isSudah = k.status === 'sudah' || (k.submit_count > 0);
-        const statusBadge = isSudah
-            ? '<span class="badge-status badge-closed"><i class="fa-solid fa-circle-check"></i> Sudah Setor</span>'
-            : '<span class="badge-status badge-rejected"><i class="fa-solid fa-clock"></i> Belum Setor</span>';
-
-        const pengerjaanBarang = (k.pengerjaan || []).map(p =>
-            `<span style="display:inline-block; margin-right:4px;"><b>${escapeHtml(p.kode_barang)}</b> (${p.jumlah} pcs)</span>`
-        ).join(', ') || '<span style="color:#94a3b8; font-style:italic;">Belum ada penyerahan barang</span>';
-
-        return `
-            <tr>
-                <td><span class="ticket-number">${escapeHtml(k.no_karyawan)}</span></td>
-                <td style="font-weight: 700; color: var(--text-primary);">${escapeHtml(k.nama_karyawan)}</td>
-                <td><span class="badge-status badge-draft">${escapeHtml(k.lokasi_subcon?.nama || 'SIMAN')}</span></td>
-                <td>${statusBadge}</td>
-                <td class="text-right" style="font-family: var(--font-mono); font-weight: 800; color: ${isSudah ? 'var(--subcon-color)' : 'var(--text-muted)'};">
-                    ${Number(k.total_pcs || 0).toLocaleString('id-ID')} PCS
-                </td>
-                <td class="text-right" style="font-weight: 600; color: ${isSudah ? 'var(--status-success)' : 'var(--text-muted)'};">
-                    ${escapeHtml(k.total_durasi_formatted || '0 Menit')}
-                </td>
-                <td style="max-width: 280px; font-size: 0.8rem;">
-                    ${pengerjaanBarang}
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-/**
- * Render Tabel 3: Performa Mitra Subcon (Tanpa Kolom Transaksi)
+ * Render Tabel 2: Performa Mitra Subcon (Tanpa Kolom Jam Kerja)
  */
 function renderSubconVendorTable(vendors) {
     const tbody = document.getElementById('subconVendorTableBody');
@@ -1071,7 +1056,7 @@ function renderSubconVendorTable(vendors) {
     if (!vendors || vendors.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="5" class="loading-state" style="color: var(--text-muted);">
+                <td colspan="4" class="loading-state" style="color: var(--text-muted);">
                     <i class="fa-solid fa-handshake"></i> Tidak ada data mitra subcon yang sesuai filter.
                 </td>
             </tr>
@@ -1088,9 +1073,6 @@ function renderSubconVendorTable(vendors) {
             <td style="color: var(--text-secondary);">${escapeHtml(v.alamat || '-')}</td>
             <td class="text-right" style="font-family: var(--font-mono); font-weight: 800; color: var(--subcon-color);">
                 ${Number(v.total_output_pcs || 0).toLocaleString('id-ID')} PCS
-            </td>
-            <td class="text-right" style="font-weight: 600; color: var(--status-success);">
-                ${escapeHtml(v.total_durasi_formatted || '0 Menit')}
             </td>
             <td class="text-center" style="font-weight: 600; color: var(--text-primary);">
                 ${v.sudah_mengisi || 0} / ${v.total_karyawan || 0} aktif
