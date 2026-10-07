@@ -20,6 +20,12 @@ module.exports = {
         timeoutMs: 8000,
     },
 
+    // Konfigurasi API Subcon Laravel
+    subcon: {
+        url: process.env.SUBCON_API_URL || 'https://www.snam110.dpdns.org/e-subcon/api/monitoring?api_key=subcon-management-monitoring-2026',
+        timeoutMs: 10000,
+    },
+
     // Cache internal Express (detik)
     cacheTtlSeconds: parseInt(process.env.CACHE_TTL_SECONDS, 10) || 5,
 

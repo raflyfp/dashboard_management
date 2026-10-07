@@ -33,6 +33,8 @@
     --it-color: #0f5ca8;
     --tk-color: #d97706;
     --ga-color: #059669;
+    --subcon-color: #6366f1;
+    --subcon-light: #eef2ff;
     --kaizen-color: #7c3aed;
     --esys-color: #2563eb;
     --simrs-color: #d92534;
@@ -248,6 +250,7 @@ html, body {
 .card-it { border-top: 3px solid var(--it-color); }
 .card-tk { border-top: 3px solid var(--tk-color); }
 .card-ga { border-top: 3px solid var(--ga-color); }
+.card-subcon { border-top: 3px solid var(--subcon-color); }
 .card-kaizen { border-top: 3px solid var(--kaizen-color); }
 .card-esys { border-top: 3px solid var(--esys-color); }
 .card-simrs { border-top: 3px solid var(--simrs-color); }
@@ -303,6 +306,7 @@ html, body {
 .it-theme { background: var(--sna-blue-light); color: var(--it-color); }
 .tk-theme { background: #fffbeb; color: var(--tk-color); }
 .ga-theme { background: #ecfdf5; color: var(--ga-color); }
+.subcon-theme { background: var(--subcon-light); color: var(--subcon-color); }
 .kaizen-theme { background: #f5f3ff; color: var(--kaizen-color); }
 .esys-theme { background: #eff6ff; color: var(--esys-color); }
 .simrs-theme { background: #fff1f2; color: var(--simrs-color); }
@@ -351,6 +355,58 @@ html, body {
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Hero Pengerjaan Subcon (Hasil Produksi PCS) */
+.subcon-hero {
+    background: #fafafa;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.45rem 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.subcon-hero-number-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+}
+
+.subcon-val {
+    font-family: var(--font-mono);
+    font-size: 1.85rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--subcon-color);
+}
+
+.subcon-unit {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+}
+
+.subcon-hero-sub {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* Penyesuaian Label Metrik Card Subcon agar Baseline Angka Sejajar Sempurna */
+.card-subcon .metrics-row .m-lbl {
+    font-size: 0.60rem;
+    min-height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+    text-align: center;
 }
 
 /* Warna Teks Persentase Sesuai Divisi */
@@ -467,6 +523,9 @@ html, body {
 
 .ga-btn { background: var(--ga-color); color: #fff; }
 .ga-btn:hover { background: #047857; }
+
+.subcon-btn { background: var(--subcon-color); color: #fff; }
+.subcon-btn:hover { background: #4f46e5; }
 
 .ext-btn { background: #ffffff; color: var(--text-secondary); border: 1px solid var(--border-dark); }
 .ext-btn:hover { background: #f1f5f9; color: var(--text-primary); }
@@ -897,3 +956,185 @@ html, body {
         justify-content: space-between;
     }
 }
+
+/* ====================================================================
+   7. MODAL MONITORING SUBCON & GRAFIK TREN
+   ==================================================================== */
+.modal-card-xl {
+    max-width: 1250px;
+    max-height: 88vh;
+}
+
+.subcon-modal-body {
+    padding: 1.25rem 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.subcon-range-pills {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.subcon-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.85rem;
+}
+
+.subcon-kpi-card {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.kpi-icon-mini {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.subcon-kpi-card .kpi-num {
+    font-family: var(--font-mono);
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text-primary);
+}
+
+.subcon-kpi-card .kpi-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+
+/* Bagian Grafik */
+.subcon-chart-section {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.95rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.section-title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.section-title-bar h4 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.chart-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: var(--subcon-light);
+    color: var(--subcon-color);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+}
+
+.subcon-chart-container {
+    position: relative;
+    height: 220px;
+    width: 100%;
+}
+
+/* Tabs Navigasi Detail */
+.subcon-detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.subcon-tabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.25rem;
+}
+
+.subcon-tab-btn {
+    background: none;
+    border: none;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 0.5rem 0.9rem;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.subcon-tab-btn:hover {
+    color: var(--subcon-color);
+    background: #f8fafc;
+}
+
+.subcon-tab-btn.active {
+    color: var(--subcon-color);
+    background: var(--subcon-light);
+}
+
+.subcon-tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -0.35rem;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--subcon-color);
+    border-radius: 3px 3px 0 0;
+}
+
+.subcon-tab-panel {
+    display: none;
+}
+
+.subcon-tab-panel.active {
+    display: block;
+}
+
+.subcon-table th.text-right,
+.subcon-table td.text-right {
+    text-align: right;
+}
+
+.subcon-table th.text-center,
+.subcon-table td.text-center {
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .subcon-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+

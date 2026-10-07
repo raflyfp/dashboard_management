@@ -15,6 +15,7 @@ const path = require('path');
 const config = require('./config/app.config');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const ticketingService = require('./services/ticketingService');
+const subconService = require('./services/subconService');
 
 const app = express();
 
@@ -42,16 +43,32 @@ app.use('/api/dashboard', dashboardRoutes);
 
 // Health check endpoint (General System Status)
 app.get('/api/health', async (req, res) => {
-    let isOperational = false;
+    let ticketingOk = false;
+    let subconOk = false;
+
     try {
-        const ping = await ticketingService.ping();
-        isOperational = ping?.status === 'online';
+        const pingTicket = await ticketingService.ping();
+        ticketingOk = pingTicket?.status === 'online';
     } catch {
-        isOperational = false;
+        ticketingOk = false;
     }
 
+    try {
+        const pingSubcon = await subconService.ping();
+        subconOk = pingSubcon?.status === 'online';
+    } catch {
+        subconOk = false;
+    }
+
+    const isOperational = ticketingOk && subconOk;
+    const isDegraded = ticketingOk || subconOk;
+
     res.json({
-        status: isOperational ? 'operational' : 'degraded',
+        status: isOperational ? 'operational' : (isDegraded ? 'partially_degraded' : 'degraded'),
+        services: {
+            ticketing: ticketingOk ? 'online' : 'offline',
+            subcon: subconOk ? 'online' : 'offline',
+        },
         uptime_seconds: Math.floor(process.uptime()),
         timestamp: new Date().toISOString()
     });
@@ -64,21 +81,31 @@ app.listen(config.port, '0.0.0.0', async () => {
     console.log(`📡 URL Lokal     : http://localhost:${config.port}`);
     console.log(`📺 URL Layar TV   : http://localhost:${config.port}`);
     console.log(`🔗 API Ticketing : ${config.ticketing.baseUrl}`);
+    console.log(`🔗 API Subcon    : ${config.subcon.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
     console.log('----------------------------------------------------');
-    console.log('⏳ Memeriksa status koneksi ke API Ticketing...');
+    console.log('⏳ Memeriksa status koneksi ke API Eksternal...');
 
     try {
         const startTime = Date.now();
         const ping = await ticketingService.ping();
         const duration = Date.now() - startTime;
-        console.log('✅ [KONEKSI API BERHASIL]: Terhubung ke sistem Ticketing!');
+        console.log('✅ [API TICKETING BERHASIL]: Terhubung ke sistem Ticketing!');
         console.log(`   • Status Server : ${ping?.status || 'online'} (${ping?.system || 'Ticketing API Service'})`);
         console.log(`   • Kecepatan     : ${duration} ms`);
-        console.log(`   • Waktu Server  : ${ping?.server_time || '-'}`);
     } catch (err) {
-        console.error('❌ [KONEKSI API GAGAL]: Tidak dapat terhubung ke API Ticketing!');
+        console.error('❌ [API TICKETING GAGAL]: Tidak dapat terhubung ke API Ticketing!');
         console.error(`   • Error         : ${err.message}`);
-        console.warn('   • Tindakan      : Periksa TICKETING_API_URL & TICKETING_API_KEY di file .env');
+    }
+
+    try {
+        const startTimeSubcon = Date.now();
+        const pingSubcon = await subconService.ping();
+        const durationSubcon = Date.now() - startTimeSubcon;
+        console.log('✅ [API SUBCON BERHASIL]: Terhubung ke sistem E-Subcon!');
+        console.log(`   • Kecepatan     : ${durationSubcon} ms`);
+    } catch (err) {
+        console.error('❌ [API SUBCON GAGAL]: Tidak dapat terhubung ke API Subcon!');
+        console.error(`   • Error         : ${err.message}`);
     }
     console.log('====================================================');
 });

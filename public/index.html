@@ -218,49 +218,48 @@
                 </section>
 
                 <!-- ---------------------------------------------------- -->
-                <!-- BARIS 1 - CARD 4: PELAPORAN KAIZEN                   -->
+                <!-- BARIS 1 - CARD 4: PENGERJAAN SUBCON (E-SUBCON LIVE) -->
                 <!-- ---------------------------------------------------- -->
-                <section class="service-card card-kaizen" id="card-KAIZEN">
+                <section class="service-card card-subcon" id="card-SUBCON">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box kaizen-theme"><i class="fa-solid fa-lightbulb"></i></div>
-                            <h2>Pelaporan Kaizen</h2>
+                            <div class="service-icon-box subcon-theme"><i class="fa-solid fa-boxes-packing"></i></div>
+                            <h2>Pengerjaan Subcon</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
-                        <div class="percent-hero">
-                            <div class="percent-number-row">
-                                <span class="percent-val kaizen-text" id="percentKAIZEN">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                        <!-- Hero Jumlah Hasil Produksi Besar (Tanpa Persentase) -->
+                        <div class="subcon-hero">
+                            <div class="subcon-hero-number-row">
+                                <span class="subcon-val" id="totalPcsSUBCON">0</span>
+                                <span class="subcon-unit">PCS</span>
                             </div>
-                            <div class="progress-bar-track">
-                                <div class="progress-bar-fill kaizen-fill" id="barFillKAIZEN" style="width: 0%"></div>
+                            <div class="subcon-hero-sub">
+                                <i class="fa-solid fa-industry"></i> Hasil Produksi (Hari Ini)
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
+                        <!-- 3 Metrik Inti: Jumlah Subcon, Jumlah Karyawan, Jam Kerja -->
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
-                                <span class="m-val" id="totalKAIZEN">0</span>
+                                <span class="m-lbl">Jumlah Subcon</span>
+                                <span class="m-val" id="subconJumlahSubcon">1</span>
+                            </div>
+                            <div class="metric-box m-info">
+                                <span class="m-lbl">Jumlah Karyawan</span>
+                                <span class="m-val text-primary" id="subconJumlahKaryawan">26</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
-                                <span class="m-val text-success" id="selesaiKAIZEN">0</span>
-                            </div>
-                            <div class="metric-box m-warning">
-                                <span class="m-lbl">Belum</span>
-                                <span class="m-val text-warning" id="belumKAIZEN">0</span>
+                                <span class="m-lbl">Jam Kerja</span>
+                                <span class="m-val text-success" id="subconDurasi">0 Jam</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail subcon-btn" onclick="openSubconModal()">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -581,7 +580,8 @@
             </div>
             <div class="ticker-content" id="tickerWrapper">
                 <div class="ticker-items" id="tickerList">
-                    <span class="ticker-item"><i class="fa-solid fa-spinner fa-spin"></i> Memuat informasi layanan...</span>
+                    <span class="ticker-item"><i class="fa-solid fa-spinner fa-spin"></i> Memuat informasi
+                        layanan...</span>
                 </div>
             </div>
             <div class="footer-system-status">
@@ -704,8 +704,230 @@
         </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- 5. MODAL MONITORING PENGERJAAN BARANG SUBCON DENGAN GRAFIK   -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="subconModal" aria-hidden="true">
+        <div class="modal-card modal-card-xl">
+
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon subcon-theme"><i class="fa-solid fa-boxes-packing"></i></div>
+                    <div>
+                        <h3>Monitoring Pengerjaan Barang Subcon</h3>
+                        <p id="subconModalSubtitle">Data hasil produksi mitra subcon & analisis pengerjaan</p>
+                    </div>
+                </div>
+
+                <div class="modal-header-actions">
+                    <!-- Filter Rentang Waktu: Hari Ini / 7 Hari Terakhir / 30 Hari Terakhir -->
+                    <div class="filter-pills subcon-range-pills">
+                        <button class="filter-pill active" id="btnRangeToday" onclick="switchSubconRange('today')">
+                            <i class="fa-solid fa-calendar-day"></i> Hari Ini
+                        </button>
+                        <button class="filter-pill" id="btnRangeWeek" onclick="switchSubconRange('week')">
+                            <i class="fa-solid fa-calendar-week"></i> 7 Hari Terakhir
+                        </button>
+                        <button class="filter-pill" id="btnRangeMonth" onclick="switchSubconRange('month')">
+                            <i class="fa-solid fa-calendar-days"></i> 30 Hari Terakhir
+                        </button>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="subconSearchInput" placeholder="Cari nama barang / subcon / karyawan..."
+                            oninput="handleSubconSearch(this.value)">
+                    </div>
+
+                    <!-- Close Button -->
+                    <button class="modal-close-btn" onclick="closeSubconModal()" title="Tutup">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body Modal Subcon -->
+            <div class="modal-body subcon-modal-body">
+                <!-- 4 KPI Ringkasan Subcon di Modal (Fokus Track Pengerjaan Harian) -->
+                <div class="subcon-kpi-grid">
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-cubes-stacked"></i></div>
+                        <div>
+                            <div class="kpi-num" id="modalKpiTotalPcs">0</div>
+                            <div class="kpi-label">Total Hasil Produksi (PCS)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-success"><i class="fa-solid fa-business-time"></i></div>
+                        <div>
+                            <div class="kpi-num text-success" id="modalKpiTotalDurasi">0 Jam</div>
+                            <div class="kpi-label">Total Waktu Pengerjaan</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-info"><i class="fa-solid fa-industry"></i></div>
+                        <div>
+                            <div class="kpi-num text-info" id="modalKpiTotalSubcon">1</div>
+                            <div class="kpi-label">Jumlah Subcon</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-users"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiTotalKaryawan">26</div>
+                            <div class="kpi-label">Jumlah Karyawan</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bagian Grafik Tren Hasil Produksi -->
+                <div class="subcon-chart-section">
+                    <div class="section-title-bar">
+                        <h4><i class="fa-solid fa-chart-column"></i> <span id="subconChartTitle">Grafik Tren Hasil
+                                Produksi</span></h4>
+                        <span class="chart-badge" id="subconChartBadge">Hari Ini</span>
+                    </div>
+                    <div class="subcon-chart-container">
+                        <canvas id="subconChartCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tab Segmentasi Data Detail -->
+                <div class="subcon-detail-section">
+                    <div class="subcon-tabs-nav">
+                        <button class="subcon-tab-btn active" id="tabBtnBarang" onclick="switchSubconTab('barang')">
+                            <i class="fa-solid fa-box-open"></i> Pengerjaan Per Barang (<span id="countBarang">0</span>)
+                        </button>
+                        <button class="subcon-tab-btn" id="tabBtnKaryawan" onclick="switchSubconTab('karyawan')">
+                            <i class="fa-solid fa-users-gear"></i> Tracking Karyawan (<span id="countKaryawan">0</span>)
+                        </button>
+                        <button class="subcon-tab-btn" id="tabBtnSubcon" onclick="switchSubconTab('subcon')">
+                            <i class="fa-solid fa-handshake"></i> Performa Mitra Subcon (<span
+                                id="countSubcon">0</span>)
+                        </button>
+                        <button class="subcon-tab-btn" id="tabBtnRiwayat" onclick="switchSubconTab('riwayat')">
+                            <i class="fa-solid fa-clock-rotate-left"></i> Log Aktivitas (<span
+                                id="countRiwayat">0</span>)
+                        </button>
+                    </div>
+
+                    <!-- Panel Tab 1: Pengerjaan Barang -->
+                    <div class="subcon-tab-panel active" id="tabPanelBarang">
+                        <div class="table-responsive">
+                            <table class="tickets-table subcon-table">
+                                <thead>
+                                    <tr>
+                                        <th>Kode Barang</th>
+                                        <th>Nama Barang</th>
+                                        <th>Satuan</th>
+                                        <th class="text-right">Hasil Produksi</th>
+                                        <th class="text-right">Total Jam Kerja</th>
+                                        <th class="text-center">Karyawan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subconBarangTableBody">
+                                    <tr>
+                                        <td colspan="6" class="loading-state"><i
+                                                class="fa-solid fa-circle-notch fa-spin"></i> Memuat data barang...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Panel Tab 2: Tracking Karyawan Harian -->
+                    <div class="subcon-tab-panel" id="tabPanelKaryawan">
+                        <div class="table-responsive">
+                            <table class="tickets-table subcon-table">
+                                <thead>
+                                    <tr>
+                                        <th>No. Karyawan</th>
+                                        <th>Nama Karyawan</th>
+                                        <th>Mitra Subcon</th>
+                                        <th>Status Setor</th>
+                                        <th class="text-right">Hasil Output</th>
+                                        <th class="text-right">Jam Kerja</th>
+                                        <th>Barang Dikerjakan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subconKaryawanTableBody">
+                                    <tr>
+                                        <td colspan="7" class="loading-state"><i
+                                                class="fa-solid fa-circle-notch fa-spin"></i> Memuat tracking
+                                            karyawan...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Panel Tab 3: Mitra Subcon -->
+                    <div class="subcon-tab-panel" id="tabPanelSubcon">
+                        <div class="table-responsive">
+                            <table class="tickets-table subcon-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nama Mitra Subcon</th>
+                                        <th>Alamat / Lokasi</th>
+                                        <th class="text-right">Hasil Produksi (PCS)</th>
+                                        <th class="text-right">Jam Kerja</th>
+                                        <th class="text-center">Tenaga Kerja Aktif</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subconVendorTableBody">
+                                    <tr>
+                                        <td colspan="5" class="loading-state"><i
+                                                class="fa-solid fa-circle-notch fa-spin"></i> Memuat data subcon...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Panel Tab 4: Riwayat Aktivitas Pengerjaan -->
+                    <div class="subcon-tab-panel" id="tabPanelRiwayat">
+                        <div class="table-responsive">
+                            <table class="tickets-table subcon-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tanggal & Jam</th>
+                                        <th>Karyawan</th>
+                                        <th>Subcon</th>
+                                        <th>Barang</th>
+                                        <th>Pekerjaan</th>
+                                        <th class="text-right">Output (PCS)</th>
+                                        <th class="text-center">Durasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subconRiwayatTableBody">
+                                    <tr>
+                                        <td colspan="7" class="loading-state"><i
+                                                class="fa-solid fa-circle-notch fa-spin"></i> Memuat riwayat
+                                            pengerjaan...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-stats" id="subconModalFooterStats">
+                    Menampilkan data monitoring e-subcon
+                </div>
+                <button class="btn-secondary" onclick="closeSubconModal()">Tutup</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Chart.js Library untuk Visualisasi Grafik Tren -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=1.0.3"></script>
+    <script src="/js/app.js?v=1.0.4"></script>
 </body>
 
 </html>

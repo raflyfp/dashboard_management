@@ -13,6 +13,7 @@ const express = require('express');
 const router = express.Router();
 const config = require('../config/app.config');
 const ticketingService = require('../services/ticketingService');
+const subconService = require('../services/subconService');
 
 // In-memory cache sederhana untuk efisiensi beban server
 const cache = {
@@ -62,7 +63,7 @@ router.get('/config', (req, res) => {
 
 /**
  * GET /api/dashboard/stats
- * Mengumpulkan data dari API ticketing & modul aplikasi lainnya
+ * Mengumpulkan data dari API ticketing & API subcon serta modul lainnya
  */
 router.get('/stats', async (req, res) => {
     const now = Date.now();
@@ -78,18 +79,38 @@ router.get('/stats', async (req, res) => {
     }
 
     try {
-        // 2. Ambil data dari Layanan Ticketing
-        const apiData = await ticketingService.getSummary();
+        // 2. Ambil data dari Layanan Ticketing & Subcon secara paralel
+        const [ticketingSettled, subconSettled] = await Promise.allSettled([
+            ticketingService.getSummary(),
+            subconService.getMonitoringToday()
+        ]);
 
-        // Pemberitahuan status koneksi berhasil ke terminal server
-        if (lastApiStatus !== 'online') {
-            const timeStr = new Date().toLocaleTimeString('id-ID');
-            console.log(`[${timeStr}] ✅ [API TICKETING]: Berhasil terhubung & sinkronisasi data dari ${config.ticketing.baseUrl}`);
-            lastApiStatus = 'online';
+        let apiData = null;
+        if (ticketingSettled.status === 'fulfilled') {
+            apiData = ticketingSettled.value;
+            if (lastApiStatus !== 'online') {
+                const timeStr = new Date().toLocaleTimeString('id-ID');
+                console.log(`[${timeStr}] ✅ [API TICKETING]: Berhasil terhubung & sinkronisasi data dari ${config.ticketing.baseUrl}`);
+                lastApiStatus = 'online';
+            }
+        } else {
+            console.error(`❌ [API TICKETING ERROR]: ${ticketingSettled.reason?.message}`);
         }
 
-        const summaryData = apiData.data || {};
+        let subconData = null;
+        if (subconSettled.status === 'fulfilled') {
+            subconData = subconSettled.value;
+        } else {
+            console.error(`❌ [API SUBCON ERROR]: ${subconSettled.reason?.message}`);
+        }
+
+        const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
+
+        const subconRaw = subconData?.data || {};
+        const subconKpi = subconRaw.kpi || {};
+        const subconList = subconRaw.per_subcon || [];
+        const subconFirst = subconList[0] || {};
 
         // 3. Susunan 10 Modul Layanan (Sesuai Kebutuhan Manajemen SNA Medika)
         const servicesResult = {
@@ -149,18 +170,24 @@ router.get('/stats', async (req, res) => {
                 ),
             },
 
-            // --- Modul Aplikasi Lain (Siap Dihubungkan / Standby) ---
-            KAIZEN: {
-                kode: 'KAIZEN',
-                nama: 'Pelaporan Kaizen',
-                sub_nama: 'Ide & Improvement',
-                icon: 'lightbulb',
-                sumber: 'Aplikasi Kaizen',
-                is_active: false,
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+            // --- Modul Pengerjaan Barang Subcon (Aktif & Live E-Subcon API) ---
+            SUBCON: {
+                kode: 'SUBCON',
+                nama: 'Pengerjaan Subcon',
+                sub_nama: 'Mitra & Pengemasan',
+                icon: 'boxes-packing',
+                sumber: 'E-Subcon',
+                is_active: true,
+                is_production_metric: true, // Menandakan card memakai Hasil Produksi PCS
+                total_output_pcs: subconKpi.total_output_pcs ?? 0,
+                total_output_pcs_formatted: Number(subconKpi.total_output_pcs ?? 0).toLocaleString('id-ID'),
+                total_durasi: subconKpi.total_durasi_formatted || '0 Menit',
+                total_transaksi: subconKpi.total_transaksi ?? 0,
+                total_subcon: subconKpi.total_subcon_aktif ?? subconList.length ?? 1,
+                total_karyawan: subconKpi.total_karyawan_aktif ?? 0,
+                sudah_mengisi: subconKpi.sudah_mengisi ?? 0,
+                belum_mengisi: subconKpi.belum_mengisi ?? 0,
+                subcon_nama: subconFirst.nama_lokasi || 'SIMAN',
             },
             ESYS: {
                 kode: 'ESYS',
@@ -334,6 +361,39 @@ router.get('/tickets', async (req, res) => {
         return res.status(502).json({
             success: false,
             message: 'Gagal mengambil daftar tiket.',
+            error: error.message
+        });
+    }
+});
+
+/**
+ * GET /api/dashboard/subcon
+ * Mengambil detail monitoring pengerjaan barang subcon lengkap dengan grafik harian & rincian barang
+ * Query params:
+ * - range: 'today' | 'week' | 'month' (default: 'today')
+ * - tanggal_mulai: YYYY-MM-DD
+ * - tanggal_akhir: YYYY-MM-DD
+ * - search: pencarian barang atau karyawan
+ */
+router.get('/subcon', async (req, res) => {
+    const { range = 'today', tanggal_mulai, tanggal_akhir, search } = req.query;
+    try {
+        const data = await subconService.getMonitoringData({
+            range,
+            tanggal_mulai,
+            tanggal_akhir,
+            search
+        });
+
+        return res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('[API ERROR /subcon]:', error.message);
+        return res.status(502).json({
+            success: false,
+            message: 'Gagal mengambil data monitoring pengerjaan subcon.',
             error: error.message
         });
     }
