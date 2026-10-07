@@ -264,17 +264,35 @@ function renderServiceCards(layanan) {
             efektifEl.textContent = `/ ${item.total_efektif || item.total_tiket} valid`;
         }
 
-        // 2. Persentase & Progress Bar Fill
+        // 2. Persentase & Progress Bar Fill (Standarisasi Warna Traffic Light KPI)
         const percent = item.persentase_selesai || 0;
         const percentEl = document.getElementById(`percent${code}`);
-        if (percentEl) {
-            percentEl.textContent = `${percent}%`;
+        const barFill = document.getElementById(`barFill${code}`);
+
+        // Ambang Batas KPI:
+        // - Merah: dibawah 75% (< 75%)
+        // - Kuning: 76% sampai 85% (75% - 85%)
+        // - Hijau: diatas 85% (> 85%)
+        let kpiTextClass = 'kpi-color-red';
+        let kpiFillClass = 'kpi-fill-red';
+
+        if (percent > 85) {
+            kpiTextClass = 'kpi-color-green';
+            kpiFillClass = 'kpi-fill-green';
+        } else if (percent >= 75) {
+            kpiTextClass = 'kpi-color-yellow';
+            kpiFillClass = 'kpi-fill-yellow';
         }
 
-        // Update lebar progress bar di bawah angka persentase
-        const barFill = document.getElementById(`barFill${code}`);
+        if (percentEl) {
+            percentEl.textContent = `${percent}%`;
+            percentEl.className = `percent-val ${kpiTextClass}`;
+        }
+
+        // Update lebar dan warna progress bar di bawah angka persentase
         if (barFill) {
             barFill.style.width = `${percent}%`;
+            barFill.className = `progress-bar-fill ${kpiFillClass}`;
         }
     });
 }

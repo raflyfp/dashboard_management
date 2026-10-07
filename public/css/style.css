@@ -246,18 +246,13 @@ html, body {
     min-height: 0; /* Menghilangkan tinggi kosong yang melompong */
 }
 
-/* Border Atas Solid */
-.card-it { border-top: 3px solid var(--it-color); }
-.card-tk { border-top: 3px solid var(--tk-color); }
-.card-ga { border-top: 3px solid var(--ga-color); }
-.card-subcon { border-top: 3px solid var(--subcon-color); }
-.card-kaizen { border-top: 3px solid var(--kaizen-color); }
-.card-esys { border-top: 3px solid var(--esys-color); }
-.card-simrs { border-top: 3px solid var(--simrs-color); }
-.card-farmasi { border-top: 3px solid var(--farmasi-color); }
-.card-lab { border-top: 3px solid var(--lab-color); }
-.card-billing { border-top: 3px solid var(--billing-color); }
-.card-sdm { border-top: 3px solid var(--sdm-color); }
+/* Penyeragaman Border Atas Kartu */
+.card-it, .card-tk, .card-ga, .card-subcon {
+    border-top: 3px solid var(--sna-blue);
+}
+.card-kaizen, .card-esys, .card-simrs, .card-farmasi, .card-lab, .card-billing, .card-sdm {
+    border-top: 3px solid var(--border-dark);
+}
 
 /* Header Kartu */
 .card-header {
@@ -302,18 +297,15 @@ html, body {
 .status-live { background: var(--status-success-bg); color: var(--status-success); }
 .status-standby { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
-/* Icon Background Themes */
-.it-theme { background: var(--sna-blue-light); color: var(--it-color); }
-.tk-theme { background: #fffbeb; color: var(--tk-color); }
-.ga-theme { background: #ecfdf5; color: var(--ga-color); }
-.subcon-theme { background: var(--subcon-light); color: var(--subcon-color); }
-.kaizen-theme { background: #f5f3ff; color: var(--kaizen-color); }
-.esys-theme { background: #eff6ff; color: var(--esys-color); }
-.simrs-theme { background: #fff1f2; color: var(--simrs-color); }
-.farmasi-theme { background: #f0fdfa; color: var(--farmasi-color); }
-.lab-theme { background: #f0f9ff; color: var(--lab-color); }
-.billing-theme { background: #fff7ed; color: var(--billing-color); }
-.sdm-theme { background: #f8fafc; color: var(--sdm-color); }
+/* Penyeragaman Icon Background Themes */
+.it-theme, .tk-theme, .ga-theme, .subcon-theme {
+    background: var(--sna-blue-light);
+    color: var(--sna-blue);
+}
+.kaizen-theme, .esys-theme, .simrs-theme, .farmasi-theme, .lab-theme, .billing-theme, .sdm-theme {
+    background: #f1f5f9;
+    color: #64748b;
+}
 
 /* ====================================================================
    4. BODY KARTU: HERO PERSENTASE BESAR & 3 METRIK
@@ -413,19 +405,34 @@ html, body {
     text-align: center;
 }
 
-/* Warna Teks Persentase Sesuai Divisi */
-.it-text { color: var(--it-color); }
-.tk-text { color: var(--tk-color); }
-.ga-text { color: var(--ga-color); }
-.kaizen-text { color: var(--kaizen-color); }
-.esys-text { color: var(--esys-color); }
-.simrs-text { color: var(--simrs-color); }
-.farmasi-text { color: var(--farmasi-color); }
-.lab-text { color: var(--lab-color); }
-.billing-text { color: var(--billing-color); }
-.sdm-text { color: var(--sdm-color); }
+/* ====================================================================
+   STANDARISASI WARNA PERSENTASE & PROGRESS BAR (TRAFFIC LIGHT KPI)
+   - Merah  : < 75%
+   - Kuning : 76% - 85%
+   - Hijau  : > 85%
+   ==================================================================== */
+.kpi-color-red {
+    color: #ef4444 !important; /* Merah (< 75%) */
+}
+.kpi-fill-red {
+    background-color: #ef4444 !important;
+}
 
-/* Progress Bar Track & Fill */
+.kpi-color-yellow {
+    color: #f59e0b !important; /* Kuning / Amber (76% - 85%) */
+}
+.kpi-fill-yellow {
+    background-color: #f59e0b !important;
+}
+
+.kpi-color-green {
+    color: #10b981 !important; /* Hijau (> 85%) */
+}
+.kpi-fill-green {
+    background-color: #10b981 !important;
+}
+
+/* Progress Bar Track & Base Fill */
 .progress-bar-track {
     width: 100%;
     height: 6px;
@@ -437,19 +444,8 @@ html, body {
 .progress-bar-fill {
     height: 100%;
     border-radius: 3px;
-    transition: width 0.6s ease;
+    transition: width 0.6s ease, background-color 0.3s ease;
 }
-
-.it-fill { background-color: var(--it-color); }
-.tk-fill { background-color: var(--tk-color); }
-.ga-fill { background-color: var(--ga-color); }
-.kaizen-fill { background-color: var(--kaizen-color); }
-.esys-fill { background-color: var(--esys-color); }
-.simrs-fill { background-color: var(--simrs-color); }
-.farmasi-fill { background-color: var(--farmasi-color); }
-.lab-fill { background-color: var(--lab-color); }
-.billing-fill { background-color: var(--billing-color); }
-.sdm-fill { background-color: var(--sdm-color); }
 
 /* 3 Metrik Inti (Total, Selesai, Belum) */
 .metrics-row {
@@ -518,18 +514,14 @@ html, body {
     transition: background 0.15s ease;
 }
 
-/* Tombol Aksen Flat */
-.it-btn { background: var(--it-color); color: #fff; }
-.it-btn:hover { background: #0c4a86; }
-
-.tk-btn { background: var(--tk-color); color: #fff; }
-.tk-btn:hover { background: #b45309; }
-
-.ga-btn { background: var(--ga-color); color: #fff; }
-.ga-btn:hover { background: #047857; }
-
-.subcon-btn { background: var(--subcon-color); color: #fff; }
-.subcon-btn:hover { background: #4f46e5; }
+/* Penyeragaman Tombol Detail (Biru Tema SNA Medika untuk Semua Kartu Aktif) */
+.it-btn, .tk-btn, .ga-btn, .subcon-btn {
+    background: var(--sna-blue);
+    color: #fff;
+}
+.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover {
+    background: #0c4a86;
+}
 
 .ext-btn { background: #ffffff; color: var(--text-secondary); border: 1px solid var(--border-dark); }
 .ext-btn:hover { background: #f1f5f9; color: var(--text-primary); }
