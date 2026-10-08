@@ -78,11 +78,12 @@ File [`.env`](file:///c:/laragon/www/dashboard_management/.env) menyimpan parame
 # Port tempat aplikasi Dashboard Express berjalan
 PORT=3000
 
-# Base URL API Ticketing Laravel (di Laragon)
-TICKETING_API_URL=http://127.0.0.1:8002/api/v1
+# Base URL API Ticketing (Format satu pintu dengan api_key seperti API Subcon)
+TICKETING_API_URL=https://www.snam110.dpdns.org/helpdesk/api/monitoring?api_key=ticketing-monitoring-2026
 
-# API Key resmi sistem ticketing
-TICKETING_API_KEY=
+# API Subcon
+SUBCON_API_URL=https://www.snam110.dpdns.org/e-subcon/api/monitoring?api_key=subcon-management-monitoring-2026
+
 # Durasi Cache internal Express (detik) untuk efisiensi beban server
 CACHE_TTL_SECONDS=5
 

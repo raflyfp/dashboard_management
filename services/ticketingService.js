@@ -2,74 +2,176 @@
  * ====================================================================
  * SERVICE: TICKETING API CLIENT
  * ====================================================================
- * Bertanggung jawab khusus untuk komunikasi ke API Ticketing Laravel.
- * Terpisah dari logika Express agar mudah di-maintain dan di-test.
+ * Bertanggung jawab khusus untuk komunikasi ke API Monitoring Ticketing.
+ * Dibangun dengan arsitektur & pola yang sama persis seperti subconService:
+ * - Menggunakan URL tunggal dengan api_key (?api_key=...)
+ * - Caching in-memory untuk efisiensi beban server
+ * - Agregasi data untuk kebutuhan kartu layanan (IT, TK, GA) & modal tiket
  * ====================================================================
  */
 
 const axios = require('axios');
 const config = require('../config/app.config');
 
-// Normalisasi Base URL agar terhindar dari double slash (//) atau trailing slash
-function normalizeBaseUrl(rawUrl) {
-    if (!rawUrl) return '';
-    try {
-        const u = new URL(rawUrl.trim());
-        u.pathname = u.pathname.replace(/\/+/g, '/').replace(/\/$/, '');
-        return u.toString().replace(/\/$/, '');
-    } catch {
-        return rawUrl.trim().replace(/\/+$/, '');
+// In-memory cache untuk meminimalkan beban request ke server ticketing
+const cache = {
+    summary: { data: null, timestamp: 0 },
+    tickets: new Map(), // key: cacheKey -> { data, timestamp }
+};
+
+const CACHE_TTL_MS = config.cacheTtlSeconds * 1000;
+
+/**
+ * Bangun URL lengkap dengan parameter query yang aman (identik dengan buildSubconUrl)
+ */
+function buildTicketingUrl(params = {}) {
+    const rawUrl = config.ticketing.url;
+    if (!rawUrl) {
+        throw new Error('TICKETING_API_URL belum dikonfigurasi di file .env');
     }
+
+    const u = new URL(rawUrl.trim());
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null && value !== '') {
+            u.searchParams.set(key, value);
+        }
+    }
+    return u.toString();
 }
 
-// Inisialisasi Axios instance dengan Base URL dan Header API Key
-const apiClient = axios.create({
-    baseURL: normalizeBaseUrl(config.ticketing.baseUrl),
-    timeout: config.ticketing.timeoutMs,
+/**
+ * Buat instance Axios dengan konfigurasi timeout
+ */
+const httpClient = axios.create({
+    timeout: config.ticketing.timeoutMs || 10000,
     headers: {
         'Accept': 'application/json',
-        'X-API-KEY': config.ticketing.apiKey,
     }
 });
 
 const ticketingService = {
     /**
-     * Mengambil ringkasan statistik (summary) dari Laravel Ticketing
+     * Mengambil ringkasan statistik (summary) monitoring ticketing
+     * Mengembalikan data KPI dan layanan_monitoring { IT, TK, GA }
      */
-    async getSummary() {
-        const response = await apiClient.get('/monitoring/summary');
-        if (!response.data || !response.data.success) {
-            throw new Error(response.data?.message || 'Gagal mengambil summary dari sistem ticketing');
+    async getSummary(force = false) {
+        const now = Date.now();
+        if (!force && cache.summary.data && (now - cache.summary.timestamp < CACHE_TTL_MS)) {
+            return cache.summary.data;
         }
-        return response.data;
+
+        const targetUrl = buildTicketingUrl();
+        const response = await httpClient.get(targetUrl);
+        const json = response.data;
+
+        if (!json || !json.success) {
+            throw new Error(json?.message || 'Gagal memuat summary dari API Monitoring Ticketing');
+        }
+
+        const rawData = json.data || {};
+
+        // Bentuk layanan_monitoring map { IT: {...}, TK: {...}, GA: {...} }
+        // agar kompatibel langsung dengan dashboardRoutes & frontend
+        const layananMap = {};
+        if (Array.isArray(rawData.per_layanan)) {
+            rawData.per_layanan.forEach(item => {
+                if (item && item.kode) {
+                    layananMap[item.kode] = {
+                        ...item,
+                        total_tiket: item.total_tiket ?? 0,
+                        selesai: item.selesai ?? 0,
+                        belum_selesai: item.belum_selesai ?? 0,
+                        ditolak: item.ditolak ?? 0,
+                        persentase_selesai: item.persentase_selesai ?? 0,
+                    };
+                }
+            });
+        }
+
+        const resultPayload = {
+            success: true,
+            message: json.message,
+            server_time: json.meta?.timestamp || new Date().toISOString(),
+            data: {
+                ...rawData,
+                total_tiket_aktif: rawData.kpi?.total_tiket_aktif ?? 0,
+                layanan_monitoring: layananMap,
+            }
+        };
+
+        cache.summary.data = resultPayload;
+        cache.summary.timestamp = now;
+        return resultPayload;
     },
 
     /**
      * Mengambil daftar tiket dengan filter spesifik
-     * @param {Object} params - { service, status, limit }
+     * @param {Object} params - { service, status, limit, search }
      */
-    async getTickets({ service, status, limit = 50 }) {
-        // Normalisasi status jika dari frontend mengirim 'ditolak'
+    async getTickets({ service, status, limit = 50, search } = {}) {
+        const now = Date.now();
         let targetStatus = status;
         if (status === 'ditolak') targetStatus = 'rejected';
+        else if (status === 'all') targetStatus = undefined;
 
-        const response = await apiClient.get('/monitoring/tickets', {
-            params: {
-                service: service || undefined,
-                status: targetStatus || undefined,
-                limit: Math.min(parseInt(limit, 10) || 50, 200)
-            }
+        const effectiveLimit = Math.min(parseInt(limit, 10) || 50, 200);
+        const cacheKey = `${service || 'ALL'}_${targetStatus || 'ALL'}_${effectiveLimit}_${search || ''}`;
+
+        const cached = cache.tickets.get(cacheKey);
+        if (cached && (now - cached.timestamp < CACHE_TTL_MS)) {
+            return cached.data;
+        }
+
+        const targetUrl = buildTicketingUrl({
+            service: service || undefined,
+            status: targetStatus || undefined,
+            limit: effectiveLimit,
+            search: search || undefined
         });
+
+        const response = await httpClient.get(targetUrl);
+        const json = response.data;
+
+        if (!json || !json.success) {
+            throw new Error(json?.message || 'Gagal memuat daftar tiket dari API Monitoring Ticketing');
+        }
+
+        const tickets = json.data?.tickets || [];
+        const resultPayload = {
+            success: true,
+            data: tickets,
+            tickets: tickets,
+            total_tickets: json.data?.total_tickets || tickets.length,
+            kpi: json.data?.kpi,
+            per_layanan: json.data?.per_layanan
+        };
+
+        cache.tickets.set(cacheKey, { data: resultPayload, timestamp: now });
+        return resultPayload;
+    },
+
+    /**
+     * Mengambil data monitoring mentah lengkap
+     */
+    async getMonitoringData(params = {}) {
+        const targetUrl = buildTicketingUrl(params);
+        const response = await httpClient.get(targetUrl);
         return response.data;
     },
 
     /**
-     * Health check koneksi ke Laravel Ticketing
+     * Health check koneksi ke API Ticketing
      */
     async ping() {
-        const response = await apiClient.get('/ping', { timeout: 3000 });
-        return response.data;
+        const targetUrl = buildTicketingUrl({ limit: 1 });
+        const res = await httpClient.get(targetUrl, { timeout: 5000 });
+        return {
+            status: res.data?.success ? 'online' : 'error',
+            system: 'Ticketing Monitoring API',
+            message: res.data?.message || 'OK'
+        };
     }
 };
 
 module.exports = ticketingService;
+

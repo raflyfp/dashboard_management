@@ -79,8 +79,7 @@ app.listen(config.port, '0.0.0.0', async () => {
     console.log('====================================================');
     console.log('🚀 SNA MEDIKA - MANAGEMENT MONITORING DASHBOARD');
     console.log(`📡 URL Lokal     : http://localhost:${config.port}`);
-    console.log(`📺 URL Layar TV   : http://localhost:${config.port}`);
-    console.log(`🔗 API Ticketing : ${config.ticketing.baseUrl}`);
+    console.log(`🔗 API Ticketing : ${config.ticketing.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
     console.log(`🔗 API Subcon    : ${config.subcon.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
     console.log('----------------------------------------------------');
     console.log('⏳ Memeriksa status koneksi ke API Eksternal...');

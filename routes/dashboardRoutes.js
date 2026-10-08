@@ -81,8 +81,8 @@ router.get('/stats', async (req, res) => {
     try {
         // 2. Ambil data dari Layanan Ticketing & Subcon secara paralel
         const [ticketingSettled, subconSettled] = await Promise.allSettled([
-            ticketingService.getSummary(),
-            subconService.getMonitoringToday()
+            ticketingService.getSummary(forceRefresh),
+            subconService.getMonitoringToday(forceRefresh)
         ]);
 
         let apiData = null;
@@ -90,7 +90,7 @@ router.get('/stats', async (req, res) => {
             apiData = ticketingSettled.value;
             if (lastApiStatus !== 'online') {
                 const timeStr = new Date().toLocaleTimeString('id-ID');
-                console.log(`[${timeStr}] ✅ [API TICKETING]: Berhasil terhubung & sinkronisasi data dari ${config.ticketing.baseUrl}`);
+                console.log(`[${timeStr}] ✅ [API TICKETING]: Berhasil terhubung & sinkronisasi data dari ${config.ticketing.url}`);
                 lastApiStatus = 'online';
             }
         } else {
@@ -106,6 +106,11 @@ router.get('/stats', async (req, res) => {
 
         const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
+        if (Object.keys(rawCards).length === 0 && Array.isArray(summaryData.per_layanan)) {
+            summaryData.per_layanan.forEach(item => {
+                if (item?.kode) rawCards[item.kode] = item;
+            });
+        }
 
         const subconRaw = subconData?.data || {};
         const subconKpi = subconRaw.kpi || {};
@@ -287,7 +292,7 @@ router.get('/stats', async (req, res) => {
                 total_ditolak: totalDitolak,
                 total_efektif: totalEfektifGlobal,
                 persentase_selesai: persentaseGlobal,
-                total_aktif: summaryData.total_tiket_aktif || 0,
+                total_aktif: summaryData.kpi?.total_tiket_aktif ?? summaryData.total_tiket_aktif ?? 0,
             },
             layanan: servicesResult,
             perlu_perhatian: sanitizedPerluPerhatian,
