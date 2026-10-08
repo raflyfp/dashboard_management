@@ -19,9 +19,9 @@ const cache = {
     tickets: new Map(), // key: cacheKey -> { data, timestamp }
 };
 
-// Durasi cache summary (10 detik) dan tiket (45 detik) agar akses detail instan
+// Durasi cache summary (10 detik) dan tiket (15 detik) agar tetap sangat responsif & selalu fresh
 const SUMMARY_CACHE_TTL_MS = Math.max(config.cacheTtlSeconds * 1000, 10000);
-const TICKET_CACHE_TTL_MS = 45 * 1000;
+const TICKET_CACHE_TTL_MS = 15 * 1000;
 
 /**
  * Bangun URL lengkap dengan parameter query yang aman (identik dengan buildSubconUrl)
@@ -124,7 +124,7 @@ const ticketingService = {
             for (const status of statuses) {
                 const cacheKey = `${service}_${status}_all_`;
                 const cached = cache.tickets.get(cacheKey);
-                if (!cached || (Date.now() - cached.timestamp > 30000)) {
+                if (!cached || (Date.now() - cached.timestamp > 15000)) {
                     try {
                         await ticketingService.getTickets({ service, status, limit: 'all' });
                     } catch {
@@ -137,9 +137,9 @@ const ticketingService = {
 
     /**
      * Mengambil daftar tiket dengan filter spesifik
-     * @param {Object} params - { service, status, limit, search }
+     * @param {Object} params - { service, status, limit, search, force }
      */
-    async getTickets({ service, status, limit = 'all', search } = {}) {
+    async getTickets({ service, status, limit = 'all', search, force = false } = {}) {
         const now = Date.now();
         let targetStatus = status || 'all';
         if (targetStatus === 'ditolak') targetStatus = 'rejected';
@@ -148,7 +148,7 @@ const ticketingService = {
         const cacheKey = `${service || 'ALL'}_${targetStatus}_${effectiveLimit}_${search || ''}`;
 
         const cached = cache.tickets.get(cacheKey);
-        if (cached && (now - cached.timestamp < TICKET_CACHE_TTL_MS)) {
+        if (!force && cached && (now - cached.timestamp < TICKET_CACHE_TTL_MS)) {
             return cached.data;
         }
 

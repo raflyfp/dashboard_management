@@ -825,6 +825,37 @@ html, body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    color: #ef4444;
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+
+.modal-refresh-btn {
+    background: #ffffff;
+    border: 1px solid var(--border-dark);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-refresh-btn:hover {
+    color: var(--sna-blue);
+    border-color: var(--sna-blue);
+    background: #f0f7ff;
+}
+
+.modal-refresh-btn:active {
+    transform: scale(0.95);
 }
 
 .modal-body {

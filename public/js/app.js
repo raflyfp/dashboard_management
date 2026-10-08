@@ -486,7 +486,7 @@ async function openTicketModal(serviceCode, serviceTitle) {
     await loadModalTickets(serviceCode, 'all');
 }
 
-async function loadModalTickets(serviceCode, filterStatus = 'all') {
+async function loadModalTickets(serviceCode, filterStatus = 'all', force = false) {
     let queryStatus = filterStatus;
     if (filterStatus === 'ditolak') queryStatus = 'rejected';
 
@@ -494,11 +494,11 @@ async function loadModalTickets(serviceCode, filterStatus = 'all') {
     if (!state.ticketCache) state.ticketCache = {};
     const cached = state.ticketCache[cacheKey];
 
-    // Jika data tab ini sudah ada di cache, tampilkan langsung instan (0 ms)!
-    if (cached) {
+    // Jika data tab ini sudah ada di cache & tidak dipaksa refresh, tampilkan langsung instan (0 ms)!
+    if (!force && cached) {
         state.modalRawTickets = cached.data;
         renderFilteredTickets();
-        if (Date.now() - cached.timestamp < 45000) {
+        if (Date.now() - cached.timestamp < 15000) {
             return;
         }
     } else {
@@ -506,7 +506,8 @@ async function loadModalTickets(serviceCode, filterStatus = 'all') {
     }
 
     try {
-        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=all`;
+        const forceParam = force ? '&force=true' : '';
+        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=all${forceParam}`;
         const response = await fetch(url);
         const json = await response.json();
 
@@ -527,8 +528,28 @@ async function loadModalTickets(serviceCode, filterStatus = 'all') {
 
     } catch (error) {
         console.error('Error saat load modal tickets:', error);
-        if (!cached) {
+        if (!cached || force) {
             renderTicketTableError(error.message);
+        }
+    }
+}
+
+async function refreshModalTickets() {
+    if (!state.currentServiceModal) return;
+    const btn = document.getElementById('btnRefreshTickets');
+    const icon = btn ? btn.querySelector('i') : null;
+    if (icon) icon.classList.add('fa-spin');
+
+    // Kosongkan cache frontend untuk layanan ini agar semua tab ikut segar
+    state.ticketCache = {};
+
+    try {
+        await loadModalTickets(state.currentServiceModal, state.currentModalFilter || 'all', true);
+    } finally {
+        if (icon) {
+            setTimeout(() => {
+                icon.classList.remove('fa-spin');
+            }, 500);
         }
     }
 }
