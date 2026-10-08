@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <!-- Stylesheet Tema Flat SNA Medika -->
-    <link rel="stylesheet" href="/css/style.css?v=1.0.8">
+    <link rel="stylesheet" href="/css/style.css?v=2.3.0">
 </head>
 
 <body>
@@ -648,10 +648,47 @@
                             </tr>
                         </thead>
                         <tbody id="ticketsTableBody">
-                            <tr>
-                                <td colspan="7" class="loading-state">
-                                    <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat data tiket...
+                            <tr class="skeleton-row">
+                                <td><span class="skeleton-box" style="width: 105px; height: 16px;"></span></td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                                        <span class="skeleton-box" style="width: 82%; height: 15px;"></span>
+                                        <span class="skeleton-box" style="width: 40%; height: 10px; opacity: 0.6;"></span>
+                                    </div>
                                 </td>
+                                <td><span class="skeleton-pill" style="width: 36px;"></span></td>
+                                <td><span class="skeleton-box" style="width: 115px; height: 14px;"></span></td>
+                                <td><span class="skeleton-box" style="width: 120px; height: 14px;"></span></td>
+                                <td><span class="skeleton-badge" style="width: 72px;"></span></td>
+                                <td><span class="skeleton-box" style="width: 85px; height: 13px;"></span></td>
+                            </tr>
+                            <tr class="skeleton-row">
+                                <td><span class="skeleton-box" style="width: 115px; height: 16px;"></span></td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                                        <span class="skeleton-box" style="width: 60%; height: 15px;"></span>
+                                        <span class="skeleton-box" style="width: 35%; height: 10px; opacity: 0.6;"></span>
+                                    </div>
+                                </td>
+                                <td><span class="skeleton-pill" style="width: 48px;"></span></td>
+                                <td><span class="skeleton-box" style="width: 95px; height: 14px;"></span></td>
+                                <td><span class="skeleton-box" style="width: 105px; height: 14px;"></span></td>
+                                <td><span class="skeleton-badge" style="width: 64px;"></span></td>
+                                <td><span class="skeleton-box" style="width: 90px; height: 13px;"></span></td>
+                            </tr>
+                            <tr class="skeleton-row">
+                                <td><span class="skeleton-box" style="width: 100px; height: 16px;"></span></td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                                        <span class="skeleton-box" style="width: 88%; height: 15px;"></span>
+                                        <span class="skeleton-box" style="width: 45%; height: 10px; opacity: 0.6;"></span>
+                                    </div>
+                                </td>
+                                <td><span class="skeleton-pill" style="width: 36px;"></span></td>
+                                <td><span class="skeleton-box" style="width: 130px; height: 14px;"></span></td>
+                                <td><span class="skeleton-box" style="width: 100px; height: 14px;"></span></td>
+                                <td><span class="skeleton-badge" style="width: 80px;"></span></td>
+                                <td><span class="skeleton-box" style="width: 80px; height: 13px;"></span></td>
                             </tr>
                         </tbody>
                     </table>
@@ -808,9 +845,29 @@
                                     </tr>
                                 </thead>
                                 <tbody id="subconBarangTableBody">
-                                    <tr>
-                                        <td colspan="6" class="loading-state"><i
-                                                class="fa-solid fa-circle-notch fa-spin"></i> Memuat data barang...</td>
+                                    <tr class="skeleton-row">
+                                        <td><span class="skeleton-box" style="width: 80px; height: 16px;"></span></td>
+                                        <td><span class="skeleton-box" style="width: 80%; height: 15px;"></span></td>
+                                        <td><span class="skeleton-pill" style="width: 38px;"></span></td>
+                                        <td class="text-right"><span class="skeleton-box" style="width: 70px; height: 16px;"></span></td>
+                                        <td><span class="skeleton-badge" style="width: 75px;"></span></td>
+                                        <td class="text-center"><span class="skeleton-box" style="width: 40px; height: 14px;"></span></td>
+                                    </tr>
+                                    <tr class="skeleton-row">
+                                        <td><span class="skeleton-box" style="width: 80px; height: 16px;"></span></td>
+                                        <td><span class="skeleton-box" style="width: 60%; height: 15px;"></span></td>
+                                        <td><span class="skeleton-pill" style="width: 38px;"></span></td>
+                                        <td class="text-right"><span class="skeleton-box" style="width: 70px; height: 16px;"></span></td>
+                                        <td><span class="skeleton-badge" style="width: 75px;"></span></td>
+                                        <td class="text-center"><span class="skeleton-box" style="width: 40px; height: 14px;"></span></td>
+                                    </tr>
+                                    <tr class="skeleton-row">
+                                        <td><span class="skeleton-box" style="width: 80px; height: 16px;"></span></td>
+                                        <td><span class="skeleton-box" style="width: 72%; height: 15px;"></span></td>
+                                        <td><span class="skeleton-pill" style="width: 38px;"></span></td>
+                                        <td class="text-right"><span class="skeleton-box" style="width: 70px; height: 16px;"></span></td>
+                                        <td><span class="skeleton-badge" style="width: 75px;"></span></td>
+                                        <td class="text-center"><span class="skeleton-box" style="width: 40px; height: 14px;"></span></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -830,9 +887,17 @@
                                     </tr>
                                 </thead>
                                 <tbody id="subconVendorTableBody">
-                                    <tr>
-                                        <td colspan="4" class="loading-state"><i
-                                                class="fa-solid fa-circle-notch fa-spin"></i> Memuat data subcon...</td>
+                                    <tr class="skeleton-row">
+                                        <td><span class="skeleton-box" style="width: 120px; height: 16px;"></span></td>
+                                        <td><span class="skeleton-box" style="width: 160px; height: 14px;"></span></td>
+                                        <td class="text-right"><span class="skeleton-box" style="width: 80px; height: 16px;"></span></td>
+                                        <td class="text-center"><span class="skeleton-box" style="width: 45px; height: 14px;"></span></td>
+                                    </tr>
+                                    <tr class="skeleton-row">
+                                        <td><span class="skeleton-box" style="width: 110px; height: 16px;"></span></td>
+                                        <td><span class="skeleton-box" style="width: 140px; height: 14px;"></span></td>
+                                        <td class="text-right"><span class="skeleton-box" style="width: 75px; height: 16px;"></span></td>
+                                        <td class="text-center"><span class="skeleton-box" style="width: 45px; height: 14px;"></span></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -855,7 +920,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=1.0.8"></script>
+    <script src="/js/app.js?v=2.3.0"></script>
 </body>
 
 </html>

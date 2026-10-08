@@ -17,7 +17,7 @@ const cache = {
     range: new Map(), // key: range_key -> { data, timestamp }
 };
 
-const CACHE_TTL_MS = config.cacheTtlSeconds * 1000;
+const CACHE_TTL_MS = Math.max(config.cacheTtlSeconds * 1000, 45000);
 
 /**
  * Format Date ke string YYYY-MM-DD

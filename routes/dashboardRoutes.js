@@ -335,18 +335,21 @@ router.get('/stats', async (req, res) => {
  * Mengambil daftar tiket spesifik
  */
 router.get('/tickets', async (req, res) => {
-    const { service, status, limit = 30 } = req.query;
-    const cacheKey = `${service || 'ALL'}_${status || 'DEFAULT'}_${limit}`;
+    const { service, status = 'all', limit = 'all' } = req.query;
+    let targetStatus = status;
+    if (status === 'ditolak') targetStatus = 'rejected';
+
+    const cacheKey = `${service || 'ALL'}_${targetStatus}_${limit}`;
     const now = Date.now();
 
-    // Cache tiket 5 detik
+    // Cache tiket 45 detik agar instan saat dibuka dari frontend
     const cachedItem = cache.tickets.get(cacheKey);
-    if (cachedItem && (now - cachedItem.timestamp < 5000)) {
+    if (cachedItem && (now - cachedItem.timestamp < 45000)) {
         return res.json(cachedItem.data);
     }
 
     try {
-        const result = await ticketingService.getTickets({ service, status, limit });
+        const result = await ticketingService.getTickets({ service, status: targetStatus, limit });
         const rawTickets = result.data || result.tickets || [];
         const sanitizedTickets = rawTickets.map(t => ({
             ...t,

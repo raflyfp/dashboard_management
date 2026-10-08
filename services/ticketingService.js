@@ -19,7 +19,9 @@ const cache = {
     tickets: new Map(), // key: cacheKey -> { data, timestamp }
 };
 
-const CACHE_TTL_MS = config.cacheTtlSeconds * 1000;
+// Durasi cache summary (10 detik) dan tiket (45 detik) agar akses detail instan
+const SUMMARY_CACHE_TTL_MS = Math.max(config.cacheTtlSeconds * 1000, 10000);
+const TICKET_CACHE_TTL_MS = 45 * 1000;
 
 /**
  * Bangun URL lengkap dengan parameter query yang aman (identik dengan buildSubconUrl)
@@ -56,7 +58,7 @@ const ticketingService = {
      */
     async getSummary(force = false) {
         const now = Date.now();
-        if (!force && cache.summary.data && (now - cache.summary.timestamp < CACHE_TTL_MS)) {
+        if (!force && cache.summary.data && (now - cache.summary.timestamp < SUMMARY_CACHE_TTL_MS)) {
             return cache.summary.data;
         }
 
@@ -101,30 +103,58 @@ const ticketingService = {
 
         cache.summary.data = resultPayload;
         cache.summary.timestamp = now;
+
+        // Otomatis pre-warm data tiket di background agar saat tombol "Lihat Detail" ditekan,
+        // responnya langsung instan (0 ms) tanpa menunggu pemanggilan API ke WAN!
+        setTimeout(() => {
+            ticketingService.prewarmTickets().catch(() => {});
+        }, 200);
+
         return resultPayload;
+    },
+
+    /**
+     * Background pre-warming tiket per layanan untuk semua tab filter
+     */
+    async prewarmTickets() {
+        const services = ['IT', 'TK', 'GA'];
+        const statuses = ['all', 'selesai', 'belum', 'rejected'];
+
+        for (const service of services) {
+            for (const status of statuses) {
+                const cacheKey = `${service}_${status}_all_`;
+                const cached = cache.tickets.get(cacheKey);
+                if (!cached || (Date.now() - cached.timestamp > 30000)) {
+                    try {
+                        await ticketingService.getTickets({ service, status, limit: 'all' });
+                    } catch {
+                        // ignore background prewarm error
+                    }
+                }
+            }
+        }
     },
 
     /**
      * Mengambil daftar tiket dengan filter spesifik
      * @param {Object} params - { service, status, limit, search }
      */
-    async getTickets({ service, status, limit = 50, search } = {}) {
+    async getTickets({ service, status, limit = 'all', search } = {}) {
         const now = Date.now();
-        let targetStatus = status;
-        if (status === 'ditolak') targetStatus = 'rejected';
-        else if (status === 'all') targetStatus = undefined;
+        let targetStatus = status || 'all';
+        if (targetStatus === 'ditolak') targetStatus = 'rejected';
 
-        const effectiveLimit = Math.min(parseInt(limit, 10) || 50, 200);
-        const cacheKey = `${service || 'ALL'}_${targetStatus || 'ALL'}_${effectiveLimit}_${search || ''}`;
+        const effectiveLimit = (limit === 'all' || limit === 0 || limit === '0' || !limit) ? 'all' : (parseInt(limit, 10) || 'all');
+        const cacheKey = `${service || 'ALL'}_${targetStatus}_${effectiveLimit}_${search || ''}`;
 
         const cached = cache.tickets.get(cacheKey);
-        if (cached && (now - cached.timestamp < CACHE_TTL_MS)) {
+        if (cached && (now - cached.timestamp < TICKET_CACHE_TTL_MS)) {
             return cached.data;
         }
 
         const targetUrl = buildTicketingUrl({
             service: service || undefined,
-            status: targetStatus || undefined,
+            status: targetStatus,
             limit: effectiveLimit,
             search: search || undefined
         });

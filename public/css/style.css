@@ -902,6 +902,71 @@ html, body {
     font-family: var(--font-mono);
 }
 
+/* ====================================================================
+   SKELETON LOADING ANIMATION (MODAL LIHAT DETAIL)
+   ==================================================================== */
+@keyframes skeletonShimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton-box {
+    display: inline-block;
+    height: 14px;
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+    border-radius: 4px;
+    vertical-align: middle;
+}
+
+.skeleton-badge {
+    display: inline-block;
+    height: 20px;
+    width: 65px;
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+    border-radius: 4px;
+    vertical-align: middle;
+}
+
+.skeleton-pill {
+    display: inline-block;
+    height: 18px;
+    width: 42px;
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+    border-radius: 9999px;
+    vertical-align: middle;
+}
+
+.skeleton-circle {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+    vertical-align: middle;
+}
+
+.skeleton-row {
+    pointer-events: none;
+    user-select: none;
+}
+
+.skeleton-row td {
+    padding: 0.75rem 0.8rem !important;
+    border-bottom: 1px solid var(--border-color);
+}
+
 .modal-footer {
     padding: 0.8rem 1.35rem;
     border-top: 1px solid var(--border-color);

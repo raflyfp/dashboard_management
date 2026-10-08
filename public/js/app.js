@@ -25,8 +25,11 @@ const state = {
     isFetching: false,      // Penanda sedang memuat
     currentServiceModal: null, // Layanan yang sedang dibuka di modal tiket
     currentModalFilter: 'all',  // Filter di modal: all / selesai / belum / ditolak
+    ticketSearchQuery: '',  // Pencarian kata kunci di modal tiket
     modalRawTickets: [],    // Data mentah tiket yang sedang dibuka
     servicesData: null,     // Cache data statistik 10 layanan terakhir
+    ticketCache: {},        // Cache in-memory tiket per layanan untuk loading instan
+    subconCache: new Map(), // Cache in-memory subcon per range
 
     // State Khusus Modul Pengerjaan Subcon
     subconChartInstance: null,
@@ -479,22 +482,31 @@ async function openTicketModal(serviceCode, serviceTitle) {
 
     if (modal) modal.classList.add('active');
 
-    // Tampilkan status loading di tabel
-    renderTicketTableLoading();
-
-    // Fetch daftar tiket spesifik untuk layanan ini
+    // Ambil data tiket untuk tab aktif (default: 'all')
     await loadModalTickets(serviceCode, 'all');
 }
 
-async function loadModalTickets(serviceCode, filterStatus) {
-    try {
-        // Parameter status ke Express
-        let queryStatus = 'all';
-        if (filterStatus === 'selesai') queryStatus = 'selesai';
-        if (filterStatus === 'belum') queryStatus = 'belum';
-        if (filterStatus === 'ditolak') queryStatus = 'ditolak';
+async function loadModalTickets(serviceCode, filterStatus = 'all') {
+    let queryStatus = filterStatus;
+    if (filterStatus === 'ditolak') queryStatus = 'rejected';
 
-        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=100`;
+    const cacheKey = `${serviceCode}_${queryStatus}`;
+    if (!state.ticketCache) state.ticketCache = {};
+    const cached = state.ticketCache[cacheKey];
+
+    // Jika data tab ini sudah ada di cache, tampilkan langsung instan (0 ms)!
+    if (cached) {
+        state.modalRawTickets = cached.data;
+        renderFilteredTickets();
+        if (Date.now() - cached.timestamp < 45000) {
+            return;
+        }
+    } else {
+        renderTicketTableLoading();
+    }
+
+    try {
+        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=all`;
         const response = await fetch(url);
         const json = await response.json();
 
@@ -502,12 +514,22 @@ async function loadModalTickets(serviceCode, filterStatus) {
             throw new Error(json.message || 'Gagal memuat tiket');
         }
 
-        state.modalRawTickets = json.data || [];
-        renderTicketsTable(state.modalRawTickets);
+        const tickets = json.data || [];
+        state.ticketCache[cacheKey] = {
+            data: tickets,
+            timestamp: Date.now()
+        };
+
+        if (state.currentServiceModal === serviceCode && state.currentModalFilter === filterStatus) {
+            state.modalRawTickets = tickets;
+            renderFilteredTickets();
+        }
 
     } catch (error) {
         console.error('Error saat load modal tickets:', error);
-        renderTicketTableError(error.message);
+        if (!cached) {
+            renderTicketTableError(error.message);
+        }
     }
 }
 
@@ -520,27 +542,30 @@ function filterModalTickets(filterType) {
     });
 
     if (state.currentServiceModal) {
-        renderTicketTableLoading();
         loadModalTickets(state.currentServiceModal, filterType);
     }
 }
 
 function handleSearchTickets(keyword) {
-    const term = keyword.trim().toLowerCase();
-    if (!term) {
-        renderTicketsTable(state.modalRawTickets);
-        return;
+    state.ticketSearchQuery = keyword;
+    renderFilteredTickets();
+}
+
+function renderFilteredTickets() {
+    const keyword = (state.ticketSearchQuery || '').trim().toLowerCase();
+    let list = state.modalRawTickets || [];
+
+    if (keyword) {
+        list = list.filter(t => {
+            const noTiket = (t.no_tiket || '').toLowerCase();
+            const judul = (t.judul || '').toLowerCase();
+            const pelapor = (t.pelapor || '').toLowerCase();
+            const petugas = (t.petugas || '').toLowerCase();
+            return noTiket.includes(keyword) || judul.includes(keyword) || pelapor.includes(keyword) || petugas.includes(keyword);
+        });
     }
 
-    const filtered = state.modalRawTickets.filter(t => {
-        const noTiket = (t.no_tiket || '').toLowerCase();
-        const judul = (t.judul || '').toLowerCase();
-        const pelapor = (t.pelapor || '').toLowerCase();
-        const petugas = (t.petugas || '').toLowerCase();
-        return noTiket.includes(term) || judul.includes(term) || pelapor.includes(term) || petugas.includes(term);
-    });
-
-    renderTicketsTable(filtered);
+    renderTicketsTable(list);
 }
 
 function renderTicketsTable(tickets) {
@@ -591,17 +616,40 @@ function renderTicketsTable(tickets) {
     }).join('');
 }
 
-function renderTicketTableLoading() {
+function renderTicketTableLoading(rowCount = 6) {
     const tbody = document.getElementById('ticketsTableBody');
-    if (tbody) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="loading-state">
-                    <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat data tiket dari sistem...
+    if (!tbody) return;
+
+    const widths = [
+        ['105px', '82%', '36px', '115px', '120px', '72px', '85px'],
+        ['115px', '60%', '48px', '95px', '105px', '64px', '90px'],
+        ['100px', '88%', '36px', '130px', '100px', '80px', '80px'],
+        ['110px', '50%', '42px', '90px', '125px', '68px', '85px'],
+        ['95px', '75%', '36px', '110px', '95px', '75px', '90px'],
+        ['112px', '66%', '45px', '105px', '115px', '64px', '80px'],
+    ];
+
+    let html = '';
+    for (let i = 0; i < rowCount; i++) {
+        const w = widths[i % widths.length];
+        html += `
+            <tr class="skeleton-row">
+                <td><span class="skeleton-box" style="width: ${w[0]}; height: 16px;"></span></td>
+                <td>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <span class="skeleton-box" style="width: ${w[1]}; height: 15px;"></span>
+                        <span class="skeleton-box" style="width: 40%; height: 10px; opacity: 0.6;"></span>
+                    </div>
                 </td>
+                <td><span class="skeleton-pill" style="width: ${w[2]};"></span></td>
+                <td><span class="skeleton-box" style="width: ${w[3]}; height: 14px;"></span></td>
+                <td><span class="skeleton-box" style="width: ${w[4]}; height: 14px;"></span></td>
+                <td><span class="skeleton-badge" style="width: ${w[5]};"></span></td>
+                <td><span class="skeleton-box" style="width: ${w[6]}; height: 13px;"></span></td>
             </tr>
         `;
     }
+    tbody.innerHTML = html;
 }
 
 function renderTicketTableError(msg) {
@@ -790,8 +838,18 @@ async function switchSubconRange(range) {
     if (btnWeek) btnWeek.classList.toggle('active', range === 'week');
     if (btnMonth) btnMonth.classList.toggle('active', range === 'month');
 
-    // Tampilkan state loading di tabel
-    renderSubconTablesLoading();
+    // Cek cache lokal frontend agar instan tanpa loading
+    if (!state.subconCache) state.subconCache = new Map();
+    const cached = state.subconCache.get(range);
+    if (cached) {
+        state.subconRawData = cached.data;
+        renderSubconModalData(cached.data);
+        if (Date.now() - cached.timestamp < 30000) {
+            return;
+        }
+    } else {
+        renderSubconTablesLoading();
+    }
 
     try {
         const response = await fetch(`/api/dashboard/subcon?range=${range}`);
@@ -801,12 +859,15 @@ async function switchSubconRange(range) {
             throw new Error(result.message || 'Gagal mengambil data monitoring subcon');
         }
 
+        state.subconCache.set(range, { data: result.data, timestamp: Date.now() });
         state.subconRawData = result.data;
         renderSubconModalData(result.data);
 
     } catch (err) {
         console.error('Error memuat data subcon:', err);
-        renderSubconTablesError(err.message);
+        if (!cached) {
+            renderSubconTablesError(err.message);
+        }
     }
 }
 
@@ -1147,19 +1208,60 @@ function renderSubconRiwayatTable(riwayat) {
     `).join('');
 }
 
-function renderSubconTablesLoading() {
-    ['subconBarangTableBody', 'subconKaryawanTableBody', 'subconVendorTableBody', 'subconRiwayatTableBody'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.innerHTML = `
-                <tr>
-                    <td colspan="7" class="loading-state">
-                        <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat data pengerjaan dari E-Subcon...
-                    </td>
+function renderSubconTablesLoading(rowCount = 5) {
+    const barangTbody = document.getElementById('subconBarangTableBody');
+    if (barangTbody) {
+        const widths = ['80%', '60%', '85%', '55%', '70%'];
+        let html = '';
+        for (let i = 0; i < rowCount; i++) {
+            html += `
+                <tr class="skeleton-row">
+                    <td><span class="skeleton-box" style="width: 80px; height: 16px;"></span></td>
+                    <td><span class="skeleton-box" style="width: ${widths[i % widths.length]}; height: 15px;"></span></td>
+                    <td><span class="skeleton-pill" style="width: 38px;"></span></td>
+                    <td class="text-right"><span class="skeleton-box" style="width: 70px; height: 16px;"></span></td>
+                    <td><span class="skeleton-badge" style="width: 75px;"></span></td>
+                    <td class="text-center"><span class="skeleton-box" style="width: 40px; height: 14px;"></span></td>
                 </tr>
             `;
         }
-    });
+        barangTbody.innerHTML = html;
+    }
+
+    const vendorTbody = document.getElementById('subconVendorTableBody');
+    if (vendorTbody) {
+        let html = '';
+        for (let i = 0; i < 3; i++) {
+            html += `
+                <tr class="skeleton-row">
+                    <td><span class="skeleton-box" style="width: 120px; height: 16px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 160px; height: 14px;"></span></td>
+                    <td class="text-right"><span class="skeleton-box" style="width: 80px; height: 16px;"></span></td>
+                    <td class="text-center"><span class="skeleton-box" style="width: 45px; height: 14px;"></span></td>
+                </tr>
+            `;
+        }
+        vendorTbody.innerHTML = html;
+    }
+
+    const riwayatTbody = document.getElementById('subconRiwayatTableBody');
+    if (riwayatTbody) {
+        let html = '';
+        for (let i = 0; i < rowCount; i++) {
+            html += `
+                <tr class="skeleton-row">
+                    <td><span class="skeleton-box" style="width: 80px; height: 14px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 110px; height: 15px;"></span></td>
+                    <td><span class="skeleton-badge" style="width: 65px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 70%; height: 14px;"></span></td>
+                    <td><span class="skeleton-badge" style="width: 70px;"></span></td>
+                    <td class="text-right"><span class="skeleton-box" style="width: 65px; height: 16px;"></span></td>
+                    <td class="text-center"><span class="skeleton-box" style="width: 55px; height: 13px;"></span></td>
+                </tr>
+            `;
+        }
+        riwayatTbody.innerHTML = html;
+    }
 }
 
 function renderSubconTablesError(msg) {
