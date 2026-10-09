@@ -37,6 +37,7 @@ const state = {
     currentSubconTab: 'barang',
     subconRawData: null,
     subconSearchQuery: '',
+
 };
 
 // ====================================================================
@@ -222,8 +223,14 @@ function renderGlobalKPI(kpi) {
 function renderServiceCards(layanan) {
     if (!layanan) return;
 
-    // Daftar 10 Modul Layanan (5 Baris Atas, 5 Baris Bawah)
-    const services = ['IT', 'TK', 'GA', 'SUBCON', 'ESYS', 'SIMRS', 'FARMASI', 'LAB', 'BILLING', 'SDM'];
+    // Dukung seluruh modul dari API (22 Modul Operasional SNA Medika)
+    const services = Object.keys(layanan);
+
+    // Update jumlah modul di counter tab Semua
+    const countAllEl = document.getElementById('count-all');
+    if (countAllEl) {
+        countAllEl.textContent = `${services.length}`;
+    }
 
     services.forEach(code => {
         const item = layanan[code];
@@ -231,15 +238,17 @@ function renderServiceCards(layanan) {
 
         // Penanganan Khusus Modul Pengerjaan Subcon (Hasil Produksi PCS)
         if (code === 'SUBCON') {
-            animateCounter('totalPcsSUBCON', item.total_output_pcs || 0);
+            const pcs = item.total_output_pcs || 0;
+            animateCounter('totalPcsSUBCON', pcs);
+            animateCounter('percentSUBCON', pcs);
 
-            const subconEl = document.getElementById('subconJumlahSubcon') || document.getElementById('subconJumlahMitra');
+            const subconEl = document.getElementById('subconJumlahSubcon') || document.getElementById('totalSUBCON') || document.getElementById('subconJumlahMitra');
             if (subconEl) {
                 const totalSubcon = item.total_subcon || 1;
                 subconEl.textContent = `${totalSubcon}`;
             }
 
-            const karyawanEl = document.getElementById('subconJumlahKaryawan');
+            const karyawanEl = document.getElementById('subconJumlahKaryawan') || document.getElementById('karyawanSUBCON');
             if (karyawanEl) {
                 const totalKaryawan = item.total_karyawan || 0;
                 karyawanEl.textContent = `${totalKaryawan}`;
@@ -692,6 +701,23 @@ function closeTicketModal() {
     state.currentServiceModal = null;
 }
 
+/**
+ * Modal Sederhana Informasi Modul Standby / Belum Terhubung
+ */
+function openAppModal(title, desc) {
+    const modal = document.getElementById('appModal');
+    const titleEl = document.getElementById('appModalTitle');
+    const descEl = document.getElementById('appModalDesc');
+    if (titleEl && title) titleEl.textContent = title;
+    if (descEl && desc) descEl.textContent = desc;
+    if (modal) modal.classList.add('active');
+}
+
+function closeAppModal() {
+    const modal = document.getElementById('appModal');
+    if (modal) modal.classList.remove('active');
+}
+
 // Helper Label dan Warna Badge Status Tiket
 function getStatusBadge(status, customLabel) {
     const s = (status || '').toLowerCase();
@@ -793,22 +819,7 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
-// ====================================================================
-// 13. MODAL INFORMASI MODUL EKSTERNAL
-// ====================================================================
-function openAppModal(title, desc) {
-    const modal = document.getElementById('appModal');
-    const titleEl = document.getElementById('appModalTitle');
-    const descEl = document.getElementById('appModalDesc');
-    if (titleEl) titleEl.textContent = title;
-    if (descEl) descEl.textContent = desc;
-    if (modal) modal.classList.add('active');
-}
 
-function closeAppModal() {
-    const modal = document.getElementById('appModal');
-    if (modal) modal.classList.remove('active');
-}
 
 // ====================================================================
 // 14. MODAL MONITORING PENGERJAAN SUBCON & GRAFIK TREN

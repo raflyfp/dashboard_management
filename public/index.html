@@ -64,14 +64,12 @@
         </header>
 
         <!-- ============================================================ -->
-        <!-- 2. GRID 10 KARTU (5 KARTU DI ATAS, 5 KARTU DI BAWAH)          -->
+        <!-- 2. GRID 22 KARTU MONITORING OPERASIONAL                      -->
         <!-- ============================================================ -->
         <main class="main-content">
             <div class="cards-grid-10">
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 1 - CARD 1: LAYANAN IT (TICKETING LIVE)        -->
-                <!-- ---------------------------------------------------- -->
+                <!-- CARD: LAYANAN IT (LIVE) -->
                 <section class="service-card card-it" id="card-IT">
                     <div class="card-header">
                         <div class="card-title-group">
@@ -82,7 +80,6 @@
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentIT">0%</span>
@@ -93,7 +90,6 @@
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
                         <div class="metrics-row">
                             <div class="metric-box">
                                 <span class="m-lbl">Total</span>
@@ -118,9 +114,7 @@
                     </div>
                 </section>
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 1 - CARD 2: LAYANAN TEKNIK (TICKETING LIVE)    -->
-                <!-- ---------------------------------------------------- -->
+                <!-- CARD: LAYANAN TEKNIK (LIVE) -->
                 <section class="service-card card-tk" id="card-TK">
                     <div class="card-header">
                         <div class="card-title-group">
@@ -131,7 +125,6 @@
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentTK">0%</span>
@@ -142,7 +135,6 @@
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
                         <div class="metrics-row">
                             <div class="metric-box">
                                 <span class="m-lbl">Total</span>
@@ -167,9 +159,7 @@
                     </div>
                 </section>
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 1 - CARD 3: LAYANAN GA (TICKETING LIVE)        -->
-                <!-- ---------------------------------------------------- -->
+                <!-- CARD: LAYANAN GA (LIVE) -->
                 <section class="service-card card-ga" id="card-GA">
                     <div class="card-header">
                         <div class="card-title-group">
@@ -180,7 +170,6 @@
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentGA">0%</span>
@@ -191,7 +180,6 @@
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
                         <div class="metrics-row">
                             <div class="metric-box">
                                 <span class="m-lbl">Total</span>
@@ -216,9 +204,7 @@
                     </div>
                 </section>
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 1 - CARD 4: PENGERJAAN SUBCON (E-SUBCON LIVE) -->
-                <!-- ---------------------------------------------------- -->
+                <!-- CARD: SUBCON (LIVE) -->
                 <section class="service-card card-subcon" id="card-SUBCON">
                     <div class="card-header">
                         <div class="card-title-group">
@@ -261,301 +247,810 @@
                     </div>
                 </section>
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 1 - CARD 5: E-SYSTEM / ERP                    -->
-                <!-- ---------------------------------------------------- -->
-                <section class="service-card card-esys" id="card-ESYS">
+                <!-- CARD: PRODUKSI FINISHING (STANDBY) -->
+                <section class="service-card" id="card-PROD_FINISHING">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box esys-theme"><i class="fa-solid fa-server"></i></div>
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-industry"></i></div>
+                            <h2>Produksi Finishing</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentPROD_FINISHING">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_FINISHING" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalPROD_FINISHING">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiPROD_FINISHING">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumPROD_FINISHING">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: PRODUKSI ANTISEPTIK (STANDBY) -->
+                <section class="service-card" id="card-PROD_ANTISEPTIK">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-pump-medical"></i></div>
+                            <h2>Produksi Antiseptik</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentPROD_ANTISEPTIK">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_ANTISEPTIK" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalPROD_ANTISEPTIK">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiPROD_ANTISEPTIK">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumPROD_ANTISEPTIK">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: PRODUKSI CW (STANDBY) -->
+                <section class="service-card" id="card-PROD_CW">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-prescription-bottle"></i></div>
+                            <h2>Produksi CW</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentPROD_CW">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_CW" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalPROD_CW">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiPROD_CW">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumPROD_CW">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: PRODUKSI SIZING (STANDBY) -->
+                <section class="service-card" id="card-PROD_SIZING">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-ruler-combined"></i></div>
+                            <h2>Produksi Sizing</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentPROD_SIZING">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SIZING" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalPROD_SIZING">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiPROD_SIZING">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumPROD_SIZING">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: PRODUKSI POLIGYP (STANDBY) -->
+                <section class="service-card" id="card-PROD_POLIGYP">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-bandage"></i></div>
+                            <h2>Produksi Poligyp</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentPROD_POLIGYP">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_POLIGYP" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalPROD_POLIGYP">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiPROD_POLIGYP">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumPROD_POLIGYP">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: PRODUKSI SIZING 2 (STANDBY) -->
+                <section class="service-card" id="card-PROD_SIZING2">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-ruler-horizontal"></i></div>
+                            <h2>Produksi Sizing 2</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentPROD_SIZING2">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SIZING2" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalPROD_SIZING2">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiPROD_SIZING2">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumPROD_SIZING2">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: PRODUKSI IRONING (STANDBY) -->
+                <section class="service-card" id="card-PROD_IRONING">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-shirt"></i></div>
+                            <h2>Produksi Ironing</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentPROD_IRONING">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_IRONING" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalPROD_IRONING">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiPROD_IRONING">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumPROD_IRONING">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: PRODUKSI SURGICAL MESIN (STANDBY) -->
+                <section class="service-card" id="card-PROD_SURGICAL_MESIN">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-gears"></i></div>
+                            <h2>Produksi Surgical Mesin</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentPROD_SURGICAL_MESIN">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SURGICAL_MESIN" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalPROD_SURGICAL_MESIN">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiPROD_SURGICAL_MESIN">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumPROD_SURGICAL_MESIN">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: PRODUKSI SURGICAL PACKING (STANDBY) -->
+                <section class="service-card" id="card-PROD_SURGICAL_PACKING">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-box-tissue"></i></div>
+                            <h2>Produksi Surgical Packing</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentPROD_SURGICAL_PACKING">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SURGICAL_PACKING" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalPROD_SURGICAL_PACKING">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiPROD_SURGICAL_PACKING">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumPROD_SURGICAL_PACKING">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: HR (STANDBY) -->
+                <section class="service-card" id="card-HR">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-users"></i></div>
+                            <h2>HR</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentHR">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillHR" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalHR">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiHR">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumHR">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: DC (STANDBY) -->
+                <section class="service-card" id="card-DC">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-network-wired"></i></div>
+                            <h2>DC</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentDC">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillDC" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalDC">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiDC">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumDC">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: PURCHASING (STANDBY) -->
+                <section class="service-card" id="card-PURCHASING">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-cart-shopping"></i></div>
                             <h2>Purchasing</h2>
                         </div>
                         <span class="service-status-pill status-standby">Standby</span>
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentESYS">0%</span>
+                                <span class="percent-val kpi-color-red" id="percentPURCHASING">0%</span>
                                 <span class="percent-lbl">Selesai</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillESYS" style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPURCHASING" style="width: 0%"></div>
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
                         <div class="metrics-row">
                             <div class="metric-box">
                                 <span class="m-lbl">Total</span>
-                                <span class="m-val" id="totalESYS">0</span>
+                                <span class="m-val" id="totalPURCHASING">0</span>
                             </div>
                             <div class="metric-box m-success">
                                 <span class="m-lbl">Selesai</span>
-                                <span class="m-val text-success" id="selesaiESYS">0</span>
+                                <span class="m-val text-success" id="selesaiPURCHASING">0</span>
                             </div>
                             <div class="metric-box m-warning">
                                 <span class="m-lbl">Belum</span>
-                                <span class="m-val text-warning" id="belumESYS">0</span>
+                                <span class="m-val text-warning" id="belumPURCHASING">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 2 - CARD 6: SIMRS & EMR (REKAM MEDIS)         -->
-                <!-- ---------------------------------------------------- -->
-                <section class="service-card card-simrs" id="card-SIMRS">
+                <!-- CARD: QA (STANDBY) -->
+                <section class="service-card" id="card-QA">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box simrs-theme"><i class="fa-solid fa-hospital"></i></div>
-                            <h2>PPIC</h2>
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-clipboard-check"></i></div>
+                            <h2>QA</h2>
                         </div>
                         <span class="service-status-pill status-standby">Standby</span>
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentSIMRS">0%</span>
+                                <span class="percent-val kpi-color-red" id="percentQA">0%</span>
                                 <span class="percent-lbl">Selesai</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillSIMRS" style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillQA" style="width: 0%"></div>
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
                         <div class="metrics-row">
                             <div class="metric-box">
                                 <span class="m-lbl">Total</span>
-                                <span class="m-val" id="totalSIMRS">0</span>
+                                <span class="m-val" id="totalQA">0</span>
                             </div>
                             <div class="metric-box m-success">
                                 <span class="m-lbl">Selesai</span>
-                                <span class="m-val text-success" id="selesaiSIMRS">0</span>
+                                <span class="m-val text-success" id="selesaiQA">0</span>
                             </div>
                             <div class="metric-box m-warning">
                                 <span class="m-lbl">Belum</span>
-                                <span class="m-val text-warning" id="belumSIMRS">0</span>
+                                <span class="m-val text-warning" id="belumQA">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 2 - CARD 7: FARMASI & OBAT                    -->
-                <!-- ---------------------------------------------------- -->
-                <section class="service-card card-farmasi" id="card-FARMASI">
+                <!-- CARD: LOGISTIK (STANDBY) -->
+                <section class="service-card" id="card-LOGISTIK">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box farmasi-theme"><i class="fa-solid fa-pills"></i></div>
-                            <h2>Penilaian Karyawan</h2>
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-truck-fast"></i></div>
+                            <h2>Logistik</h2>
                         </div>
                         <span class="service-status-pill status-standby">Standby</span>
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentFARMASI">0%</span>
+                                <span class="percent-val kpi-color-red" id="percentLOGISTIK">0%</span>
                                 <span class="percent-lbl">Selesai</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillFARMASI" style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillLOGISTIK" style="width: 0%"></div>
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
                         <div class="metrics-row">
                             <div class="metric-box">
                                 <span class="m-lbl">Total</span>
-                                <span class="m-val" id="totalFARMASI">0</span>
+                                <span class="m-val" id="totalLOGISTIK">0</span>
                             </div>
                             <div class="metric-box m-success">
                                 <span class="m-lbl">Selesai</span>
-                                <span class="m-val text-success" id="selesaiFARMASI">0</span>
+                                <span class="m-val text-success" id="selesaiLOGISTIK">0</span>
                             </div>
                             <div class="metric-box m-warning">
                                 <span class="m-lbl">Belum</span>
-                                <span class="m-val text-warning" id="belumFARMASI">0</span>
+                                <span class="m-val text-warning" id="belumLOGISTIK">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 2 - CARD 8: LAB & DIAGNOSTIK                  -->
-                <!-- ---------------------------------------------------- -->
-                <section class="service-card card-lab" id="card-LAB">
+                <!-- CARD: WH FG (STANDBY) -->
+                <section class="service-card" id="card-WH_FG">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box lab-theme"><i class="fa-solid fa-flask-vial"></i></div>
-                            <h2>Produksi 1</h2>
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-warehouse"></i></div>
+                            <h2>WH FG</h2>
                         </div>
                         <span class="service-status-pill status-standby">Standby</span>
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentLAB">0%</span>
+                                <span class="percent-val kpi-color-red" id="percentWH_FG">0%</span>
                                 <span class="percent-lbl">Selesai</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillLAB" style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillWH_FG" style="width: 0%"></div>
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
                         <div class="metrics-row">
                             <div class="metric-box">
                                 <span class="m-lbl">Total</span>
-                                <span class="m-val" id="totalLAB">0</span>
+                                <span class="m-val" id="totalWH_FG">0</span>
                             </div>
                             <div class="metric-box m-success">
                                 <span class="m-lbl">Selesai</span>
-                                <span class="m-val text-success" id="selesaiLAB">0</span>
+                                <span class="m-val text-success" id="selesaiWH_FG">0</span>
                             </div>
                             <div class="metric-box m-warning">
                                 <span class="m-lbl">Belum</span>
-                                <span class="m-val text-warning" id="belumLAB">0</span>
+                                <span class="m-val text-warning" id="belumWH_FG">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 2 - CARD 9: KEUANGAN & KASIR                  -->
-                <!-- ---------------------------------------------------- -->
-                <section class="service-card card-billing" id="card-BILLING">
+                <!-- CARD: WH MAT (STANDBY) -->
+                <section class="service-card" id="card-WH_MAT">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box billing-theme"><i class="fa-solid fa-money-bill-wave"></i>
-                            </div>
-                            <h2>Produksi 2</h2>
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-dolly"></i></div>
+                            <h2>WH Mat</h2>
                         </div>
                         <span class="service-status-pill status-standby">Standby</span>
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentBILLING">0%</span>
+                                <span class="percent-val kpi-color-red" id="percentWH_MAT">0%</span>
                                 <span class="percent-lbl">Selesai</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillBILLING" style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillWH_MAT" style="width: 0%"></div>
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
                         <div class="metrics-row">
                             <div class="metric-box">
                                 <span class="m-lbl">Total</span>
-                                <span class="m-val" id="totalBILLING">0</span>
+                                <span class="m-val" id="totalWH_MAT">0</span>
                             </div>
                             <div class="metric-box m-success">
                                 <span class="m-lbl">Selesai</span>
-                                <span class="m-val text-success" id="selesaiBILLING">0</span>
+                                <span class="m-val text-success" id="selesaiWH_MAT">0</span>
                             </div>
                             <div class="metric-box m-warning">
                                 <span class="m-lbl">Belum</span>
-                                <span class="m-val text-warning" id="belumBILLING">0</span>
+                                <span class="m-val text-warning" id="belumWH_MAT">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- ---------------------------------------------------- -->
-                <!-- BARIS 2 - CARD 10: SDM & PERSONALIA                 -->
-                <!-- ---------------------------------------------------- -->
-                <section class="service-card card-sdm" id="card-SDM">
+                <!-- CARD: PBF (STANDBY) -->
+                <section class="service-card" id="card-PBF">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box sdm-theme"><i class="fa-solid fa-user-tie"></i></div>
-                            <h2>Produksi 3</h2>
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-pills"></i></div>
+                            <h2>PBF</h2>
                         </div>
                         <span class="service-status-pill status-standby">Standby</span>
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Persentase Besar & Jelas -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentSDM">0%</span>
+                                <span class="percent-val kpi-color-red" id="percentPBF">0%</span>
                                 <span class="percent-lbl">Selesai</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillSDM" style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPBF" style="width: 0%"></div>
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Total, Selesai, Belum -->
                         <div class="metrics-row">
                             <div class="metric-box">
                                 <span class="m-lbl">Total</span>
-                                <span class="m-val" id="totalSDM">0</span>
+                                <span class="m-val" id="totalPBF">0</span>
                             </div>
                             <div class="metric-box m-success">
                                 <span class="m-lbl">Selesai</span>
-                                <span class="m-val text-success" id="selesaiSDM">0</span>
+                                <span class="m-val text-success" id="selesaiPBF">0</span>
                             </div>
                             <div class="metric-box m-warning">
                                 <span class="m-lbl">Belum</span>
-                                <span class="m-val text-warning" id="belumSDM">0</span>
+                                <span class="m-val text-warning" id="belumPBF">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                            <span>Lihat Detail</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- CARD: DEVELOPMENT (STANDBY) -->
+                <section class="service-card" id="card-DEVELOPMENT">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-flask-vial"></i></div>
+                            <h2>Development</h2>
+                        </div>
+                        <span class="service-status-pill status-standby">Standby</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-red" id="percentDEVELOPMENT">0%</span>
+                                <span class="percent-lbl">Selesai</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillDEVELOPMENT" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-row">
+                            <div class="metric-box">
+                                <span class="m-lbl">Total</span>
+                                <span class="m-val" id="totalDEVELOPMENT">0</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Selesai</span>
+                                <span class="m-val text-success" id="selesaiDEVELOPMENT">0</span>
+                            </div>
+                            <div class="metric-box m-warning">
+                                <span class="m-lbl">Belum</span>
+                                <span class="m-val text-warning" id="belumDEVELOPMENT">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <button class="btn-detail ext-btn" onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -925,7 +1420,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=2.3.0"></script>
+    <script src="/js/app.js?v=2.4.2"></script>
 </body>
 
 </html>
