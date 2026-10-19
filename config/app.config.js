@@ -37,6 +37,13 @@ module.exports = {
         timeoutMs: 10000,
     },
 
+    // Konfigurasi Atena ERP Purchasing (Laporan Purchase Request)
+    purchasing: {
+        url: (process.env.ATENA_PR_URL || 'https://erpsna.atena.id/Laporan/LaporanPembelian/LaporanPR/laporan?kode=LPRS1').trim(),
+        sessionCookie: (process.env.ATENA_SESSION_COOKIE || 'ci_session=dv26ne8pa0orpc1gqnfbs001bmic31fi').trim(),
+        timeoutMs: 25000,
+    },
+
     // Cache internal Express (detik)
     cacheTtlSeconds: parseInt(process.env.CACHE_TTL_SECONDS, 10) || 5,
 

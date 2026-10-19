@@ -44,3 +44,5 @@ desktop.ini
 *.temp
 *.swp
 *.bak
+data/
+scratch/

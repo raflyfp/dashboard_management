@@ -14,6 +14,7 @@ const router = express.Router();
 const config = require('../config/app.config');
 const ticketingService = require('../services/ticketingService');
 const subconService = require('../services/subconService');
+const purchasingService = require('../services/purchasingService');
 
 // In-memory cache sederhana untuk efisiensi beban server
 const cache = {
@@ -79,10 +80,11 @@ router.get('/stats', async (req, res) => {
     }
 
     try {
-        // 2. Ambil data dari Layanan Ticketing & Subcon secara paralel
-        const [ticketingSettled, subconSettled] = await Promise.allSettled([
+        // 2. Ambil data dari Layanan Ticketing, Subcon, & Purchasing secara paralel
+        const [ticketingSettled, subconSettled, purchasingSettled] = await Promise.allSettled([
             ticketingService.getSummary(forceRefresh),
-            subconService.getMonitoringToday(forceRefresh)
+            subconService.getMonitoringToday(forceRefresh),
+            purchasingService.getSummary(forceRefresh)
         ]);
 
         let apiData = null;
@@ -103,6 +105,14 @@ router.get('/stats', async (req, res) => {
         } else {
             console.error(`❌ [API SUBCON ERROR]: ${subconSettled.reason?.message}`);
         }
+
+        let purchasingData = null;
+        if (purchasingSettled.status === 'fulfilled') {
+            purchasingData = purchasingSettled.value;
+        } else {
+            console.error(`❌ [API PURCHASING ERROR]: ${purchasingSettled.reason?.message}`);
+        }
+        const purchasingKpi = purchasingData?.kpi || {};
 
         const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
@@ -481,17 +491,26 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Supply Chain & Gudang',
                 data_ditampilkan: 'Pemenuhan PR Mat & PR Non Mat',
                 sub_nama: 'PR Material & PR Non-Mat Atena',
-                sumber_data: 'Laporan PR Material, Lap PR nonmat Atena',
-                sumber: 'Laporan PR Atena',
+                sumber_data: 'Laporan PR Atena ERP (Live)',
+                sumber: 'Atena ERP',
                 catatan: 'Pemenuhan Purchase Requisition Material & Non-Material',
                 icon: 'cart-shopping',
-                is_active: false,
-                metric_labels: { total: 'Total PR', selesai: 'Terpenuhi', belum: 'Pending' },
-                unit: 'PR / Item',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: true,
+                metric_labels: { total: 'Total PR', selesai: 'Sudah PO / GRS', belum: 'Belum PO' },
+                unit: 'PR',
+                total_tiket: purchasingKpi.total_pr ?? 0,
+                selesai: purchasingKpi.pr_terpenuhi ?? 0,
+                belum_selesai: purchasingKpi.pr_belum ?? 0,
+                ditolak: 0,
+                total_efektif: purchasingKpi.total_pr ?? 0,
+                persentase_selesai: purchasingKpi.persentase_selesai ?? 0,
+                total_item: purchasingKpi.total_item ?? 0,
+                material: purchasingKpi.material || {},
+                non_material: purchasingKpi.non_material || {},
+                total_qty_request: purchasingKpi.total_qty_request ?? 0,
+                total_qty_po: purchasingKpi.total_qty_po ?? 0,
+                total_qty_grs: purchasingKpi.total_qty_grs ?? 0,
+                total_qty_os: purchasingKpi.total_qty_os ?? 0,
             },
             LOGISTIK: {
                 no: 18,
@@ -619,7 +638,7 @@ router.get('/stats', async (req, res) => {
 
         const result = {
             success: true,
-            server_time: apiData.server_time || new Date().toISOString(),
+            server_time: apiData?.server_time || new Date().toISOString(),
             kpi_global: {
                 total_tiket: totalSemua,
                 total_selesai: totalSelesai,
@@ -739,6 +758,60 @@ router.get('/subcon', async (req, res) => {
             success: false,
             message: 'Gagal mengambil data monitoring pengerjaan subcon.',
             error: error.message
+        });
+    }
+});
+
+/**
+ * GET /api/dashboard/purchasing
+ * Mengambil data pemenuhan Purchase Request Atena ERP dalam format JSON
+ * Query params:
+ * - range: 'all' | 'today' | 'week' | 'month' (default: 'all')
+ * - jenis: 'all' | 'material' | 'non_material'
+ * - status: 'all' | 'terpenuhi' | 'proses_po' | 'parsial' | 'pending' | 'belum_terpenuhi'
+ * - search: pencarian No PR, kode barang, atau nama barang
+ */
+router.get('/purchasing', async (req, res) => {
+    try {
+        const { range = 'all', jenis = 'all', status = 'all', search = '', force = false } = req.query;
+        const data = await purchasingService.getMonitoringData({
+            range,
+            jenis,
+            status,
+            search,
+            force: force === 'true'
+        });
+
+        return res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('[API ERROR /purchasing]:', error.message);
+        return res.status(502).json({
+            success: false,
+            message: 'Gagal mengambil data monitoring purchasing Atena ERP.',
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/dashboard/purchasing/sync
+ * Memaksa sinkronisasi data terbaru langsung dari server Atena ERP
+ */
+router.post('/purchasing/sync', async (req, res) => {
+    try {
+        const data = await purchasingService.fetchData(true);
+        return res.json({
+            success: true,
+            message: 'Sinkronisasi data Purchase Request dari Atena ERP berhasil',
+            data
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Gagal sinkronisasi data dari Atena ERP: ' + error.message
         });
     }
 });

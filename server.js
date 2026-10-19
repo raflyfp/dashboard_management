@@ -16,6 +16,7 @@ const config = require('./config/app.config');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const ticketingService = require('./services/ticketingService');
 const subconService = require('./services/subconService');
+const purchasingService = require('./services/purchasingService');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.get('/api/health', async (req, res) => {
     let ticketingOk = false;
     let subconOk = false;
+    let purchasingOk = false;
 
     try {
         const pingTicket = await ticketingService.ping();
@@ -60,14 +62,22 @@ app.get('/api/health', async (req, res) => {
         subconOk = false;
     }
 
-    const isOperational = ticketingOk && subconOk;
-    const isDegraded = ticketingOk || subconOk;
+    try {
+        const pingPurchasing = await purchasingService.ping();
+        purchasingOk = pingPurchasing?.status === 'online';
+    } catch {
+        purchasingOk = false;
+    }
+
+    const isOperational = ticketingOk && subconOk && purchasingOk;
+    const isDegraded = ticketingOk || subconOk || purchasingOk;
 
     res.json({
         status: isOperational ? 'operational' : (isDegraded ? 'partially_degraded' : 'degraded'),
         services: {
             ticketing: ticketingOk ? 'online' : 'offline',
             subcon: subconOk ? 'online' : 'offline',
+            purchasing: purchasingOk ? 'online' : 'offline',
         },
         uptime_seconds: Math.floor(process.uptime()),
         timestamp: new Date().toISOString()
@@ -78,9 +88,10 @@ app.get('/api/health', async (req, res) => {
 app.listen(config.port, '0.0.0.0', async () => {
     console.log('====================================================');
     console.log('🚀 SNA MEDIKA - MANAGEMENT MONITORING DASHBOARD');
-    console.log(`📡 URL Lokal     : http://localhost:${config.port}`);
-    console.log(`🔗 API Ticketing : ${config.ticketing.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
-    console.log(`🔗 API Subcon    : ${config.subcon.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
+    console.log(`📡 URL Lokal      : http://localhost:${config.port}`);
+    console.log(`🔗 API Ticketing  : ${config.ticketing.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
+    console.log(`🔗 API Subcon     : ${config.subcon.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
+    console.log(`🔗 ERP Purchasing : ${config.purchasing?.url ? 'Terkonfigurasi (Atena ERP)' : 'Belum diisi'}`);
     console.log('----------------------------------------------------');
     console.log('⏳ Memeriksa status koneksi ke API Eksternal...');
 
@@ -104,6 +115,18 @@ app.listen(config.port, '0.0.0.0', async () => {
         console.log(`   • Kecepatan     : ${durationSubcon} ms`);
     } catch (err) {
         console.error('❌ [API SUBCON GAGAL]: Tidak dapat terhubung ke API Subcon!');
+        console.error(`   • Error         : ${err.message}`);
+    }
+
+    try {
+        const startTimePurchasing = Date.now();
+        const pingPurchasing = await purchasingService.ping();
+        const durationPurchasing = Date.now() - startTimePurchasing;
+        console.log('✅ [ATENA PURCHASING BERHASIL]: Terhubung ke sistem Atena ERP Laporan PR!');
+        console.log(`   • Status Server : ${pingPurchasing?.status || 'online'}`);
+        console.log(`   • Kecepatan     : ${durationPurchasing} ms`);
+    } catch (err) {
+        console.error('⚠️ [ATENA PURCHASING]: Tidak dapat terhubung langsung ke Atena ERP (menggunakan data cadangan lokal)');
         console.error(`   • Error         : ${err.message}`);
     }
     console.log('====================================================');

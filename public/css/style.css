@@ -298,7 +298,7 @@ html, body {
 .status-standby { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
 /* Penyeragaman Icon Background Themes */
-.it-theme, .tk-theme, .ga-theme, .subcon-theme {
+.it-theme, .tk-theme, .ga-theme, .subcon-theme, .purchasing-theme {
     background: var(--sna-blue-light);
     color: var(--sna-blue);
 }
@@ -515,11 +515,11 @@ html, body {
 }
 
 /* Penyeragaman Tombol Detail (Biru Tema SNA Medika untuk Semua Kartu Aktif) */
-.it-btn, .tk-btn, .ga-btn, .subcon-btn {
+.it-btn, .tk-btn, .ga-btn, .subcon-btn, .purchasing-btn {
     background: var(--sna-blue);
     color: #fff;
 }
-.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover {
+.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover, .purchasing-btn:hover {
     background: #0c4a86;
 }
 
@@ -1062,16 +1062,46 @@ html, body {
    7. MODAL MONITORING SUBCON & GRAFIK TREN
    ==================================================================== */
 .modal-card-xl {
-    max-width: 1250px;
-    max-height: 88vh;
+    width: 95vw;
+    max-width: 1360px;
+    max-height: 90vh;
 }
 
 .subcon-modal-body {
-    padding: 1.25rem 1.5rem;
+    padding: 1rem 1.25rem;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+@media (min-width: 1100px) {
+    .table-responsive {
+        overflow-x: hidden;
+    }
+}
+
+.tickets-table.subcon-table {
+    width: 100%;
+    table-layout: auto;
+}
+
+.tickets-table.subcon-table th {
+    padding: 0.55rem 0.45rem;
+    font-size: 0.69rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.tickets-table.subcon-table td {
+    padding: 0.5rem 0.45rem;
+    font-size: 0.78rem;
 }
 
 .subcon-range-pills {
@@ -1237,6 +1267,160 @@ html, body {
     .subcon-kpi-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+}
+
+/* ====================================================================
+   7. STYLING KHUSUS MODAL PURCHASING (ATENA ERP)
+   ==================================================================== */
+.purchasing-kpi-grid {
+    grid-template-columns: repeat(5, 1fr);
+}
+
+@media (max-width: 1100px) {
+    .purchasing-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .purchasing-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.purchasing-select {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    color: var(--text-primary);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.purchasing-select:focus {
+    border-color: var(--sna-blue);
+}
+
+/* Badges Jenis PR */
+.badge-mat {
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.badge-nonmat {
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* Badges Status Pemenuhan */
+.badge-status-terpenuhi {
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.badge-status-proses-po {
+    background: #e0e7ff;
+    color: #4338ca;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.badge-status-parsial {
+    background: #fef9c3;
+    color: #854d0e;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.badge-status-pending {
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+/* Progress Bar mini dalam baris PR */
+.pr-progress-track {
+    width: 100%;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.pr-progress-fill {
+    height: 100%;
+    background: var(--sna-blue);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.pr-progress-fill.fill-complete {
+    background: #16a34a;
+}
+
+/* Header Tabel Interaktif dengan Fitur Sorting (Ascending / Descending) */
+.sortable-th {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.sortable-th:hover {
+    background-color: #f1f5f9 !important;
+    color: var(--sna-blue);
+}
+
+.sortable-th .sort-icon {
+    margin-left: 5px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    opacity: 0.6;
+    transition: transform 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.sortable-th.active-sort {
+    color: var(--sna-blue);
+    background-color: rgba(14, 165, 233, 0.06);
+}
+
+.sortable-th.active-sort .sort-icon {
+    color: var(--sna-blue);
+    opacity: 1;
 }
 
 

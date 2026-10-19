@@ -20,9 +20,11 @@ const RING_CIRCUMFERENCE = 251.32;
 // Konfigurasi State Aplikasi
 const state = {
     refreshInterval: 15,    // Interval refresh bawaan (detik)
+    retryInterval: 5,       // Interval retry cepat saat error / reconnect (detik)
     countdownTimer: 15,     // Hitung mundur detik
     timerId: null,          // Referensi interval timer
     isFetching: false,      // Penanda sedang memuat
+    isOffline: false,       // Status jaringan sedang offline / reconnect
     currentServiceModal: null, // Layanan yang sedang dibuka di modal tiket
     currentModalFilter: 'all',  // Filter di modal: all / selesai / belum / ditolak
     ticketSearchQuery: '',  // Pencarian kata kunci di modal tiket
@@ -38,6 +40,23 @@ const state = {
     subconRawData: null,
     subconSearchQuery: '',
 
+    // State Khusus Modul Purchasing (Atena ERP)
+    currentPurchasingRange: 'all',
+    currentPurchasingJenis: 'all',
+    currentPurchasingStatus: 'all',
+    currentPurchasingView: 'pr',
+    purchasingSearchQuery: '',
+    purchasingCurrentPage: 1,
+    purchasingPageSize: 30,
+    purchasingRawData: null,
+    purchasingCache: new Map(),
+
+    // State Sorting Tabel (Purchasing & Ticket)
+    purchasingSort: {
+        pr: { column: 'tanggal', dir: 'desc' },
+        items: { column: 'tanggal', dir: 'desc' },
+    },
+    ticketSort: { column: 'tanggal', dir: 'desc' },
 };
 
 // ====================================================================
@@ -99,6 +118,7 @@ function initEventListeners() {
             closeTicketModal();
             closeAppModal();
             closeSubconModal();
+            closePurchasingModal();
         }
     });
 
@@ -129,10 +149,32 @@ function initEventListeners() {
             }
         });
     }
+
+    const purchasingModalOverlay = document.getElementById('purchasingModal');
+    if (purchasingModalOverlay) {
+        purchasingModalOverlay.addEventListener('click', (e) => {
+            if (e.target === purchasingModalOverlay) {
+                closePurchasingModal();
+            }
+        });
+    }
+
+    // Auto-reconnect saat koneksi internet / LAN kembali online
+    window.addEventListener('online', () => {
+        console.log('🌐 [Network]: Jaringan kembali online, menyinkronkan data...');
+        fetchDashboardStats(true);
+    });
+
+    // Auto-sync saat tab browser aktif kembali (misalnya display TV atau pengguna kembali ke tab)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            fetchDashboardStats(false);
+        }
+    });
 }
 
 // ====================================================================
-// 4. LOGIKA AUTO-REFRESH & HITUNG MUNDUR (COUNTDOWN)
+// 4. LOGIKA AUTO-REFRESH & HITUNG MUNDUR (COUNTDOWN & FAST RECONNECT)
 // ====================================================================
 function startAutoRefresh() {
     if (state.timerId) clearInterval(state.timerId);
@@ -145,7 +187,8 @@ function startAutoRefresh() {
         updateCountdownUI();
 
         if (state.countdownTimer <= 0) {
-            state.countdownTimer = state.refreshInterval;
+            // Jika sedang offline gunakan retry cepat (5s), jika normal gunakan interval normal (15s)
+            state.countdownTimer = state.isOffline ? state.retryInterval : state.refreshInterval;
             fetchDashboardStats();
         }
     }, 1000);
@@ -154,7 +197,19 @@ function startAutoRefresh() {
 function updateCountdownUI() {
     const timerEl = document.getElementById('refreshTimer');
     if (timerEl) {
-        timerEl.textContent = `${state.countdownTimer}s`;
+        if (state.isOffline) {
+            timerEl.textContent = `${state.countdownTimer}s ⟳`;
+        } else {
+            timerEl.textContent = `${state.countdownTimer}s`;
+        }
+    }
+
+    if (state.isOffline) {
+        const badge = document.getElementById('systemStatusBadge');
+        if (badge) {
+            badge.className = 'status-badge status-offline';
+            badge.innerHTML = `<span class="status-dot"></span> Reconnecting (${state.countdownTimer}s)...`;
+        }
     }
 }
 
@@ -168,14 +223,27 @@ async function fetchDashboardStats(force = false) {
     const refreshIcon = document.getElementById('refreshIcon');
     if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
+    // Timeout 10 detik dengan AbortController untuk mencegah fetch menggantung tanpa batas waktu
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
         const url = `/api/dashboard/stats${force ? '?force=true' : ''}`;
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} (${response.statusText})`);
+        }
+
         const data = await response.json();
 
         if (!data.success) {
             throw new Error(data.message || 'Gagal memuat data dari server');
         }
+
+        // Tandai koneksi pulih jika sebelumnya offline
+        state.isOffline = false;
 
         // Simpan data layanan ke state lokal
         state.servicesData = data.layanan;
@@ -186,13 +254,22 @@ async function fetchDashboardStats(force = false) {
         renderKpiTrackerTicker(data);
         updateSystemStatus(true, Boolean(data._cached));
 
-        // Reset hitung mundur setelah fetch manual
+        // Reset hitung mundur normal setelah fetch sukses
         state.countdownTimer = state.refreshInterval;
         updateCountdownUI();
 
     } catch (error) {
-        console.error('Error saat fetch dashboard stats:', error);
+        clearTimeout(timeoutId);
+        const isAbort = error.name === 'AbortError';
+        const errorMsg = isAbort ? 'Request Timeout (10s)' : (error.message || 'Jaringan Terputus');
+        console.warn(`⚠️ [Sync Error]: ${errorMsg}, mencoba reconnect otomatis dalam 5 detik...`);
+
+        state.isOffline = true;
+        // Atur interval retry cepat (5 detik)
+        state.countdownTimer = state.retryInterval;
         updateSystemStatus(false);
+        updateCountdownUI();
+
     } finally {
         state.isFetching = false;
         if (refreshIcon) {
@@ -439,7 +516,7 @@ function updateSystemStatus(isOnline, isCached = false) {
         badge.innerHTML = `<span class="status-dot"></span> ${label}`;
     } else {
         badge.className = 'status-badge status-offline';
-        badge.innerHTML = `<span class="status-dot"></span> Terputus`;
+        badge.innerHTML = `<span class="status-dot"></span> Reconnecting (${state.countdownTimer}s)...`;
     }
 }
 
@@ -583,7 +660,7 @@ function handleSearchTickets(keyword) {
 
 function renderFilteredTickets() {
     const keyword = (state.ticketSearchQuery || '').trim().toLowerCase();
-    let list = state.modalRawTickets || [];
+    let list = [...(state.modalRawTickets || [])];
 
     if (keyword) {
         list = list.filter(t => {
@@ -595,7 +672,68 @@ function renderFilteredTickets() {
         });
     }
 
+    // Sort Tiket (Asc / Desc)
+    const tSort = state.ticketSort || { column: 'tanggal', dir: 'desc' };
+    if (tSort.column) {
+        const col = tSort.column;
+        const dir = tSort.dir === 'asc' ? 1 : -1;
+        list.sort((a, b) => {
+            let valA = a[col];
+            let valB = b[col];
+            if (col === 'tanggal') {
+                valA = a.tanggal || a.created_at || '';
+                valB = b.tanggal || b.created_at || '';
+                return String(valA).localeCompare(String(valB)) * dir;
+            }
+            return String(valA || '').localeCompare(String(valB || ''), 'id', { numeric: true, sensitivity: 'base' }) * dir;
+        });
+    }
+
     renderTicketsTable(list);
+}
+
+/**
+ * Sorting Kolom Modal Tiket (Ascending / Descending)
+ */
+function sortTicketTable(column) {
+    if (!state.ticketSort) {
+        state.ticketSort = { column: 'tanggal', dir: 'desc' };
+    }
+    if (state.ticketSort.column === column) {
+        state.ticketSort.dir = state.ticketSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.ticketSort.column = column;
+        state.ticketSort.dir = column === 'tanggal' ? 'desc' : 'asc';
+    }
+    updateTicketSortHeaders();
+    renderFilteredTickets();
+}
+
+/**
+ * Update Icon Sort pada Header Tabel Tiket
+ */
+function updateTicketSortHeaders() {
+    const table = document.querySelector('#ticketModal .tickets-table');
+    if (!table) return;
+    const currentSort = state.ticketSort || { column: 'tanggal', dir: 'desc' };
+    const headers = table.querySelectorAll('th.sortable-th');
+    headers.forEach(th => {
+        const key = th.getAttribute('data-sort-key');
+        const icon = th.querySelector('.sort-icon');
+        if (key === currentSort.column) {
+            th.classList.add('active-sort');
+            if (icon) {
+                icon.className = currentSort.dir === 'asc'
+                    ? 'fa-solid fa-sort-up sort-icon'
+                    : 'fa-solid fa-sort-down sort-icon';
+            }
+        } else {
+            th.classList.remove('active-sort');
+            if (icon) {
+                icon.className = 'fa-solid fa-sort sort-icon';
+            }
+        }
+    });
 }
 
 function renderTicketsTable(tickets) {
@@ -721,7 +859,7 @@ function closeAppModal() {
 // Helper Label dan Warna Badge Status Tiket
 function getStatusBadge(status, customLabel) {
     const s = (status || '').toLowerCase();
-    if (s === 'closed' || s === 'done') {
+    if (s === 'closed') {
         return { label: customLabel || 'Selesai', cssClass: 'badge-closed' };
     }
     if (s === 'rejected' || s === 'ditolak') {
@@ -735,6 +873,9 @@ function getStatusBadge(status, customLabel) {
     }
     if (s === 'checking') {
         return { label: customLabel || 'Pemeriksaan', cssClass: 'badge-checking' };
+    }
+    if (s === 'done') {
+        return { label: customLabel || 'Menunggu Laporan', cssClass: 'badge-pending' };
     }
     if (s === 'draft') {
         return { label: customLabel || 'Draft', cssClass: 'badge-draft' };
@@ -1310,4 +1451,712 @@ function renderSubconTablesError(msg) {
         }
     });
 }
+
+// ====================================================================
+// 12. LOGIKA INTERAKTIF MODAL PURCHASING (ATENA ERP)
+// ====================================================================
+
+/**
+ * Buka Modal Monitoring Purchasing
+ */
+function openPurchasingModal(range = 'all') {
+    const modal = document.getElementById('purchasingModal');
+    if (!modal) return;
+
+    modal.classList.add('active');
+    state.purchasingSearchQuery = '';
+    state.purchasingCurrentPage = 1;
+
+    const searchInput = document.getElementById('purchasingSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectPurchasingStatus');
+    if (selectStatus) selectStatus.value = 'all';
+    state.currentPurchasingStatus = 'all';
+
+    switchPurchasingRange(range);
+}
+
+/**
+ * Tutup Modal Purchasing
+ */
+function closePurchasingModal() {
+    const modal = document.getElementById('purchasingModal');
+    if (modal) modal.classList.remove('active');
+}
+
+/**
+ * Mengganti rentang waktu (all, month, week, today)
+ */
+async function switchPurchasingRange(range) {
+    state.currentPurchasingRange = range;
+    state.purchasingCurrentPage = 1;
+
+    // Update active class tombol
+    ['All', 'Month', 'Week', 'Today'].forEach(r => {
+        const btn = document.getElementById(`btnPrRange${r}`);
+        if (btn) btn.classList.toggle('active', r.toLowerCase() === range.toLowerCase());
+    });
+
+    await loadPurchasingData();
+}
+
+/**
+ * Mengganti filter Jenis PR (all, material, non_material)
+ */
+function switchPurchasingJenis(jenis) {
+    state.currentPurchasingJenis = jenis;
+    state.purchasingCurrentPage = 1;
+
+    const btnAll = document.getElementById('tabBtnPrAll');
+    const btnMat = document.getElementById('tabBtnPrMaterial');
+    const btnNon = document.getElementById('tabBtnPrNonMaterial');
+
+    if (btnAll) btnAll.classList.toggle('active', jenis === 'all');
+    if (btnMat) btnMat.classList.toggle('active', jenis === 'material');
+    if (btnNon) btnNon.classList.toggle('active', jenis === 'non_material');
+
+    if (state.purchasingRawData) {
+        renderPurchasingModalData(state.purchasingRawData);
+    }
+}
+
+/**
+ * Mengganti filter status (all, terpenuhi, proses_po, parsial, pending, belum_terpenuhi)
+ */
+function switchPurchasingStatus(status) {
+    state.currentPurchasingStatus = status;
+    state.purchasingCurrentPage = 1;
+
+    if (state.purchasingRawData) {
+        renderPurchasingModalData(state.purchasingRawData);
+    }
+}
+
+/**
+ * Mengganti mode tampilan: Per No. PR ('pr') vs Rincian Item ('items')
+ */
+function switchPurchasingView(viewMode) {
+    state.currentPurchasingView = viewMode;
+    state.purchasingCurrentPage = 1;
+
+    const btnPr = document.getElementById('btnViewPrGroup');
+    const btnItems = document.getElementById('btnViewPrItems');
+    const panelPr = document.getElementById('tabPanelPurchasingPr');
+    const panelItems = document.getElementById('tabPanelPurchasingItems');
+
+    if (btnPr) btnPr.classList.toggle('active', viewMode === 'pr');
+    if (btnItems) btnItems.classList.toggle('active', viewMode === 'items');
+
+    if (panelPr) panelPr.classList.toggle('active', viewMode === 'pr');
+    if (panelItems) panelItems.classList.toggle('active', viewMode === 'items');
+
+    updatePurchasingSortHeaders(viewMode);
+
+    if (state.purchasingRawData) {
+        renderPurchasingModalData(state.purchasingRawData);
+    }
+}
+
+/**
+ * Pencarian No PR / Barang secara realtime
+ */
+let purchasingSearchTimeout = null;
+function handlePurchasingSearch(query) {
+    clearTimeout(purchasingSearchTimeout);
+    purchasingSearchTimeout = setTimeout(() => {
+        state.purchasingSearchQuery = (query || '').trim().toLowerCase();
+        state.purchasingCurrentPage = 1;
+        if (state.purchasingRawData) {
+            renderPurchasingModalData(state.purchasingRawData);
+        }
+    }, 200);
+}
+
+/**
+ * Tombol Sinkronisasi Paksa dengan Atena ERP
+ */
+async function syncPurchasingData() {
+    const syncBtn = document.getElementById('btnSyncPurchasing');
+    const icon = syncBtn?.querySelector('i');
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        renderPurchasingTablesLoading();
+        const res = await fetch('/api/dashboard/purchasing/sync', { method: 'POST' });
+        const json = await res.json();
+        if (json.success && json.data) {
+            state.purchasingCache.clear();
+            state.purchasingRawData = json.data;
+            renderPurchasingModalData(json.data);
+            // Refresh statistik dashboard utama
+            fetchDashboardStats(true);
+        } else {
+            throw new Error(json.message || 'Gagal sinkronisasi data');
+        }
+    } catch (err) {
+        console.error('Error sync purchasing:', err);
+        renderPurchasingTablesError(err.message);
+    } finally {
+        if (icon) {
+            setTimeout(() => icon.classList.remove('fa-spin'), 600);
+        }
+    }
+}
+
+/**
+ * Muat data purchasing dari API
+ */
+async function loadPurchasingData(force = false) {
+    const range = state.currentPurchasingRange;
+    const cacheKey = `${range}`;
+
+    if (!force && state.purchasingCache.has(cacheKey)) {
+        const cached = state.purchasingCache.get(cacheKey);
+        state.purchasingRawData = cached.data;
+        renderPurchasingModalData(cached.data);
+        if (Date.now() - cached.timestamp < 30000) return;
+    } else {
+        renderPurchasingTablesLoading();
+    }
+
+    try {
+        const res = await fetch(`/api/dashboard/purchasing?range=${range}${force ? '&force=true' : ''}`);
+        const result = await res.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Gagal mengambil data monitoring purchasing');
+        }
+
+        state.purchasingCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+        state.purchasingRawData = result.data;
+        renderPurchasingModalData(result.data);
+
+    } catch (err) {
+        console.error('Error memuat data purchasing:', err);
+        renderPurchasingTablesError(err.message);
+    }
+}
+
+/**
+ * Render semua elemen di Modal Purchasing berdasarkan state filter
+ */
+function renderPurchasingModalData(data) {
+    if (!data) return;
+
+    const kpi = data.kpi || {};
+    const meta = data.meta || {};
+
+    // 1. Tampilkan KPI Top Grid
+    const elTotalPr = document.getElementById('modalKpiTotalPr');
+    const elTerpenuhi = document.getElementById('modalKpiPrTerpenuhi');
+    const elPercent = document.getElementById('modalKpiPrPercent');
+    const elMatTerpenuhi = document.getElementById('modalKpiMatTerpenuhi');
+    const elMatPercent = document.getElementById('modalKpiMatPercent');
+    const elNonMatTerpenuhi = document.getElementById('modalKpiNonMatTerpenuhi');
+    const elNonMatPercent = document.getElementById('modalKpiNonMatPercent');
+    const elPending = document.getElementById('modalKpiPrPending');
+
+    if (elTotalPr) elTotalPr.textContent = Number(kpi.total_pr || 0).toLocaleString('id-ID');
+    if (elTerpenuhi) elTerpenuhi.textContent = Number(kpi.pr_terpenuhi || 0).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = `${kpi.persentase_selesai || 0}%`;
+    if (elMatTerpenuhi) elMatTerpenuhi.textContent = Number(kpi.material?.pr_terpenuhi || 0).toLocaleString('id-ID');
+    if (elMatPercent) elMatPercent.textContent = `${kpi.material?.persentase || 0}%`;
+    if (elNonMatTerpenuhi) elNonMatTerpenuhi.textContent = Number(kpi.non_material?.pr_terpenuhi || 0).toLocaleString('id-ID');
+    if (elNonMatPercent) elNonMatPercent.textContent = `${kpi.non_material?.persentase || 0}%`;
+    if (elPending) elPending.textContent = Number(kpi.pr_pending || 0).toLocaleString('id-ID');
+
+    // 2. Tampilkan Counter Tab Jenis PR
+    const countAllEl = document.getElementById('countPrAll');
+    const countMatEl = document.getElementById('countPrMaterial');
+    const countNonMatEl = document.getElementById('countPrNonMaterial');
+
+    if (countAllEl) countAllEl.textContent = `${kpi.total_pr || 0}`;
+    if (countMatEl) countMatEl.textContent = `${kpi.material?.total_pr || 0}`;
+    if (countNonMatEl) countNonMatEl.textContent = `${kpi.non_material?.total_pr || 0}`;
+
+    // 3. Tampilkan Info Terakhir Sinkronisasi
+    const syncTimeEl = document.getElementById('purchasingLastSyncTime');
+    if (syncTimeEl) {
+        if (meta.sync_time) {
+            const d = new Date(meta.sync_time);
+            syncTimeEl.textContent = `• Sinkronisasi: ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+        } else if (meta.generated_at) {
+            const d = new Date(meta.generated_at);
+            syncTimeEl.textContent = `• Diperbarui: ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+        }
+    }
+
+    // 4. Filter List PR dan Item
+    const q = state.purchasingSearchQuery;
+    const jenis = state.currentPurchasingJenis;
+    const status = state.currentPurchasingStatus;
+
+    // Filter daftar PR
+    let prList = (data.summary_by_pr || []).filter(pr => {
+        // Filter Jenis
+        if (jenis !== 'all' && pr.jenis_code !== jenis) return false;
+        // Filter Status
+        if (status !== 'all') {
+            if (status === 'belum_terpenuhi') {
+                if (pr.status_code === 'terpenuhi') return false;
+            } else if (pr.status_code !== status) {
+                return false;
+            }
+        }
+        // Filter Search
+        if (q) {
+            const matchPr = pr.no_pr && pr.no_pr.toLowerCase().includes(q);
+            const matchItem = (pr.items || []).some(i =>
+                (i.kode_barang && i.kode_barang.toLowerCase().includes(q)) ||
+                (i.nama_barang && i.nama_barang.toLowerCase().includes(q))
+            );
+            if (!matchPr && !matchItem) return false;
+        }
+        return true;
+    });
+
+    // Filter daftar Item
+    let itemList = (data.items || []).filter(item => {
+        // Filter Jenis
+        if (jenis !== 'all' && item.jenis_code !== jenis) return false;
+        // Filter Status
+        if (status !== 'all') {
+            if (status === 'belum_terpenuhi') {
+                if (item.status_code === 'terpenuhi') return false;
+            } else if (item.status_code !== status) {
+                return false;
+            }
+        }
+        // Filter Search
+        if (q) {
+            const matchPr = item.no_pr && item.no_pr.toLowerCase().includes(q);
+            const matchKode = item.kode_barang && item.kode_barang.toLowerCase().includes(q);
+            const matchNama = item.nama_barang && item.nama_barang.toLowerCase().includes(q);
+            if (!matchPr && !matchKode && !matchNama) return false;
+        }
+        return true;
+    });
+
+    // 5. Urutkan Data (Sorting Ascending / Descending)
+    const prSort = state.purchasingSort?.pr || { column: 'tanggal', dir: 'desc' };
+    if (prSort.column) {
+        const col = prSort.column;
+        const dir = prSort.dir === 'asc' ? 1 : -1;
+        prList.sort((a, b) => {
+            let valA = a[col];
+            let valB = b[col];
+
+            if (col === 'status_code') {
+                valA = a.status_code === 'terpenuhi' ? 1 : 0;
+                valB = b.status_code === 'terpenuhi' ? 1 : 0;
+                return (valA - valB) * dir;
+            }
+
+            if (col === 'tanggal') {
+                return String(valA || '').localeCompare(String(valB || '')) * dir;
+            }
+
+            if (typeof valA === 'number' || typeof valB === 'number') {
+                return ((valA || 0) - (valB || 0)) * dir;
+            }
+
+            return String(valA || '').localeCompare(String(valB || ''), 'id', { numeric: true, sensitivity: 'base' }) * dir;
+        });
+    }
+
+    const itemSort = state.purchasingSort?.items || { column: 'tanggal', dir: 'desc' };
+    if (itemSort.column) {
+        const col = itemSort.column;
+        const dir = itemSort.dir === 'asc' ? 1 : -1;
+        itemList.sort((a, b) => {
+            let valA = a[col];
+            let valB = b[col];
+
+            if (col === 'status_code') {
+                valA = a.status_code === 'terpenuhi' ? 1 : 0;
+                valB = b.status_code === 'terpenuhi' ? 1 : 0;
+                return (valA - valB) * dir;
+            }
+
+            if (col === 'tanggal') {
+                return String(valA || '').localeCompare(String(valB || '')) * dir;
+            }
+
+            if (col === 'progress_percent') {
+                valA = getItemProgressPercent(a);
+                valB = getItemProgressPercent(b);
+                return (valA - valB) * dir;
+            }
+
+            if (typeof valA === 'number' || typeof valB === 'number') {
+                return ((valA || 0) - (valB || 0)) * dir;
+            }
+
+            return String(valA || '').localeCompare(String(valB || ''), 'id', { numeric: true, sensitivity: 'base' }) * dir;
+        });
+    }
+
+    // Perbarui Icon Header yang Aktif
+    updatePurchasingSortHeaders(state.currentPurchasingView);
+
+    // 6. Render sesuai mode tampilan aktif
+    if (state.currentPurchasingView === 'pr') {
+        renderPurchasingPrTable(prList);
+    } else {
+        renderPurchasingItemsTable(itemList);
+    }
+}
+
+/**
+ * Hitung persentase pemenuhan item berdasarkan Realisasi GRS dan Sisa OS (Outstanding)
+ * Rumus: (Realisasi GRS / (Realisasi GRS + Sisa OS)) * 100%
+ * Catatan: Pemenuhan hanya ada pada rincian per item, tidak pada level per PR.
+ */
+function getItemProgressPercent(item) {
+    if (!item) return 0;
+    const grs = Number(item.qty_grs || 0);
+    const os = Number(item.qty_os || 0);
+    const total = grs + os;
+    if (total > 0) {
+        return Math.min(100, Math.max(0, Number(((grs / total) * 100).toFixed(1))));
+    }
+    if (grs > 0 && os <= 0) return 100;
+    return 0;
+}
+
+/**
+ * Render Tabel Rangkuman Per No. PR
+ */
+function renderPurchasingPrTable(prList) {
+    const tbody = document.getElementById('purchasingPrTableBody');
+    const footerStats = document.getElementById('purchasingModalFooterStats');
+    const pageInfo = document.getElementById('purchasingPageInfo');
+    const btnPrev = document.getElementById('btnPurchasingPrevPage');
+    const btnNext = document.getElementById('btnPurchasingNextPage');
+
+    if (!tbody) return;
+
+    if (prList.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="loading-state" style="color: var(--text-muted); padding: 2.5rem 1rem;">
+                    <i class="fa-solid fa-inbox" style="font-size: 1.8rem; margin-bottom: 0.5rem; display: block; color: #cbd5e1;"></i>
+                    Tidak ada data Purchase Request yang sesuai dengan filter.
+                </td>
+            </tr>
+        `;
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 No. PR';
+        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
+        if (btnPrev) btnPrev.disabled = true;
+        if (btnNext) btnNext.disabled = true;
+        return;
+    }
+
+    const pageSize = state.purchasingPageSize;
+    const totalPages = Math.ceil(prList.length / pageSize);
+    if (state.purchasingCurrentPage > totalPages) state.purchasingCurrentPage = totalPages;
+    if (state.purchasingCurrentPage < 1) state.purchasingCurrentPage = 1;
+
+    const startIndex = (state.purchasingCurrentPage - 1) * pageSize;
+    const pageItems = prList.slice(startIndex, startIndex + pageSize);
+
+    let html = '';
+    pageItems.forEach((pr, idx) => {
+        const rowNo = startIndex + idx + 1;
+
+        let badgeStatusHtml = '';
+        if (pr.status_code === 'terpenuhi') {
+            badgeStatusHtml = `<span class="badge-status-terpenuhi"><i class="fa-solid fa-circle-check"></i> Sudah PO / GRS</span>`;
+        } else {
+            badgeStatusHtml = `<span class="badge-status-pending"><i class="fa-solid fa-hourglass-start"></i> Belum PO</span>`;
+        }
+
+        const badgeJenisHtml = pr.jenis_code === 'material'
+            ? `<span class="badge-mat"><i class="fa-solid fa-cube"></i> Material</span>`
+            : `<span class="badge-nonmat"><i class="fa-solid fa-tag"></i> Non-Mat</span>`;
+
+        html += `
+            <tr>
+                <td class="text-center" style="color: var(--text-muted); font-size: 0.78rem;">${rowNo}</td>
+                <td>
+                    <span class="ticket-number" style="font-weight: 700; cursor: pointer; white-space: nowrap;" onclick="filterToSinglePr('${escapeHtml(pr.no_pr)}')">
+                        ${escapeHtml(pr.no_pr)}
+                    </span>
+                </td>
+                <td style="font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap;">${escapeHtml(pr.tanggal_label || pr.tanggal)}</td>
+                <td class="text-center">${badgeJenisHtml}</td>
+                <td class="text-center" style="font-weight: 600;">${pr.item_count}</td>
+                <td class="text-right" style="font-weight: 600; white-space: nowrap;">${Number(pr.total_request || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #2563eb; white-space: nowrap;">${Number(pr.total_po || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #16a34a; font-weight: 600; white-space: nowrap;">${Number(pr.total_grs || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: ${pr.total_os > 0 ? '#dc2626' : '#16a34a'}; font-weight: 600; white-space: nowrap;">
+                    ${Number(pr.total_os || 0).toLocaleString('id-ID')}
+                </td>
+                <td class="text-center" style="white-space: nowrap;">${badgeStatusHtml}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIndex + 1}-${Math.min(startIndex + pageSize, prList.length)} dari ${prList.length} No. PR`;
+    }
+    if (pageInfo) {
+        pageInfo.textContent = `Halaman ${state.purchasingCurrentPage} dari ${totalPages} (${prList.length} PR)`;
+    }
+    if (btnPrev) btnPrev.disabled = state.purchasingCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = state.purchasingCurrentPage >= totalPages;
+}
+
+/**
+ * Render Tabel Rincian Semua Item
+ */
+function renderPurchasingItemsTable(itemList) {
+    const tbody = document.getElementById('purchasingItemsTableBody');
+    const footerStats = document.getElementById('purchasingModalFooterStats');
+    const pageInfo = document.getElementById('purchasingPageInfo');
+    const btnPrev = document.getElementById('btnPurchasingPrevPage');
+    const btnNext = document.getElementById('btnPurchasingNextPage');
+
+    if (!tbody) return;
+
+    if (itemList.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="13" class="loading-state" style="color: var(--text-muted); padding: 2.5rem 1rem;">
+                    <i class="fa-solid fa-inbox" style="font-size: 1.8rem; margin-bottom: 0.5rem; display: block; color: #cbd5e1;"></i>
+                    Tidak ada baris item yang sesuai dengan filter.
+                </td>
+            </tr>
+        `;
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 Item';
+        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
+        if (btnPrev) btnPrev.disabled = true;
+        if (btnNext) btnNext.disabled = true;
+        return;
+    }
+
+    const pageSize = state.purchasingPageSize;
+    const totalPages = Math.ceil(itemList.length / pageSize);
+    if (state.purchasingCurrentPage > totalPages) state.purchasingCurrentPage = totalPages;
+    if (state.purchasingCurrentPage < 1) state.purchasingCurrentPage = 1;
+
+    const startIndex = (state.purchasingCurrentPage - 1) * pageSize;
+    const pageItems = itemList.slice(startIndex, startIndex + pageSize);
+
+    let html = '';
+    pageItems.forEach((item, idx) => {
+        const rowNo = startIndex + idx + 1;
+
+        let badgeStatusHtml = '';
+        if (item.status_code === 'terpenuhi') {
+            badgeStatusHtml = `<span class="badge-status-terpenuhi"><i class="fa-solid fa-check"></i> Sudah PO / GRS</span>`;
+        } else {
+            badgeStatusHtml = `<span class="badge-status-pending">Belum PO</span>`;
+        }
+
+        const badgeJenisHtml = item.jenis_code === 'material'
+            ? `<span class="badge-mat">Material</span>`
+            : `<span class="badge-nonmat">Non-Mat</span>`;
+
+        // Persentase Pemenuhan Item berdasarkan Realisasi GRS dan Sisa OS
+        const progressVal = getItemProgressPercent(item);
+        const progressCls = progressVal >= 100 ? 'fill-complete' : '';
+
+        html += `
+            <tr>
+                <td class="text-center" style="color: var(--text-muted); font-size: 0.78rem;">${rowNo}</td>
+                <td>
+                    <span class="ticket-number" style="font-size: 0.78rem; white-space: nowrap;">${escapeHtml(item.no_pr)}</span>
+                </td>
+                <td style="font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap;">${escapeHtml(item.tanggal)}</td>
+                <td class="text-center">${badgeJenisHtml}</td>
+                <td style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted); white-space: nowrap;">${escapeHtml(item.kode_barang)}</td>
+                <td style="font-weight: 600; color: var(--text-primary); font-size: 0.78rem; line-height: 1.35; word-break: break-word;">
+                    ${escapeHtml(item.nama_barang)}
+                </td>
+                <td class="text-center"><span class="badge-status badge-draft" style="font-size: 0.68rem; padding: 1px 5px;">${escapeHtml(item.satuan || 'PCS')}</span></td>
+                <td class="text-right" style="font-weight: 600; white-space: nowrap;">${Number(item.qty_request || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #2563eb; white-space: nowrap;">${Number(item.qty_po || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #16a34a; font-weight: 600; white-space: nowrap;">${Number(item.qty_grs || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: ${item.qty_os > 0 ? '#dc2626' : '#16a34a'}; font-weight: 600; white-space: nowrap;">
+                    ${Number(item.qty_os || 0).toLocaleString('id-ID')}
+                </td>
+                <td style="min-width: 80px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 2px;">
+                        <span>${progressVal}%</span>
+                    </div>
+                    <div class="pr-progress-track">
+                        <div class="pr-progress-fill ${progressCls}" style="width: ${Math.min(100, progressVal)}%;"></div>
+                    </div>
+                </td>
+                <td class="text-center" style="white-space: nowrap;">${badgeStatusHtml}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIndex + 1}-${Math.min(startIndex + pageSize, itemList.length)} dari ${itemList.length} Item`;
+    }
+    if (pageInfo) {
+        pageInfo.textContent = `Halaman ${state.purchasingCurrentPage} dari ${totalPages} (${itemList.length} Item)`;
+    }
+    if (btnPrev) btnPrev.disabled = state.purchasingCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = state.purchasingCurrentPage >= totalPages;
+}
+
+/**
+ * Filter langsung ke single PR saat No PR diklik
+ */
+function filterToSinglePr(noPr) {
+    const searchInput = document.getElementById('purchasingSearchInput');
+    if (searchInput) searchInput.value = noPr;
+    state.purchasingSearchQuery = (noPr || '').toLowerCase();
+    switchPurchasingView('items');
+}
+
+/**
+ * Navigasi ganti halaman
+ */
+function changePurchasingPage(delta) {
+    state.purchasingCurrentPage += delta;
+    if (state.purchasingRawData) {
+        renderPurchasingModalData(state.purchasingRawData);
+    }
+}
+
+/**
+ * Animasi skeleton loading tabel purchasing
+ */
+function renderPurchasingTablesLoading() {
+    const prTbody = document.getElementById('purchasingPrTableBody');
+    const itemsTbody = document.getElementById('purchasingItemsTableBody');
+
+    const skeletonPr = Array(6).fill(0).map(() => `
+        <tr class="skeleton-row">
+            <td class="text-center"><span class="skeleton-box" style="width: 20px; height: 16px;"></span></td>
+            <td><span class="skeleton-box" style="width: 100px; height: 16px;"></span></td>
+            <td><span class="skeleton-box" style="width: 80px; height: 14px;"></span></td>
+            <td><span class="skeleton-pill" style="width: 70px;"></span></td>
+            <td class="text-center"><span class="skeleton-box" style="width: 30px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+            <td class="text-center"><span class="skeleton-badge" style="width: 70px;"></span></td>
+        </tr>
+    `).join('');
+
+    const skeletonItems = Array(6).fill(0).map(() => `
+        <tr class="skeleton-row">
+            <td class="text-center"><span class="skeleton-box" style="width: 20px; height: 16px;"></span></td>
+            <td><span class="skeleton-box" style="width: 95px; height: 16px;"></span></td>
+            <td><span class="skeleton-box" style="width: 75px; height: 14px;"></span></td>
+            <td><span class="skeleton-pill" style="width: 65px;"></span></td>
+            <td><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+            <td><span class="skeleton-box" style="width: 80%; height: 14px;"></span></td>
+            <td class="text-center"><span class="skeleton-box" style="width: 40px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 50px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 50px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 50px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 50px; height: 14px;"></span></td>
+            <td><span class="skeleton-box" style="width: 85px; height: 12px;"></span></td>
+            <td class="text-center"><span class="skeleton-badge" style="width: 70px;"></span></td>
+        </tr>
+    `).join('');
+
+    if (prTbody) prTbody.innerHTML = skeletonPr;
+    if (itemsTbody) itemsTbody.innerHTML = skeletonItems;
+}
+
+/**
+ * Tampilkan pesan error di tabel
+ */
+function renderPurchasingTablesError(msg) {
+    ['purchasingPrTableBody', 'purchasingItemsTableBody'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = `
+                <tr>
+                    <td colspan="12" class="loading-state" style="color: #ef4444; padding: 2rem 1rem;">
+                        <i class="fa-solid fa-circle-exclamation"></i> Gagal memuat data Purchasing: ${escapeHtml(msg)}
+                    </td>
+                </tr>
+            `;
+        }
+    });
+}
+
+/**
+ * Sorting Kolom Tabel Purchasing (Ascending / Descending)
+ */
+function sortPurchasing(viewMode, column) {
+    if (!state.purchasingSort) {
+        state.purchasingSort = {
+            pr: { column: 'tanggal', dir: 'desc' },
+            items: { column: 'tanggal', dir: 'desc' }
+        };
+    }
+
+    const currentSort = state.purchasingSort[viewMode] || { column: 'tanggal', dir: 'desc' };
+
+    if (currentSort.column === column) {
+        // Toggle direction (asc <-> desc)
+        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        // Ganti kolom baru
+        currentSort.column = column;
+        const numericCols = [
+            'item_count', 'total_request', 'total_po', 'total_grs', 'total_os', 'progress_percent',
+            'qty_request', 'qty_po', 'qty_grs', 'qty_os', 'tanggal'
+        ];
+        currentSort.dir = numericCols.includes(column) ? 'desc' : 'asc';
+    }
+
+    state.purchasingSort[viewMode] = currentSort;
+    state.purchasingCurrentPage = 1;
+
+    updatePurchasingSortHeaders(viewMode);
+
+    if (state.purchasingRawData) {
+        renderPurchasingModalData(state.purchasingRawData);
+    }
+}
+
+/**
+ * Update Icon dan Indikator Sorting pada Header Tabel Purchasing
+ */
+function updatePurchasingSortHeaders(viewMode) {
+    const panelId = viewMode === 'pr' ? 'tabPanelPurchasingPr' : 'tabPanelPurchasingItems';
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    const currentSort = (state.purchasingSort && state.purchasingSort[viewMode])
+        ? state.purchasingSort[viewMode]
+        : { column: 'tanggal', dir: 'desc' };
+
+    const headers = panel.querySelectorAll('th.sortable-th');
+    headers.forEach(th => {
+        const key = th.getAttribute('data-sort-key');
+        const icon = th.querySelector('.sort-icon');
+        if (key === currentSort.column) {
+            th.classList.add('active-sort');
+            if (icon) {
+                icon.className = currentSort.dir === 'asc'
+                    ? 'fa-solid fa-sort-up sort-icon'
+                    : 'fa-solid fa-sort-down sort-icon';
+            }
+        } else {
+            th.classList.remove('active-sort');
+            if (icon) {
+                icon.className = 'fa-solid fa-sort sort-icon';
+            }
+        }
+    });
+}
+
 
