@@ -15,6 +15,7 @@ const config = require('../config/app.config');
 const ticketingService = require('../services/ticketingService');
 const subconService = require('../services/subconService');
 const purchasingService = require('../services/purchasingService');
+const produksiService = require('../services/produksiService');
 
 // In-memory cache sederhana untuk efisiensi beban server
 const cache = {
@@ -80,11 +81,12 @@ router.get('/stats', async (req, res) => {
     }
 
     try {
-        // 2. Ambil data dari Layanan Ticketing, Subcon, & Purchasing secara paralel
-        const [ticketingSettled, subconSettled, purchasingSettled] = await Promise.allSettled([
+        // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing & Produksi secara paralel
+        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled] = await Promise.allSettled([
             ticketingService.getSummary(forceRefresh),
             subconService.getMonitoringToday(forceRefresh),
-            purchasingService.getSummary(forceRefresh)
+            purchasingService.getSummary(forceRefresh),
+            produksiService.getRingkasanAll(forceRefresh)
         ]);
 
         let apiData = null;
@@ -113,6 +115,15 @@ router.get('/stats', async (req, res) => {
             console.error(`❌ [API PURCHASING ERROR]: ${purchasingSettled.reason?.message}`);
         }
         const purchasingKpi = purchasingData?.kpi || {};
+
+        let produksiData = null;
+        if (produksiSettled.status === 'fulfilled') {
+            produksiData = produksiSettled.value?.data || null;
+        } else {
+            console.error(`❌ [API PRODUKSI ERROR]: ${produksiSettled.reason?.message}`);
+        }
+        const prodModules = produksiData?.modules || {};
+        const prodKpi = produksiData?.kpi || {};
 
         const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
@@ -233,7 +244,7 @@ router.get('/stats', async (req, res) => {
             },
 
             // ==============================================================
-            // 4. LINI PRODUKSI ATENA (TEMPLATE STANDBY SIAP INTEGRASI)
+            // 4. LINI PRODUKSI ATENA (LIVE REST API)
             // ==============================================================
             PROD_FINISHING: {
                 no: 4,
@@ -243,17 +254,30 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Lini Produksi Atena',
                 data_ditampilkan: 'Penyelesaian PP',
                 sub_nama: 'PP Stentor vs Hasil Actual',
-                sumber_data: 'Program Atena (PP stentor vs haasil actual)',
-                sumber: 'Program Atena',
+                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+                sumber: 'Atena ERP',
                 catatan: 'Perbandingan PP Stentor dengan hasil aktual harian',
                 icon: 'industry',
-                is_active: false,
-                metric_labels: { total: 'Target PP', selesai: 'Actual', belum: 'Selisih' },
-                unit: 'Meter / PCS',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: prodModules.PROD_FINISHING ? Boolean(prodModules.PROD_FINISHING.is_active) : false,
+                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+                unit: prodModules.PROD_FINISHING?.unit || 'Meter / PCS',
+                total_tiket: prodModules.PROD_FINISHING?.total_tiket ?? 0,
+                selesai: prodModules.PROD_FINISHING?.selesai ?? 0,
+                belum_selesai: prodModules.PROD_FINISHING?.belum_selesai ?? 0,
+                persentase_selesai: prodModules.PROD_FINISHING?.persentase_selesai ?? 0,
+                bagian: 'stentor',
+                tglawal: prodModules.PROD_FINISHING?.tglawal,
+                tglakhir: prodModules.PROD_FINISHING?.tglakhir,
+                today: prodModules.PROD_FINISHING?.today,
+                month: prodModules.PROD_FINISHING?.month,
+                today_total: prodModules.PROD_FINISHING?.today_total ?? 0,
+                today_selesai: prodModules.PROD_FINISHING?.today_selesai ?? 0,
+                today_belum: prodModules.PROD_FINISHING?.today_belum ?? 0,
+                today_persentase: prodModules.PROD_FINISHING?.today_persentase ?? 0,
+                month_total: prodModules.PROD_FINISHING?.month_total ?? 0,
+                month_selesai: prodModules.PROD_FINISHING?.month_selesai ?? 0,
+                month_belum: prodModules.PROD_FINISHING?.month_belum ?? 0,
+                month_persentase: prodModules.PROD_FINISHING?.month_persentase ?? 0,
             },
             PROD_ANTISEPTIK: {
                 no: 5,
@@ -263,17 +287,30 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Lini Produksi Atena',
                 data_ditampilkan: 'Penyelesaian PP',
                 sub_nama: 'PP Antis Packing vs Hasil Actual',
-                sumber_data: 'Program Atena (PP antis packing vs haasil actual)',
-                sumber: 'Program Atena',
+                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+                sumber: 'Atena ERP',
                 catatan: 'Perbandingan PP Antis Packing dengan hasil aktual',
                 icon: 'bottle-droplet',
-                is_active: false,
-                metric_labels: { total: 'Target PP', selesai: 'Actual', belum: 'Selisih' },
-                unit: 'Botol / PCS',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: prodModules.PROD_ANTISEPTIK ? Boolean(prodModules.PROD_ANTISEPTIK.is_active) : false,
+                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+                unit: prodModules.PROD_ANTISEPTIK?.unit || 'Botol / PCS',
+                total_tiket: prodModules.PROD_ANTISEPTIK?.total_tiket ?? 0,
+                selesai: prodModules.PROD_ANTISEPTIK?.selesai ?? 0,
+                belum_selesai: prodModules.PROD_ANTISEPTIK?.belum_selesai ?? 0,
+                persentase_selesai: prodModules.PROD_ANTISEPTIK?.persentase_selesai ?? 0,
+                bagian: 'antiseptik',
+                tglawal: prodModules.PROD_ANTISEPTIK?.tglawal,
+                tglakhir: prodModules.PROD_ANTISEPTIK?.tglakhir,
+                today: prodModules.PROD_ANTISEPTIK?.today,
+                month: prodModules.PROD_ANTISEPTIK?.month,
+                today_total: prodModules.PROD_ANTISEPTIK?.today_total ?? 0,
+                today_selesai: prodModules.PROD_ANTISEPTIK?.today_selesai ?? 0,
+                today_belum: prodModules.PROD_ANTISEPTIK?.today_belum ?? 0,
+                today_persentase: prodModules.PROD_ANTISEPTIK?.today_persentase ?? 0,
+                month_total: prodModules.PROD_ANTISEPTIK?.month_total ?? 0,
+                month_selesai: prodModules.PROD_ANTISEPTIK?.month_selesai ?? 0,
+                month_belum: prodModules.PROD_ANTISEPTIK?.month_belum ?? 0,
+                month_persentase: prodModules.PROD_ANTISEPTIK?.month_persentase ?? 0,
             },
             PROD_CW: {
                 no: 6,
@@ -283,17 +320,30 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Lini Produksi Atena',
                 data_ditampilkan: 'Penyelesaian PP',
                 sub_nama: 'PP CW Packing vs Hasil Actual',
-                sumber_data: 'Program Atena (PP CW packing vs haasil actual)',
-                sumber: 'Program Atena',
+                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+                sumber: 'Atena ERP',
                 catatan: 'Perbandingan PP CW Packing dengan hasil aktual',
                 icon: 'box-open',
-                is_active: false,
-                metric_labels: { total: 'Target PP', selesai: 'Actual', belum: 'Selisih' },
-                unit: 'PCS',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: prodModules.PROD_CW ? Boolean(prodModules.PROD_CW.is_active) : false,
+                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+                unit: prodModules.PROD_CW?.unit || 'PCS',
+                total_tiket: prodModules.PROD_CW?.total_tiket ?? 0,
+                selesai: prodModules.PROD_CW?.selesai ?? 0,
+                belum_selesai: prodModules.PROD_CW?.belum_selesai ?? 0,
+                persentase_selesai: prodModules.PROD_CW?.persentase_selesai ?? 0,
+                bagian: 'cw',
+                tglawal: prodModules.PROD_CW?.tglawal,
+                tglakhir: prodModules.PROD_CW?.tglakhir,
+                today: prodModules.PROD_CW?.today,
+                month: prodModules.PROD_CW?.month,
+                today_total: prodModules.PROD_CW?.today_total ?? 0,
+                today_selesai: prodModules.PROD_CW?.today_selesai ?? 0,
+                today_belum: prodModules.PROD_CW?.today_belum ?? 0,
+                today_persentase: prodModules.PROD_CW?.today_persentase ?? 0,
+                month_total: prodModules.PROD_CW?.month_total ?? 0,
+                month_selesai: prodModules.PROD_CW?.month_selesai ?? 0,
+                month_belum: prodModules.PROD_CW?.month_belum ?? 0,
+                month_persentase: prodModules.PROD_CW?.month_persentase ?? 0,
             },
             PROD_SIZING: {
                 no: 7,
@@ -303,17 +353,30 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Lini Produksi Atena',
                 data_ditampilkan: 'Penyelesaian PP',
                 sub_nama: 'PP Sizing vs Hasil Actual',
-                sumber_data: 'Program Atena (PP Sizing vs haasil actual)',
-                sumber: 'Program Atena',
+                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+                sumber: 'Atena ERP',
                 catatan: 'Perbandingan PP Sizing dengan hasil aktual',
                 icon: 'scroll',
-                is_active: false,
-                metric_labels: { total: 'Target PP', selesai: 'Actual', belum: 'Selisih' },
-                unit: 'Meter / Beam',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: prodModules.PROD_SIZING ? Boolean(prodModules.PROD_SIZING.is_active) : false,
+                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+                unit: prodModules.PROD_SIZING?.unit || 'Meter / Beam',
+                total_tiket: prodModules.PROD_SIZING?.total_tiket ?? 0,
+                selesai: prodModules.PROD_SIZING?.selesai ?? 0,
+                belum_selesai: prodModules.PROD_SIZING?.belum_selesai ?? 0,
+                persentase_selesai: prodModules.PROD_SIZING?.persentase_selesai ?? 0,
+                bagian: 'sizing',
+                tglawal: prodModules.PROD_SIZING?.tglawal,
+                tglakhir: prodModules.PROD_SIZING?.tglakhir,
+                today: prodModules.PROD_SIZING?.today,
+                month: prodModules.PROD_SIZING?.month,
+                today_total: prodModules.PROD_SIZING?.today_total ?? 0,
+                today_selesai: prodModules.PROD_SIZING?.today_selesai ?? 0,
+                today_belum: prodModules.PROD_SIZING?.today_belum ?? 0,
+                today_persentase: prodModules.PROD_SIZING?.today_persentase ?? 0,
+                month_total: prodModules.PROD_SIZING?.month_total ?? 0,
+                month_selesai: prodModules.PROD_SIZING?.month_selesai ?? 0,
+                month_belum: prodModules.PROD_SIZING?.month_belum ?? 0,
+                month_persentase: prodModules.PROD_SIZING?.month_persentase ?? 0,
             },
             PROD_POLIGYP: {
                 no: 8,
@@ -323,37 +386,30 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Lini Produksi Atena',
                 data_ditampilkan: 'Penyelesaian PP',
                 sub_nama: 'PP Poligyp Packing vs Hasil Actual',
-                sumber_data: 'Program Atena (PP Poligyp packing vs haasil actual)',
-                sumber: 'Program Atena',
+                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+                sumber: 'Atena ERP',
                 catatan: 'Perbandingan PP Poligyp Packing dengan hasil aktual',
                 icon: 'bandage',
-                is_active: false,
-                metric_labels: { total: 'Target PP', selesai: 'Actual', belum: 'Selisih' },
-                unit: 'Roll / PCS',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
-            },
-            PROD_SIZING2: {
-                no: 9,
-                kode: 'PROD_SIZING2',
-                nama: 'Produksi Sizing (Lini 2)',
-                kategori: 'produksi',
-                kategori_label: 'Lini Produksi Atena',
-                data_ditampilkan: 'Penyelesaian PP',
-                sub_nama: 'PP Sizing Lini 2 vs Hasil Actual',
-                sumber_data: 'Program Atena (PP Sizing vs haasil actual)',
-                sumber: 'Program Atena',
-                catatan: 'Perbandingan PP Sizing Lini 2 dengan hasil aktual',
-                icon: 'lines-leaning',
-                is_active: false,
-                metric_labels: { total: 'Target PP', selesai: 'Actual', belum: 'Selisih' },
-                unit: 'Meter / Beam',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: prodModules.PROD_POLIGYP ? Boolean(prodModules.PROD_POLIGYP.is_active) : false,
+                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+                unit: prodModules.PROD_POLIGYP?.unit || 'Roll / PCS',
+                total_tiket: prodModules.PROD_POLIGYP?.total_tiket ?? 0,
+                selesai: prodModules.PROD_POLIGYP?.selesai ?? 0,
+                belum_selesai: prodModules.PROD_POLIGYP?.belum_selesai ?? 0,
+                persentase_selesai: prodModules.PROD_POLIGYP?.persentase_selesai ?? 0,
+                bagian: 'poligyp',
+                tglawal: prodModules.PROD_POLIGYP?.tglawal,
+                tglakhir: prodModules.PROD_POLIGYP?.tglakhir,
+                today: prodModules.PROD_POLIGYP?.today,
+                month: prodModules.PROD_POLIGYP?.month,
+                today_total: prodModules.PROD_POLIGYP?.today_total ?? 0,
+                today_selesai: prodModules.PROD_POLIGYP?.today_selesai ?? 0,
+                today_belum: prodModules.PROD_POLIGYP?.today_belum ?? 0,
+                today_persentase: prodModules.PROD_POLIGYP?.today_persentase ?? 0,
+                month_total: prodModules.PROD_POLIGYP?.month_total ?? 0,
+                month_selesai: prodModules.PROD_POLIGYP?.month_selesai ?? 0,
+                month_belum: prodModules.PROD_POLIGYP?.month_belum ?? 0,
+                month_persentase: prodModules.PROD_POLIGYP?.month_persentase ?? 0,
             },
             PROD_IRONING: {
                 no: 10,
@@ -363,17 +419,30 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Lini Produksi Atena',
                 data_ditampilkan: 'Penyelesaian PP',
                 sub_nama: 'PP Ironing vs Hasil Actual',
-                sumber_data: 'Program Atena (PP Ironing vs haasil actual)',
-                sumber: 'Program Atena',
+                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+                sumber: 'Atena ERP',
                 catatan: 'Perbandingan PP Ironing dengan hasil aktual',
                 icon: 'temperature-high',
-                is_active: false,
-                metric_labels: { total: 'Target PP', selesai: 'Actual', belum: 'Selisih' },
-                unit: 'PCS / Meter',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: prodModules.PROD_IRONING ? Boolean(prodModules.PROD_IRONING.is_active) : false,
+                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+                unit: prodModules.PROD_IRONING?.unit || 'PCS / Meter',
+                total_tiket: prodModules.PROD_IRONING?.total_tiket ?? 0,
+                selesai: prodModules.PROD_IRONING?.selesai ?? 0,
+                belum_selesai: prodModules.PROD_IRONING?.belum_selesai ?? 0,
+                persentase_selesai: prodModules.PROD_IRONING?.persentase_selesai ?? 0,
+                bagian: 'ironing',
+                tglawal: prodModules.PROD_IRONING?.tglawal,
+                tglakhir: prodModules.PROD_IRONING?.tglakhir,
+                today: prodModules.PROD_IRONING?.today,
+                month: prodModules.PROD_IRONING?.month,
+                today_total: prodModules.PROD_IRONING?.today_total ?? 0,
+                today_selesai: prodModules.PROD_IRONING?.today_selesai ?? 0,
+                today_belum: prodModules.PROD_IRONING?.today_belum ?? 0,
+                today_persentase: prodModules.PROD_IRONING?.today_persentase ?? 0,
+                month_total: prodModules.PROD_IRONING?.month_total ?? 0,
+                month_selesai: prodModules.PROD_IRONING?.month_selesai ?? 0,
+                month_belum: prodModules.PROD_IRONING?.month_belum ?? 0,
+                month_persentase: prodModules.PROD_IRONING?.month_persentase ?? 0,
             },
             PROD_SURGICAL_MESIN: {
                 no: 11,
@@ -388,7 +457,7 @@ router.get('/stats', async (req, res) => {
                 catatan: 'Perbandingan PP Surgical Mesin dengan hasil aktual',
                 icon: 'gears',
                 is_active: false,
-                metric_labels: { total: 'Target PP', selesai: 'Actual', belum: 'Selisih' },
+                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
                 unit: 'PCS / Box',
                 total_tiket: 0,
                 selesai: 0,
@@ -403,17 +472,30 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Lini Produksi Atena',
                 data_ditampilkan: 'Penyelesaian PP',
                 sub_nama: 'PP Surgical Packing vs Hasil Actual',
-                sumber_data: 'Program Atena (PP Surgical Packing vs haasil actual)',
-                sumber: 'Program Atena',
+                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+                sumber: 'Atena ERP',
                 catatan: 'Perbandingan PP Surgical Packing dengan hasil aktual',
                 icon: 'boxes-stacked',
-                is_active: false,
-                metric_labels: { total: 'Target PP', selesai: 'Actual', belum: 'Selisih' },
-                unit: 'Box / Karton',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: prodModules.PROD_SURGICAL_PACKING ? Boolean(prodModules.PROD_SURGICAL_PACKING.is_active) : false,
+                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+                unit: prodModules.PROD_SURGICAL_PACKING?.unit || 'Box / Karton',
+                total_tiket: prodModules.PROD_SURGICAL_PACKING?.total_tiket ?? 0,
+                selesai: prodModules.PROD_SURGICAL_PACKING?.selesai ?? 0,
+                belum_selesai: prodModules.PROD_SURGICAL_PACKING?.belum_selesai ?? 0,
+                persentase_selesai: prodModules.PROD_SURGICAL_PACKING?.persentase_selesai ?? 0,
+                bagian: 'surgicalpacking',
+                tglawal: prodModules.PROD_SURGICAL_PACKING?.tglawal,
+                tglakhir: prodModules.PROD_SURGICAL_PACKING?.tglakhir,
+                today: prodModules.PROD_SURGICAL_PACKING?.today,
+                month: prodModules.PROD_SURGICAL_PACKING?.month,
+                today_total: prodModules.PROD_SURGICAL_PACKING?.today_total ?? 0,
+                today_selesai: prodModules.PROD_SURGICAL_PACKING?.today_selesai ?? 0,
+                today_belum: prodModules.PROD_SURGICAL_PACKING?.today_belum ?? 0,
+                today_persentase: prodModules.PROD_SURGICAL_PACKING?.today_persentase ?? 0,
+                month_total: prodModules.PROD_SURGICAL_PACKING?.month_total ?? 0,
+                month_selesai: prodModules.PROD_SURGICAL_PACKING?.month_selesai ?? 0,
+                month_belum: prodModules.PROD_SURGICAL_PACKING?.month_belum ?? 0,
+                month_persentase: prodModules.PROD_SURGICAL_PACKING?.month_persentase ?? 0,
             },
 
             // ==============================================================
@@ -648,6 +730,8 @@ router.get('/stats', async (req, res) => {
                 persentase_selesai: persentaseGlobal,
                 total_aktif: summaryData.kpi?.total_tiket_aktif ?? summaryData.total_tiket_aktif ?? 0,
             },
+            kpi_produksi: prodKpi,
+            kpi_purchasing: purchasingKpi,
             layanan: servicesResult,
             perlu_perhatian: sanitizedPerluPerhatian,
         };
@@ -812,6 +896,63 @@ router.post('/purchasing/sync', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Gagal sinkronisasi data dari Atena ERP: ' + error.message
+        });
+    }
+});
+
+/**
+ * GET /api/dashboard/produksi
+ * Mengambil detail data Penyelesaian PP (Perintah Produksi) per bagian lini produksi
+ * Query params:
+ * - bagian: 'stentor' | 'antiseptik' | 'cw' | 'sizing' | 'poligyp' | 'ironing' | 'surgicalpacking' (default: 'stentor')
+ * - tglawal: YYYY-MM-DD
+ * - tglakhir: YYYY-MM-DD
+ * - status: 'all' | 'memenuhi' | 'belum'
+ * - search: pencarian No. PP, kode, atau nama barang
+ * - force: boolean
+ */
+router.get('/produksi', async (req, res) => {
+    try {
+        const { bagian = 'stentor', period = 'today', tglawal, tglakhir, status = 'all', search = '', force = false } = req.query;
+        const data = await produksiService.getDetail(bagian, {
+            period,
+            tglawal,
+            tglakhir,
+            status,
+            search,
+            force: force === 'true'
+        });
+
+        return res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('[API ERROR /produksi]:', error.message);
+        return res.status(502).json({
+            success: false,
+            message: 'Gagal mengambil data monitoring produksi Atena ERP: ' + error.message,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/dashboard/produksi/sync
+ * Memaksa sinkronisasi ulang data produksi langsung dari server Atena ERP REST API
+ */
+router.post('/produksi/sync', async (req, res) => {
+    try {
+        const ringkasan = await produksiService.getRingkasanAll(true);
+        return res.json({
+            success: true,
+            message: 'Sinkronisasi data Produksi dari Atena ERP berhasil',
+            data: ringkasan.data
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Gagal sinkronisasi data produksi Atena ERP: ' + error.message
         });
     }
 });

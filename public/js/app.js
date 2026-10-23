@@ -57,6 +57,20 @@ const state = {
         items: { column: 'tanggal', dir: 'desc' },
     },
     ticketSort: { column: 'tanggal', dir: 'desc' },
+
+    // State Khusus Modul Produksi (Atena ERP)
+    currentProduksiBagian: 'stentor',
+    currentProduksiPeriod: 'month',
+    produksiTglAwal: '',
+    produksiTglAkhir: '',
+    currentProduksiStatus: 'all',
+    produksiSearchQuery: '',
+    produksiCurrentPage: 1,
+    produksiPageSize: 20,
+    produksiRawData: null,
+    produksiCache: new Map(),
+    produksiSort: { column: 'nomor_pp', dir: 'asc' },
+    produksiFilters: {}, // Filter tanggal independen per masing-masing lini bagian
 };
 
 // ====================================================================
@@ -119,6 +133,7 @@ function initEventListeners() {
             closeAppModal();
             closeSubconModal();
             closePurchasingModal();
+            closeProduksiModal();
         }
     });
 
@@ -155,6 +170,15 @@ function initEventListeners() {
         purchasingModalOverlay.addEventListener('click', (e) => {
             if (e.target === purchasingModalOverlay) {
                 closePurchasingModal();
+            }
+        });
+    }
+
+    const produksiModalOverlay = document.getElementById('produksiModal');
+    if (produksiModalOverlay) {
+        produksiModalOverlay.addEventListener('click', (e) => {
+            if (e.target === produksiModalOverlay) {
+                closeProduksiModal();
             }
         });
     }
@@ -383,6 +407,21 @@ function renderServiceCards(layanan) {
             barFill.style.width = `${percent}%`;
             barFill.className = `progress-bar-fill ${kpiFillClass}`;
         }
+
+        // 3. Update Status Badge (Live vs Standby) secara dinamis
+        const cardEl = document.getElementById(`card-${code}`);
+        if (cardEl) {
+            const statusPill = cardEl.querySelector('.service-status-pill');
+            if (statusPill) {
+                if (item.is_active) {
+                    statusPill.className = 'service-status-pill status-live';
+                    statusPill.textContent = 'Live';
+                } else {
+                    statusPill.className = 'service-status-pill status-standby';
+                    statusPill.textContent = 'Standby';
+                }
+            }
+        }
     });
 }
 
@@ -483,6 +522,19 @@ function renderKpiTrackerTicker(data) {
         `);
     }
 
+    // 6. Realisasi Penyelesaian PP Produksi (Atena ERP)
+    if (data.kpi_produksi && data.kpi_produksi.total_pp > 0) {
+        const prodKpi = data.kpi_produksi;
+        items.push(`
+            <span class="ticker-item">
+                <i class="fa-solid fa-industry" style="color: #2563eb;"></i>
+                <span>Penyelesaian PP Produksi:</span>
+                <b style="color: #2563eb;">${prodKpi.total_memenuhi}/${prodKpi.total_pp} PP</b>
+                <span class="ticker-kpi-sub">(${prodKpi.persentase}% • Live Atena ERP)</span>
+            </span>
+        `);
+    }
+
     const itemsHtml = items.join(' &bull; ');
     // Gandakan konten agar animasi marquee meluncur mulus tanpa terputus
     listEl.innerHTML = itemsHtml + ' &bull; ' + itemsHtml;
@@ -555,7 +607,7 @@ async function openTicketModal(serviceCode, serviceTitle) {
     if (searchInput) searchInput.value = '';
 
     // Reset tombol filter aktif ke 'all'
-    document.querySelectorAll('.filter-pill').forEach(btn => {
+    document.querySelectorAll('#ticketModal .filter-pill').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-filter') === 'all');
     });
 
@@ -643,13 +695,35 @@ async function refreshModalTickets() {
 function filterModalTickets(filterType) {
     state.currentModalFilter = filterType;
 
-    // Update class active pada tab pills
-    document.querySelectorAll('.filter-pill').forEach(btn => {
+    // Update class active pada tab pills di modal tiket
+    document.querySelectorAll('#ticketModal .filter-pill').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-filter') === filterType);
     });
 
     if (state.currentServiceModal) {
         loadModalTickets(state.currentServiceModal, filterType);
+    }
+}
+
+/**
+ * Reset Filter Modal Tiket Layanan (IT, Teknik, GA) ke kondisi awal
+ */
+function resetTicketModalFilter() {
+    state.currentModalFilter = 'all';
+    state.ticketSearchQuery = '';
+    state.ticketSort = { column: 'tanggal', dir: 'desc' };
+
+    const searchInput = document.getElementById('ticketSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    document.querySelectorAll('#ticketModal .filter-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-filter') === 'all');
+    });
+
+    updateTicketSortHeaders();
+
+    if (state.currentServiceModal) {
+        loadModalTickets(state.currentServiceModal, 'all');
     }
 }
 
@@ -1079,6 +1153,18 @@ function handleSubconSearch(query) {
     if (!state.subconRawData) return;
 
     renderSubconFilteredTables();
+}
+
+/**
+ * Reset Filter Modal Subcon ke kondisi default (Hari Ini, search kosong, tab barang)
+ */
+function resetSubconFilter() {
+    state.subconSearchQuery = '';
+    const searchInput = document.getElementById('subconSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    switchSubconTab('barang');
+    switchSubconRange('today');
 }
 
 /**
@@ -2159,4 +2245,640 @@ function updatePurchasingSortHeaders(viewMode) {
     });
 }
 
+// ====================================================================
+// 12. MODAL MONITORING PENYELESAIAN PP (PRODUKSI ATENA ERP)
+// ====================================================================
 
+const PRODUKSI_BAGIAN_MAP = {
+    stentor: { name: 'Produksi Finishing', judul: 'Penyelesaian PP Stentor', unit: 'Meter / PCS', icon: 'fa-industry' },
+    antiseptik: { name: 'Produksi Antiseptik', judul: 'Penyelesaian PP Packing', unit: 'Botol / PCS', icon: 'fa-pump-medical' },
+    cw: { name: 'Produksi CW', judul: 'Penyelesaian PP CW Packing', unit: 'PCS', icon: 'fa-prescription-bottle' },
+    sizing: { name: 'Produksi Sizing', judul: 'Penyelesaian PP Sizing', unit: 'Meter / Beam', icon: 'fa-ruler-combined' },
+    poligyp: { name: 'Produksi Poligyp', judul: 'Penyelesaian PP Poligyp Packing', unit: 'Roll / PCS', icon: 'fa-bandage' },
+    ironing: { name: 'Produksi Ironing', judul: 'Penyelesaian PP Ironing', unit: 'PCS / Meter', icon: 'fa-shirt' },
+    surgicalpacking: { name: 'Produksi Surgical Packing', judul: 'Penyelesaian PP Surgical Packing', unit: 'Box / Karton', icon: 'fa-box-tissue' }
+};
+
+/**
+ * Helper format tanggal YYYY-MM-DD
+ */
+function formatProdDate(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Buka Modal Monitoring Produksi Khusus untuk Satu Bagian Tertentu
+ */
+function openProduksiModal(bagian = 'stentor') {
+    state.currentProduksiBagian = bagian;
+    state.currentProduksiStatus = 'all';
+    state.produksiSearchQuery = '';
+    state.produksiCurrentPage = 1;
+
+    const now = new Date();
+    const today = formatProdDate(now);
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+    // Pastikan container filter independen per lini bagian tersedia
+    if (!state.produksiFilters) state.produksiFilters = {};
+
+    // Ambil filter yang pernah disimpan khusus untuk lini bagian ini, atau default ke Bulan Ini
+    const bagianFilter = state.produksiFilters[bagian] || {
+        tglawal: monthStart,
+        tglakhir: today,
+        period: 'month'
+    };
+
+    state.produksiFilters[bagian] = bagianFilter;
+    state.produksiTglAwal = bagianFilter.tglawal;
+    state.produksiTglAkhir = bagianFilter.tglakhir;
+    state.currentProduksiPeriod = bagianFilter.period;
+
+    const startInput = document.getElementById('prodDateStart');
+    const endInput = document.getElementById('prodDateEnd');
+    if (startInput) startInput.value = state.produksiTglAwal;
+    if (endInput) endInput.value = state.produksiTglAkhir;
+
+    const searchInput = document.getElementById('produksiSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const modal = document.getElementById('produksiModal');
+    if (modal) {
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    updateProduksiQuickPills(state.currentProduksiPeriod);
+    updateProduksiStatusPills('all');
+    fetchProduksiDetail(bagian, state.produksiTglAwal, state.produksiTglAkhir);
+}
+
+/**
+ * Tutup Modal Monitoring Produksi
+ */
+function closeProduksiModal() {
+    const modal = document.getElementById('produksiModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+}
+
+/**
+ * Tombol shortcut cepat rentang tanggal: 'month', 'today', 'week'
+ */
+function setProduksiQuickDate(preset) {
+    const now = new Date();
+    const today = formatProdDate(now);
+    let tglawal = today;
+    let tglakhir = today;
+
+    if (preset === 'month') {
+        tglawal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        tglakhir = today;
+    } else if (preset === 'today') {
+        tglawal = today;
+        tglakhir = today;
+    } else if (preset === 'week') {
+        const weekAgo = new Date();
+        weekAgo.setDate(now.getDate() - 7);
+        tglawal = formatProdDate(weekAgo);
+        tglakhir = today;
+    }
+
+    state.produksiTglAwal = tglawal;
+    state.produksiTglAkhir = tglakhir;
+    state.currentProduksiPeriod = preset;
+    state.produksiCurrentPage = 1;
+
+    // Simpan filter khusus untuk lini bagian yang sedang aktif saja (terisolasi)
+    if (!state.produksiFilters) state.produksiFilters = {};
+    state.produksiFilters[state.currentProduksiBagian] = {
+        tglawal,
+        tglakhir,
+        period: preset
+    };
+
+    const startInput = document.getElementById('prodDateStart');
+    const endInput = document.getElementById('prodDateEnd');
+    if (startInput) startInput.value = tglawal;
+    if (endInput) endInput.value = tglakhir;
+
+    updateProduksiQuickPills(preset);
+    fetchProduksiDetail(state.currentProduksiBagian, tglawal, tglakhir);
+}
+
+/**
+ * Auto-filter saat input Date Picker berubah (onchange)
+ */
+function handleProduksiDateChange(changedField) {
+    const startInput = document.getElementById('prodDateStart');
+    const endInput = document.getElementById('prodDateEnd');
+
+    let tglawal = startInput ? startInput.value : '';
+    let tglakhir = endInput ? endInput.value : '';
+
+    if (!tglawal || !tglakhir) return;
+
+    // Jika tglawal lebih besar dari tglakhir, sesuaikan otomatis field pasangannya
+    if (tglawal > tglakhir) {
+        if (changedField === 'start') {
+            tglakhir = tglawal;
+            if (endInput) endInput.value = tglakhir;
+        } else {
+            tglawal = tglakhir;
+            if (startInput) startInput.value = tglawal;
+        }
+    }
+
+    // Jika rentang tidak berubah, abaikan
+    if (state.produksiTglAwal === tglawal && state.produksiTglAkhir === tglakhir && state.currentProduksiPeriod === 'custom') {
+        return;
+    }
+
+    state.produksiTglAwal = tglawal;
+    state.produksiTglAkhir = tglakhir;
+    state.currentProduksiPeriod = 'custom';
+    state.produksiCurrentPage = 1;
+
+    // Simpan filter khusus untuk lini bagian yang sedang aktif saja (terisolasi)
+    if (!state.produksiFilters) state.produksiFilters = {};
+    state.produksiFilters[state.currentProduksiBagian] = {
+        tglawal,
+        tglakhir,
+        period: 'custom'
+    };
+
+    updateProduksiQuickPills('custom');
+    fetchProduksiDetail(state.currentProduksiBagian, tglawal, tglakhir);
+}
+
+/**
+ * Terapkan rentang tanggal dari input Date Picker (kompatibilitas)
+ */
+function applyProduksiDateRange() {
+    handleProduksiDateChange();
+}
+
+/**
+ * Reset Filter Modal Produksi kembali ke default (Bulan Ini, status Semua, hapus pencarian)
+ */
+function resetProduksiFilter() {
+    const now = new Date();
+    const today = formatProdDate(now);
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+    state.produksiTglAwal = monthStart;
+    state.produksiTglAkhir = today;
+    state.currentProduksiPeriod = 'month';
+    state.currentProduksiStatus = 'all';
+    state.produksiSearchQuery = '';
+    state.produksiCurrentPage = 1;
+
+    // Reset filter lini bagian yang aktif kembali ke default Bulan Ini
+    if (!state.produksiFilters) state.produksiFilters = {};
+    state.produksiFilters[state.currentProduksiBagian] = {
+        tglawal: monthStart,
+        tglakhir: today,
+        period: 'month'
+    };
+
+    const startInput = document.getElementById('prodDateStart');
+    const endInput = document.getElementById('prodDateEnd');
+    if (startInput) startInput.value = monthStart;
+    if (endInput) endInput.value = today;
+
+    const searchInput = document.getElementById('produksiSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    updateProduksiQuickPills('month');
+    updateProduksiStatusPills('all');
+    fetchProduksiDetail(state.currentProduksiBagian, monthStart, today);
+}
+
+/**
+ * Update tombol filter preset cepat di modal
+ */
+function updateProduksiQuickPills(activePreset) {
+    const presets = [
+        { id: 'btnQuickProdMonth', key: 'month' },
+        { id: 'btnQuickProdToday', key: 'today' },
+        { id: 'btnQuickProdWeek', key: 'week' }
+    ];
+    presets.forEach(p => {
+        const btn = document.getElementById(p.id);
+        if (btn) {
+            if (p.key === activePreset) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+    });
+}
+
+/**
+ * Filter status di modal Produksi (all / memenuhi / belum)
+ */
+function filterProduksiStatus(status) {
+    state.currentProduksiStatus = status;
+    state.produksiCurrentPage = 1;
+    updateProduksiStatusPills(status);
+    if (state.produksiRawData) {
+        renderProduksiUI(state.produksiRawData);
+    }
+}
+
+/**
+ * Update tombol filter status (Semua / Memenuhi / Belum)
+ */
+function updateProduksiStatusPills(activeStatus) {
+    const pills = [
+        { id: 'btnFilterProdAll', status: 'all' },
+        { id: 'btnFilterProdMemenuhi', status: 'memenuhi' },
+        { id: 'btnFilterProdBelum', status: 'belum' }
+    ];
+    pills.forEach(p => {
+        const btn = document.getElementById(p.id);
+        if (btn) {
+            if (p.status === activeStatus) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+    });
+}
+
+/**
+ * Debounce pencarian nomor PP / nama barang
+ */
+let produksiSearchDebounce = null;
+function handleProduksiSearch(val) {
+    clearTimeout(produksiSearchDebounce);
+    produksiSearchDebounce = setTimeout(() => {
+        state.produksiSearchQuery = (val || '').trim().toLowerCase();
+        state.produksiCurrentPage = 1;
+        if (state.produksiRawData) {
+            renderProduksiUI(state.produksiRawData);
+        }
+    }, 250);
+}
+
+/**
+ * Mengambil detail data lini produksi dari API dengan rentang tanggal
+ */
+async function fetchProduksiDetail(bagian, tglawal, tglakhir, force = false) {
+    renderProduksiSkeleton();
+
+    const cacheKey = `${bagian}_${tglawal}_${tglakhir}`;
+    if (!force && state.produksiCache.has(cacheKey)) {
+        const cached = state.produksiCache.get(cacheKey);
+        if (Date.now() - cached.timestamp < 30000) {
+            state.produksiRawData = cached.data;
+            renderProduksiUI(cached.data);
+            return;
+        }
+    }
+
+    try {
+        let url = `/api/dashboard/produksi?bagian=${encodeURIComponent(bagian)}`;
+        if (tglawal) url += `&tglawal=${encodeURIComponent(tglawal)}`;
+        if (tglakhir) url += `&tglakhir=${encodeURIComponent(tglakhir)}`;
+        if (force) url += '&force=true';
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+
+        if (!result.success || !result.data) {
+            throw new Error(result.message || 'Gagal mengambil data');
+        }
+
+        state.produksiRawData = result.data;
+        state.produksiCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+        renderProduksiUI(result.data);
+
+        // Update jam sync
+        const lastSyncEl = document.getElementById('produksiLastSyncTime');
+        if (lastSyncEl) {
+            lastSyncEl.textContent = `Sinkron: ${new Date().toLocaleTimeString('id-ID')}`;
+        }
+    } catch (err) {
+        console.error('[PRODUKSI MODAL ERROR]:', err);
+        const tbody = document.getElementById('produksiTableBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="11" class="text-center py-4 text-danger">
+                        <i class="fa-solid fa-circle-exclamation"></i> Gagal memuat data dari Atena ERP (${err.message}).
+                        <button class="filter-pill" style="margin-left: 8px;" onclick="fetchProduksiDetail('${bagian}', '${tglawal}', '${tglakhir}', true)">
+                            <i class="fa-solid fa-rotate-right"></i> Coba Lagi
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+/**
+ * Sinkronisasi ulang data produksi langsung ke backend
+ */
+async function syncProduksiData() {
+    const btn = document.getElementById('btnSyncProduksi');
+    const icon = btn ? btn.querySelector('i') : null;
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        state.produksiCache.clear();
+        await fetch('/api/dashboard/produksi/sync', { method: 'POST' });
+        await fetchProduksiDetail(state.currentProduksiBagian, state.produksiTglAwal, state.produksiTglAkhir, true);
+        await fetchDashboardStats();
+    } catch (err) {
+        console.error('Sync Produksi Error:', err);
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+    }
+}
+
+/**
+ * Render Skeleton Loading pada Tabel Produksi
+ */
+function renderProduksiSkeleton() {
+    const tbody = document.getElementById('produksiTableBody');
+    if (!tbody) return;
+
+    let html = '';
+    for (let i = 0; i < 5; i++) {
+        html += `
+            <tr class="skeleton-row">
+                <td class="text-center"><span class="skeleton-box" style="width: 20px; height: 16px;"></span></td>
+                <td><span class="skeleton-box" style="width: 95px; height: 16px;"></span></td>
+                <td><span class="skeleton-pill" style="width: 70px;"></span></td>
+                <td><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+                <td><span class="skeleton-box" style="width: 80%; height: 14px;"></span></td>
+                <td class="text-center"><span class="skeleton-box" style="width: 120px; height: 14px;"></span></td>
+                <td class="text-right"><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+                <td class="text-right"><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+                <td class="text-center"><span class="skeleton-box" style="width: 45px; height: 14px;"></span></td>
+                <td><span class="skeleton-box" style="width: 90px; height: 12px;"></span></td>
+                <td class="text-center"><span class="skeleton-badge" style="width: 85px;"></span></td>
+            </tr>
+        `;
+    }
+    tbody.innerHTML = html;
+}
+
+/**
+ * Render seluruh elemen Modal Produksi (KPI boxes, tabel, pagination)
+ */
+function renderProduksiUI(payload) {
+    if (!payload) return;
+
+    const ringkasan = payload.ringkasan || {};
+    const cfg = payload.config || PRODUKSI_BAGIAN_MAP[payload.bagian] || {};
+
+    // 1. Header Title, Subtitle, & Lini Badge
+    const titleEl = document.getElementById('produksiModalTitle');
+    const subtitleEl = document.getElementById('produksiModalSubtitle');
+    const deptBadgeText = document.getElementById('modalDeptBadgeText');
+    const deptBadgeIcon = document.getElementById('modalDeptBadgeIcon');
+    const periodBadgeText = document.getElementById('modalPeriodBadgeText');
+
+    if (titleEl) {
+        titleEl.textContent = cfg.name ? `Monitoring ${cfg.name}` : (ringkasan.judul || 'Monitoring Produksi');
+    }
+    if (subtitleEl) {
+        subtitleEl.textContent = `Perbandingan Target Plan vs Realisasi Actual Atena ERP • ${cfg.judul || 'Penyelesaian PP'}`;
+    }
+    if (deptBadgeText) {
+        deptBadgeText.textContent = cfg.name || 'Produksi';
+    }
+    if (deptBadgeIcon) {
+        deptBadgeIcon.className = `fa-solid ${cfg.icon || 'fa-industry'}`;
+    }
+    if (periodBadgeText) {
+        const rangeStr = payload.tglawal && payload.tglakhir
+            ? (payload.tglawal === payload.tglakhir ? payload.tglawal : `${payload.tglawal} s/d ${payload.tglakhir}`)
+            : 'Rentang Terpilih';
+        periodBadgeText.textContent = `Periode: ${rangeStr}`;
+    }
+
+    // 2. KPI Cards: Total PP, Memenuhi (%), Belum Memenuhi, Target Plan vs Actual
+    const totalPpEl = document.getElementById('modalKpiTotalPp');
+    const ppMemenuhiEl = document.getElementById('modalKpiPpMemenuhi');
+    const ppPercentEl = document.getElementById('modalKpiPpPercent');
+    const ppBelumEl = document.getElementById('modalKpiPpBelum');
+    const totalPlanEl = document.getElementById('modalKpiTotalPlan');
+    const totalActualEl = document.getElementById('modalKpiTotalActual');
+
+    const totalPpVal = ringkasan.total_pp ?? payload.total_data ?? 0;
+    const memenuhiVal = ringkasan.pp_memenuhi ?? 0;
+    const belumVal = ringkasan.pp_belum_memenuhi ?? 0;
+    const persentaseVal = ringkasan.persentase ?? (totalPpVal > 0 ? Number(((memenuhiVal / totalPpVal) * 100).toFixed(1)) : 0);
+
+    if (totalPpEl) totalPpEl.textContent = totalPpVal;
+    if (ppMemenuhiEl) ppMemenuhiEl.textContent = memenuhiVal;
+    if (ppPercentEl) ppPercentEl.textContent = `${persentaseVal}%`;
+    if (ppBelumEl) ppBelumEl.textContent = belumVal;
+    if (totalPlanEl) totalPlanEl.textContent = Number(payload.total_plan || 0).toLocaleString('id-ID');
+    if (totalActualEl) totalActualEl.textContent = Number(payload.total_actual || 0).toLocaleString('id-ID');
+
+    // 3. Filter data rows
+    let rows = Array.isArray(payload.rows) ? [...payload.rows] : [];
+
+    // Filter Status
+    if (state.currentProduksiStatus === 'memenuhi') {
+        rows = rows.filter(r => (r.status || '').toUpperCase().includes('MEMENUHI') && !(r.status || '').toUpperCase().includes('BELUM'));
+    } else if (state.currentProduksiStatus === 'belum') {
+        rows = rows.filter(r => (r.status || '').toUpperCase().includes('BELUM'));
+    }
+
+    // Filter Search
+    if (state.produksiSearchQuery) {
+        const q = state.produksiSearchQuery;
+        rows = rows.filter(r => {
+            return String(r.nomor_pp || '').toLowerCase().includes(q) ||
+                String(r.nama_barang || '').toLowerCase().includes(q) ||
+                String(r.kode_barang || '').toLowerCase().includes(q) ||
+                String(r.divisi || '').toLowerCase().includes(q);
+        });
+    }
+
+    // 4. Sorting
+    const sortCol = state.produksiSort.column;
+    const sortDir = state.produksiSort.dir === 'desc' ? -1 : 1;
+    rows.sort((a, b) => {
+        let valA = a[sortCol];
+        let valB = b[sortCol];
+
+        if (sortCol === 'total_plan' || sortCol === 'total_actual' || sortCol === 'persentase' || sortCol === 'plan_tk' || sortCol === 'actual_tk') {
+            valA = Number(valA) || 0;
+            valB = Number(valB) || 0;
+            return (valA - valB) * sortDir;
+        }
+
+        valA = String(valA || '').toLowerCase();
+        valB = String(valB || '').toLowerCase();
+        return valA.localeCompare(valB) * sortDir;
+    });
+
+    updateProduksiSortHeaders();
+
+    // 5. Pagination
+    const totalItems = rows.length;
+    const pageSize = state.produksiPageSize || 20;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+    if (state.produksiCurrentPage > totalPages) state.produksiCurrentPage = totalPages;
+    if (state.produksiCurrentPage < 1) state.produksiCurrentPage = 1;
+
+    const startIdx = (state.produksiCurrentPage - 1) * pageSize;
+    const endIdx = startIdx + pageSize;
+    const pageRows = rows.slice(startIdx, endIdx);
+
+    // 6. Render Rows
+    const tbody = document.getElementById('produksiTableBody');
+    if (!tbody) return;
+
+    if (pageRows.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="11" class="text-center py-4" style="color: var(--text-muted);">
+                    <i class="fa-solid fa-inbox"></i> Tidak ada data Perintah Produksi (PP) yang sesuai rentang tanggal & filter.
+                </td>
+            </tr>
+        `;
+    } else {
+        let html = '';
+        pageRows.forEach((r, idx) => {
+            const no = startIdx + idx + 1;
+            const percent = Number(r.persentase || 0);
+            const isMemenuhi = (r.status || '').toUpperCase().includes('MEMENUHI') && !(r.status || '').toUpperCase().includes('BELUM');
+            const statusBadge = isMemenuhi
+                ? `<span class="badge-status-memenuhi"><i class="fa-solid fa-circle-check"></i> MEMENUHI</span>`
+                : `<span class="badge-status-belum"><i class="fa-solid fa-circle-xmark"></i> BELUM</span>`;
+
+            let progressClass = 'kpi-fill-red';
+            if (percent >= 100) progressClass = 'kpi-fill-green';
+            else if (percent >= 75) progressClass = 'kpi-fill-yellow';
+
+            const planFormatted = Number(r.total_plan || 0).toLocaleString('id-ID');
+            const actualFormatted = Number(r.total_actual || 0).toLocaleString('id-ID');
+
+            const periodeStr = r.tgl_mulai && r.tgl_selesai
+                ? `<span style="font-size: 0.75rem;">${r.tgl_mulai} <br><span style="color: var(--text-muted);">s/d ${r.tgl_selesai}</span></span>`
+                : (r.tgl_mulai || '-');
+
+            const tkStr = (r.plan_tk !== undefined && r.actual_tk !== undefined)
+                ? `<span style="font-size: 0.75rem;">${r.plan_tk} / <b>${r.actual_tk}</b></span>`
+                : '-';
+
+            html += `
+                <tr>
+                    <td class="text-center" style="color: var(--text-muted); font-size: 0.8rem;">${no}</td>
+                    <td><strong style="color: var(--sna-blue); font-family: var(--font-mono);">${r.nomor_pp || '-'}</strong></td>
+                    <td><span class="skeleton-pill" style="padding: 2px 8px; font-size: 0.72rem; font-weight: 600; background: #f1f5f9; border-radius: 4px;">${r.divisi || '-'}</span></td>
+                    <td style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted);">${r.kode_barang || '-'}</td>
+                    <td><strong>${r.nama_barang || '-'}</strong></td>
+                    <td class="text-center">${periodeStr}</td>
+                    <td class="text-right" style="font-family: var(--font-mono);">${planFormatted}</td>
+                    <td class="text-right" style="font-family: var(--font-mono); font-weight: 700; color: ${isMemenuhi ? '#15803d' : '#b91c1c'};">${actualFormatted}</td>
+                    <td class="text-center">${tkStr}</td>
+                    <td>
+                        <div class="prod-progress-cell">
+                            <span style="font-weight: 700; font-size: 0.8rem;">${percent}%</span>
+                            <div class="prod-progress-bar">
+                                <div class="prod-progress-fill ${progressClass}" style="width: ${Math.min(100, percent)}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-center">${statusBadge}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    // 7. Update Pagination Bar
+    const pageInfoEl = document.getElementById('produksiPageInfo');
+    if (pageInfoEl) {
+        pageInfoEl.textContent = `Halaman ${state.produksiCurrentPage} dari ${totalPages} (${totalItems} data)`;
+    }
+
+    const prevBtn = document.getElementById('btnProduksiPrevPage');
+    const nextBtn = document.getElementById('btnProduksiNextPage');
+    if (prevBtn) prevBtn.disabled = state.produksiCurrentPage <= 1;
+    if (nextBtn) nextBtn.disabled = state.produksiCurrentPage >= totalPages;
+
+    // 8. Footer stats
+    const footerStats = document.getElementById('produksiModalFooterStats');
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${pageRows.length} dari ${totalItems} PP untuk ${cfg.name || payload.bagian}`;
+    }
+}
+
+/**
+ * Handle Sorting Kolom Tabel Produksi
+ */
+function sortProduksi(column) {
+    if (state.produksiSort.column === column) {
+        state.produksiSort.dir = state.produksiSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.produksiSort.column = column;
+        const numericCols = ['total_plan', 'total_actual', 'persentase', 'plan_tk', 'actual_tk'];
+        state.produksiSort.dir = numericCols.includes(column) ? 'desc' : 'asc';
+    }
+    state.produksiCurrentPage = 1;
+    if (state.produksiRawData) {
+        renderProduksiUI(state.produksiRawData);
+    }
+}
+
+/**
+ * Mengubah Halaman Pagination Tabel Produksi
+ */
+function changeProduksiPage(delta) {
+    state.produksiCurrentPage += delta;
+    if (state.produksiRawData) {
+        renderProduksiUI(state.produksiRawData);
+    }
+}
+
+/**
+ * Update Icon Panah Sorting pada Header Tabel Produksi
+ */
+function updateProduksiSortHeaders() {
+    const table = document.getElementById('produksiModal');
+    if (!table) return;
+
+    const ths = table.querySelectorAll('th.sortable-th');
+    ths.forEach(th => {
+        const onclickAttr = th.getAttribute('onclick') || '';
+        const match = onclickAttr.match(/sortProduksi\('([^']+)'\)/);
+        if (!match) return;
+
+        const col = match[1];
+        const icon = th.querySelector('.sort-icon');
+
+        if (col === state.produksiSort.column) {
+            th.classList.add('active-sort');
+            if (icon) {
+                icon.className = state.produksiSort.dir === 'asc'
+                    ? 'fa-solid fa-sort-up sort-icon'
+                    : 'fa-solid fa-sort-down sort-icon';
+            }
+        } else {
+            th.classList.remove('active-sort');
+            if (icon) {
+                icon.className = 'fa-solid fa-sort sort-icon';
+            }
+        }
+    });
+}

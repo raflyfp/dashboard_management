@@ -70,7 +70,7 @@
             <div class="cards-grid-10">
 
                 <!-- CARD: LAYANAN IT (LIVE) -->
-                <section class="service-card card-it" id="card-IT">
+                <section class="service-card" id="card-IT">
                     <div class="card-header">
                         <div class="card-title-group">
                             <div class="service-icon-box it-theme"><i class="fa-solid fa-laptop-code"></i></div>
@@ -115,7 +115,7 @@
                 </section>
 
                 <!-- CARD: LAYANAN TEKNIK (LIVE) -->
-                <section class="service-card card-tk" id="card-TK">
+                <section class="service-card" id="card-TK">
                     <div class="card-header">
                         <div class="card-title-group">
                             <div class="service-icon-box tk-theme"><i class="fa-solid fa-screwdriver-wrench"></i></div>
@@ -160,7 +160,7 @@
                 </section>
 
                 <!-- CARD: LAYANAN GA (LIVE) -->
-                <section class="service-card card-ga" id="card-GA">
+                <section class="service-card" id="card-GA">
                     <div class="card-header">
                         <div class="card-title-group">
                             <div class="service-icon-box ga-theme"><i class="fa-solid fa-building-user"></i></div>
@@ -205,7 +205,7 @@
                 </section>
 
                 <!-- CARD: SUBCON (LIVE) -->
-                <section class="service-card card-subcon" id="card-SUBCON">
+                <section class="service-card" id="card-SUBCON">
                     <div class="card-header">
                         <div class="card-title-group">
                             <div class="service-icon-box subcon-theme"><i class="fa-solid fa-boxes-packing"></i></div>
@@ -247,35 +247,34 @@
                     </div>
                 </section>
 
-                <!-- CARD: PRODUKSI FINISHING (STANDBY) -->
+                <!-- CARD: PRODUKSI FINISHING (LIVE ATENA) -->
                 <section class="service-card" id="card-PROD_FINISHING">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-industry"></i></div>
+                            <div class="service-icon-box produksi-theme"><i class="fa-solid fa-industry"></i></div>
                             <h2>Produksi Finishing</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
-                    <div class="card-body">
+                                                            <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_FINISHING">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_FINISHING"
-                                    style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_FINISHING" style="width: 0%"></div>
                             </div>
                         </div>
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PP</span>
                                 <span class="m-val" id="totalPROD_FINISHING">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Memenuhi</span>
                                 <span class="m-val text-success" id="selesaiPROD_FINISHING">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -286,43 +285,41 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail produksi-btn" onclick="openProduksiModal('stentor')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- CARD: PRODUKSI ANTISEPTIK (STANDBY) -->
+                <!-- CARD: PRODUKSI ANTISEPTIK (LIVE ATENA) -->
                 <section class="service-card" id="card-PROD_ANTISEPTIK">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-pump-medical"></i></div>
+                            <div class="service-icon-box produksi-theme"><i class="fa-solid fa-pump-medical"></i></div>
                             <h2>Produksi Antiseptik</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
-                    <div class="card-body">
+                                                            <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_ANTISEPTIK">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_ANTISEPTIK"
-                                    style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_ANTISEPTIK" style="width: 0%"></div>
                             </div>
                         </div>
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PP</span>
                                 <span class="m-val" id="totalPROD_ANTISEPTIK">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Memenuhi</span>
                                 <span class="m-val text-success" id="selesaiPROD_ANTISEPTIK">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -333,30 +330,29 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail produksi-btn" onclick="openProduksiModal('antiseptik')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- CARD: PRODUKSI CW (STANDBY) -->
+                <!-- CARD: PRODUKSI CW (LIVE ATENA) -->
                 <section class="service-card" id="card-PROD_CW">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-prescription-bottle"></i>
+                            <div class="service-icon-box produksi-theme"><i class="fa-solid fa-prescription-bottle"></i>
                             </div>
                             <h2>Produksi CW</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
-                    <div class="card-body">
+                                                            <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_CW">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_CW" style="width: 0%"></div>
@@ -365,11 +361,11 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PP</span>
                                 <span class="m-val" id="totalPROD_CW">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Memenuhi</span>
                                 <span class="m-val text-success" id="selesaiPROD_CW">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -380,43 +376,41 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail produksi-btn" onclick="openProduksiModal('cw')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- CARD: PRODUKSI SIZING (STANDBY) -->
+                <!-- CARD: PRODUKSI SIZING (LIVE ATENA) -->
                 <section class="service-card" id="card-PROD_SIZING">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-ruler-combined"></i></div>
+                            <div class="service-icon-box produksi-theme"><i class="fa-solid fa-ruler-combined"></i></div>
                             <h2>Produksi Sizing</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
-                    <div class="card-body">
+                                                            <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_SIZING">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SIZING" style="width: 0%">
-                                </div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SIZING" style="width: 0%"></div>
                             </div>
                         </div>
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PP</span>
                                 <span class="m-val" id="totalPROD_SIZING">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Memenuhi</span>
                                 <span class="m-val text-success" id="selesaiPROD_SIZING">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -427,43 +421,41 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail produksi-btn" onclick="openProduksiModal('sizing')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- CARD: PRODUKSI POLIGYP (STANDBY) -->
+                <!-- CARD: PRODUKSI POLIGYP (LIVE ATENA) -->
                 <section class="service-card" id="card-PROD_POLIGYP">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-bandage"></i></div>
+                            <div class="service-icon-box produksi-theme"><i class="fa-solid fa-bandage"></i></div>
                             <h2>Produksi Poligyp</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
-                    <div class="card-body">
+                                                            <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_POLIGYP">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_POLIGYP" style="width: 0%">
-                                </div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_POLIGYP" style="width: 0%"></div>
                             </div>
                         </div>
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PP</span>
                                 <span class="m-val" id="totalPROD_POLIGYP">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Memenuhi</span>
                                 <span class="m-val text-success" id="selesaiPROD_POLIGYP">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -474,90 +466,42 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail produksi-btn" onclick="openProduksiModal('poligyp')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- CARD: PRODUKSI SIZING 2 (STANDBY) -->
-                <section class="service-card" id="card-PROD_SIZING2">
-                    <div class="card-header">
-                        <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-ruler-horizontal"></i></div>
-                            <h2>Produksi Sizing 2</h2>
-                        </div>
-                        <span class="service-status-pill status-standby">Standby</span>
-                    </div>
 
-                    <div class="card-body">
-                        <div class="percent-hero">
-                            <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentPROD_SIZING2">0%</span>
-                                <span class="percent-lbl">Selesai</span>
-                            </div>
-                            <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SIZING2" style="width: 0%">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="metrics-row">
-                            <div class="metric-box">
-                                <span class="m-lbl">Total</span>
-                                <span class="m-val" id="totalPROD_SIZING2">0</span>
-                            </div>
-                            <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
-                                <span class="m-val text-success" id="selesaiPROD_SIZING2">0</span>
-                            </div>
-                            <div class="metric-box m-warning">
-                                <span class="m-lbl">Belum</span>
-                                <span class="m-val text-warning" id="belumPROD_SIZING2">0</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
-                            <span>Lihat Detail</span>
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </section>
-
-                <!-- CARD: PRODUKSI IRONING (STANDBY) -->
+                <!-- CARD: PRODUKSI IRONING (LIVE ATENA) -->
                 <section class="service-card" id="card-PROD_IRONING">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-shirt"></i></div>
+                            <div class="service-icon-box produksi-theme"><i class="fa-solid fa-shirt"></i></div>
                             <h2>Produksi Ironing</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
-                    <div class="card-body">
+                                                            <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_IRONING">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_IRONING" style="width: 0%">
-                                </div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_IRONING" style="width: 0%"></div>
                             </div>
                         </div>
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PP</span>
                                 <span class="m-val" id="totalPROD_IRONING">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Memenuhi</span>
                                 <span class="m-val text-success" id="selesaiPROD_IRONING">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -568,8 +512,7 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail produksi-btn" onclick="openProduksiModal('ironing')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -623,35 +566,34 @@
                     </div>
                 </section>
 
-                <!-- CARD: PRODUKSI SURGICAL PACKING (STANDBY) -->
+                <!-- CARD: PRODUKSI SURGICAL PACKING (LIVE ATENA) -->
                 <section class="service-card" id="card-PROD_SURGICAL_PACKING">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-box-tissue"></i></div>
+                            <div class="service-icon-box produksi-theme"><i class="fa-solid fa-box-tissue"></i></div>
                             <h2>Produksi Surgical Packing</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
-                    <div class="card-body">
+                                                            <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_SURGICAL_PACKING">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SURGICAL_PACKING"
-                                    style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SURGICAL_PACKING" style="width: 0%"></div>
                             </div>
                         </div>
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PP</span>
                                 <span class="m-val" id="totalPROD_SURGICAL_PACKING">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Memenuhi</span>
                                 <span class="m-val text-success" id="selesaiPROD_SURGICAL_PACKING">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -662,8 +604,7 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail produksi-btn" onclick="openProduksiModal('surgicalpacking')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -1122,13 +1063,19 @@
     <div class="modal-overlay" id="ticketModal" aria-hidden="true">
         <div class="modal-card">
 
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <div class="modal-icon" id="modalServiceIcon"><i class="fa-solid fa-ticket"></i></div>
-                    <div>
-                        <h3 id="modalServiceTitle">Daftar Tiket</h3>
-                        <p id="modalServiceSubtitle">Menampilkan riwayat dan tiket operasional</p>
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon" id="modalServiceIcon"><i class="fa-solid fa-ticket"></i></div>
+                        <div>
+                            <h3 id="modalServiceTitle">Daftar Tiket</h3>
+                            <p id="modalServiceSubtitle">Menampilkan riwayat dan tiket operasional</p>
+                        </div>
                     </div>
+                    <!-- Close Button Pinned at Top Right -->
+                    <button class="modal-close-btn" onclick="closeTicketModal()" title="Tutup">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
 
                 <div class="modal-header-actions">
@@ -1146,6 +1093,12 @@
                         </button>
                     </div>
 
+                    <!-- Tombol Reset Filter -->
+                    <button class="filter-reset-btn" id="btnResetTicketFilter" onclick="resetTicketModalFilter()"
+                        title="Reset Filter ke Default">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+
                     <!-- Search Input -->
                     <div class="search-box">
                         <i class="fa-solid fa-magnifying-glass"></i>
@@ -1157,11 +1110,6 @@
                     <button class="modal-refresh-btn" id="btnRefreshTickets" onclick="refreshModalTickets()"
                         title="Perbarui Data (Ambil data paling terkini)">
                         <i class="fa-solid fa-arrows-rotate"></i>
-                    </button>
-
-                    <!-- Close Button -->
-                    <button class="modal-close-btn" onclick="closeTicketModal()" title="Tutup">
-                        <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
             </div>
@@ -1300,13 +1248,19 @@
     <div class="modal-overlay" id="subconModal" aria-hidden="true">
         <div class="modal-card modal-card-xl">
 
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <div class="modal-icon subcon-theme"><i class="fa-solid fa-boxes-packing"></i></div>
-                    <div>
-                        <h3>Monitoring Pengerjaan Barang Subcon</h3>
-                        <p id="subconModalSubtitle">Data hasil produksi mitra subcon & analisis pengerjaan</p>
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon subcon-theme"><i class="fa-solid fa-boxes-packing"></i></div>
+                        <div>
+                            <h3>Monitoring Pengerjaan Barang Subcon</h3>
+                            <p id="subconModalSubtitle">Data hasil produksi mitra subcon & analisis pengerjaan</p>
+                        </div>
                     </div>
+                    <!-- Close Button Pinned at Top Right -->
+                    <button class="modal-close-btn" onclick="closeSubconModal()" title="Tutup">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
 
                 <div class="modal-header-actions">
@@ -1323,17 +1277,18 @@
                         </button>
                     </div>
 
+                    <!-- Tombol Reset Filter -->
+                    <button class="filter-reset-btn" id="btnResetSubconFilter" onclick="resetSubconFilter()"
+                        title="Reset Filter ke Default">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+
                     <!-- Search Input -->
                     <div class="search-box">
                         <i class="fa-solid fa-magnifying-glass"></i>
                         <input type="text" id="subconSearchInput" placeholder="Cari nama barang / subcon..."
                             oninput="handleSubconSearch(this.value)">
                     </div>
-
-                    <!-- Close Button -->
-                    <button class="modal-close-btn" onclick="closeSubconModal()" title="Tutup">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
                 </div>
             </div>
 
@@ -1490,16 +1445,21 @@
     <div class="modal-overlay" id="purchasingModal" aria-hidden="true">
         <div class="modal-card modal-card-xl">
 
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <div class="modal-icon purchasing-theme"><i class="fa-solid fa-cart-shopping"></i></div>
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <h3>Monitoring Purchase Request (PR)</h3>
-
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon purchasing-theme"><i class="fa-solid fa-cart-shopping"></i></div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h3>Monitoring Purchase Request (PR)</h3>
+                            </div>
+                            <p id="purchasingModalSubtitle">Data Pemenuhan Material & Non-Material dari Atena ERP</p>
                         </div>
-                        <p id="purchasingModalSubtitle">Data Pemenuhan Material & Non-Material dari Atena ERP</p>
                     </div>
+                    <!-- Close Button Pinned at Top Right -->
+                    <button class="modal-close-btn" onclick="closePurchasingModal()" title="Tutup">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
 
                 <div class="modal-header-actions">
@@ -1530,11 +1490,6 @@
                     <button class="modal-refresh-btn" id="btnSyncPurchasing" onclick="syncPurchasingData()"
                         title="Sinkronkan dengan Atena ERP">
                         <i class="fa-solid fa-arrows-rotate"></i>
-                    </button>
-
-                    <!-- Close Button -->
-                    <button class="modal-close-btn" onclick="closePurchasingModal()" title="Tutup">
-                        <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
             </div>
@@ -1828,6 +1783,230 @@
                         style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
                 </div>
                 <button class="btn-secondary" onclick="closePurchasingModal()">Tutup</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 7. MODAL MONITORING PENYELESAIAN PP (PRODUKSI ATENA ERP) -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="produksiModal" aria-hidden="true">
+        <div class="modal-card modal-card-xl">
+
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon produksi-theme"><i class="fa-solid fa-industry"></i></div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h3 id="produksiModalTitle">Monitoring Penyelesaian PP (Perintah Produksi)</h3>
+                                <span class="service-status-pill status-live" style="font-size: 0.72rem;">Live Atena</span>
+                            </div>
+                            <p id="produksiModalSubtitle">Perbandingan Target Plan vs Realisasi Actual Produksi</p>
+                        </div>
+                    </div>
+                    <!-- Close Button Pinned at Top Right -->
+                    <button class="modal-close-btn" onclick="closeProduksiModal()" title="Tutup">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <!-- Filter Rentang Tanggal (Date Range Picker - Auto Filter) -->
+                    <div class="prod-date-picker-group">
+                        <div class="prod-date-input-wrap">
+                            <span>Dari:</span>
+                            <input type="date" id="prodDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleProduksiDateChange('start')">
+                        </div>
+                        <div class="prod-date-input-wrap">
+                            <span>s/d:</span>
+                            <input type="date" id="prodDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleProduksiDateChange('end')">
+                        </div>
+                    </div>
+
+                    <!-- Shortcut Presets Cepat -->
+                    <div class="filter-pills" style="margin: 0;">
+                        <button class="filter-pill active" id="btnQuickProdMonth" onclick="setProduksiQuickDate('month')">
+                            <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                        </button>
+                        <button class="filter-pill" id="btnQuickProdToday" onclick="setProduksiQuickDate('today')">
+                            <i class="fa-solid fa-calendar-day"></i> Hari Ini
+                        </button>
+                        <button class="filter-pill" id="btnQuickProdWeek" onclick="setProduksiQuickDate('week')">
+                            <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                        </button>
+                    </div>
+
+                    <!-- Tombol Reset Filter -->
+                    <button class="filter-reset-btn" id="btnResetProdFilter" onclick="resetProduksiFilter()" title="Reset Filter ke Default">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+
+                    <!-- Search Input -->
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="produksiSearchInput" placeholder="Cari No. PP / Kode / Nama Barang..."
+                            oninput="handleProduksiSearch(this.value)">
+                    </div>
+
+                    <!-- Sync Button -->
+                    <button class="modal-refresh-btn" id="btnSyncProduksi" onclick="syncProduksiData()"
+                        title="Sinkronkan dengan Atena ERP">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body Modal Produksi -->
+            <div class="modal-body subcon-modal-body">
+                <!-- KPI Ringkasan PP Sesuai Rentang Tanggal -->
+                <div class="subcon-kpi-grid">
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-clipboard-list"></i></div>
+                        <div>
+                            <div class="kpi-num" id="modalKpiTotalPp">0</div>
+                            <div class="kpi-label">Total No. PP</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
+                        <div>
+                            <div class="kpi-num text-success" id="modalKpiPpMemenuhi">0</div>
+                            <div class="kpi-label">PP Memenuhi (<span id="modalKpiPpPercent">0%</span>)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-warning"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div>
+                            <div class="kpi-num text-warning" id="modalKpiPpBelum">0</div>
+                            <div class="kpi-label">Belum Memenuhi</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-boxes-stacked"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiTotalPlan">0</div>
+                            <div class="kpi-label">Total Target Plan</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #0284c7;"><i class="fa-solid fa-chart-line"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #0284c7;" id="modalKpiTotalActual">0</div>
+                            <div class="kpi-label">Total Realisasi Actual</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail Lini Produksi Khusus & Filter Status -->
+                <div class="subcon-detail-section" style="margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 0.4rem;">
+                        <!-- Indikator Lini Khusus & Periode Aktif -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span class="prod-modal-dept-badge" id="modalDeptBadge">
+                                <i class="fa-solid fa-industry" id="modalDeptBadgeIcon"></i> 
+                                <span id="modalDeptBadgeText">Produksi Finishing</span>
+                            </span>
+                            <span class="prod-modal-period-badge" id="modalPeriodBadge">
+                                <i class="fa-solid fa-clock"></i> 
+                                <span id="modalPeriodBadgeText">Periode: Hari Ini</span>
+                            </span>
+                        </div>
+
+                        <!-- Status Filter (Semua / Memenuhi / Belum Memenuhi) -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="filter-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnFilterProdAll" onclick="filterProduksiStatus('all')">
+                                    Semua
+                                </button>
+                                <button class="filter-pill" id="btnFilterProdMemenuhi" onclick="filterProduksiStatus('memenuhi')">
+                                    <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Memenuhi
+                                </button>
+                                <button class="filter-pill" id="btnFilterProdBelum" onclick="filterProduksiStatus('belum')">
+                                    <i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b;"></i> Belum
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Detail PP -->
+                    <div class="table-responsive" style="margin-top: 0.75rem;">
+                        <table class="tickets-table subcon-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;" class="text-center">No</th>
+                                    <th style="width: 120px;" class="sortable-th" onclick="sortProduksi('nomor_pp')">
+                                        No. PP <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 100px;">Divisi</th>
+                                    <th style="width: 95px;">Kode</th>
+                                    <th class="sortable-th" onclick="sortProduksi('nama_barang')">
+                                        Nama Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 140px;" class="text-center">Periode PP</th>
+                                    <th class="text-right sortable-th" style="width: 95px;" onclick="sortProduksi('total_plan')">
+                                        Target Plan <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="text-right sortable-th" style="width: 95px;" onclick="sortProduksi('total_actual')">
+                                        Actual <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="text-center" style="width: 90px;" title="Tenaga Kerja: Plan vs Actual">
+                                        TK (P/A)
+                                    </th>
+                                    <th style="width: 110px;" class="sortable-th" onclick="sortProduksi('persentase')">
+                                        Capaian <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 115px;" class="text-center sortable-th" onclick="sortProduksi('status')">
+                                        Status <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="produksiTableBody">
+                                <tr class="skeleton-row">
+                                    <td class="text-center"><span class="skeleton-box" style="width: 20px; height: 16px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 100px; height: 16px;"></span></td>
+                                    <td><span class="skeleton-pill" style="width: 70px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 80%; height: 14px;"></span></td>
+                                    <td class="text-center"><span class="skeleton-box" style="width: 120px; height: 14px;"></span></td>
+                                    <td class="text-right"><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+                                    <td class="text-right"><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+                                    <td class="text-center"><span class="skeleton-box" style="width: 45px; height: 14px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 90px; height: 12px;"></span></td>
+                                    <td class="text-center"><span class="skeleton-badge" style="width: 85px;"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Bar -->
+                    <div class="purchasing-pagination-bar" id="produksiPaginationBar"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                        <div style="font-size: 0.8rem; color: var(--text-muted);" id="produksiPageInfo">
+                            Halaman 1 dari 1
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="filter-pill" id="btnProduksiPrevPage" onclick="changeProduksiPage(-1)">
+                                <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+                            </button>
+                            <button class="filter-pill" id="btnProduksiNextPage" onclick="changeProduksiPage(1)">
+                                Selanjutnya <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div class="modal-stats" id="produksiModalFooterStats">
+                        Menampilkan data monitoring Penyelesaian PP Atena ERP
+                    </div>
+                    <span id="produksiLastSyncTime" style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
+                </div>
+                <button class="btn-secondary" onclick="closeProduksiModal()">Tutup</button>
             </div>
 
         </div>

@@ -46,3 +46,5 @@ desktop.ini
 *.bak
 data/
 scratch/
+*.postman_collection.json
+API DASHBOARD SNAM.postman_collection.json

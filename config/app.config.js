@@ -44,6 +44,14 @@ module.exports = {
         timeoutMs: 25000,
     },
 
+    // Konfigurasi REST API Dashboard Atena ERP (Produksi, QA, Logistik, Purchasing)
+    atenaApi: {
+        baseUrl: (process.env.ATENA_API_BASE_URL || 'https://erpsna.atena.id/API/Dashboard/').trim().replace(/\/?$/, '/'),
+        username: (process.env.ATENA_API_USERNAME || 'SNATEST@EMAIL.COM').trim(),
+        password: (process.env.ATENA_API_PASSWORD || 'admin123').trim(),
+        timeoutMs: 15000,
+    },
+
     // Cache internal Express (detik)
     cacheTtlSeconds: parseInt(process.env.CACHE_TTL_SECONDS, 10) || 5,
 

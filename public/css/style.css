@@ -246,13 +246,6 @@ html, body {
     min-height: 0; /* Menghilangkan tinggi kosong yang melompong */
 }
 
-/* Penyeragaman Border Atas Kartu */
-.card-it, .card-tk, .card-ga, .card-subcon {
-    border-top: 3px solid var(--sna-blue);
-}
-.card-kaizen, .card-esys, .card-simrs, .card-farmasi, .card-lab, .card-billing, .card-sdm {
-    border-top: 3px solid var(--border-dark);
-}
 
 /* Header Kartu */
 .card-header {
@@ -298,7 +291,7 @@ html, body {
 .status-standby { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
 /* Penyeragaman Icon Background Themes */
-.it-theme, .tk-theme, .ga-theme, .subcon-theme, .purchasing-theme {
+.it-theme, .tk-theme, .ga-theme, .subcon-theme, .purchasing-theme, .produksi-theme {
     background: var(--sna-blue-light);
     color: var(--sna-blue);
 }
@@ -515,11 +508,11 @@ html, body {
 }
 
 /* Penyeragaman Tombol Detail (Biru Tema SNA Medika untuk Semua Kartu Aktif) */
-.it-btn, .tk-btn, .ga-btn, .subcon-btn, .purchasing-btn {
+.it-btn, .tk-btn, .ga-btn, .subcon-btn, .purchasing-btn, .produksi-btn {
     background: var(--sna-blue);
     color: #fff;
 }
-.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover, .purchasing-btn:hover {
+.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover, .purchasing-btn:hover, .produksi-btn:hover {
     background: #0c4a86;
 }
 
@@ -713,7 +706,8 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
     background: #fafafa;
     border-top-left-radius: var(--radius-lg);
     border-top-right-radius: var(--radius-lg);
@@ -1422,5 +1416,279 @@ html, body {
     color: var(--sna-blue);
     opacity: 1;
 }
+
+/* ====================================================================
+   PRODUKSI MODAL & THEME STYLING (ATENA ERP)
+   ==================================================================== */
+.modal-icon.produksi-theme {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+
+.badge-status-memenuhi {
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.badge-status-belum {
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.prod-progress-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.prod-progress-bar {
+    width: 100%;
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.prod-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* Dual Section Kartu Produksi (Hari Ini & Bulan Ini) */
+.prod-card-body {
+    padding: 0.75rem 0.85rem !important;
+}
+
+.prod-dual-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.prod-period-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    transition: all 0.2s ease;
+}
+
+.prod-period-box:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.prod-box-today {
+    border-left: 3px solid #0284c7;
+}
+
+.prod-box-month {
+    border-left: 3px solid #6366f1;
+}
+
+.prod-box-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.prod-box-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.prod-box-title i {
+    font-size: 0.75rem;
+}
+
+.prod-box-today .prod-box-title i {
+    color: #0284c7;
+}
+
+.prod-box-month .prod-box-title i {
+    color: #6366f1;
+}
+
+.prod-box-pct {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.progress-bar-track.prod-track {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.prod-box-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.72rem;
+    color: #64748b;
+    padding-top: 1px;
+}
+
+.prod-box-stats strong {
+    font-family: var(--font-mono, monospace);
+    font-weight: 700;
+}
+
+/* Modal Department & Period Badges */
+.prod-modal-dept-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.prod-modal-period-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+/* Date Range Picker di Modal Produksi */
+.prod-date-picker-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 3px 8px;
+}
+
+.prod-date-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.prod-date-input {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border-radius: 5px;
+    padding: 3px 6px;
+    font-size: 0.78rem;
+    color: #1e293b;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.prod-date-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.filter-apply-btn {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s ease;
+}
+
+.filter-apply-btn:hover {
+    background: #1d4ed8;
+}
+
+.filter-apply-btn:active {
+    transform: translateY(1px);
+}
+
+.modal-header-stacked {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.85rem;
+}
+
+.modal-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.filter-reset-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+}
+
+.filter-reset-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.filter-reset-btn:active {
+    transform: translateY(1px);
+}
+
+
 
 
