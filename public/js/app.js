@@ -71,6 +71,23 @@ const state = {
     produksiCache: new Map(),
     produksiSort: { column: 'nomor_pp', dir: 'asc' },
     produksiFilters: {}, // Filter tanggal independen per masing-masing lini bagian
+
+    // State Khusus Modul Logistik (Atena ERP REST API)
+    currentLogistikRange: 'month',
+    logistikDateStart: '',
+    logistikDateEnd: '',
+    currentLogistikStatus: 'all',
+    currentLogistikView: 'orders', // 'orders' | 'items'
+    logistikFilteredOrder: '', // Ketika user klik drilldown rincian order spesifik
+    logistikSearchQuery: '',
+    logistikCurrentPage: 1,
+    logistikPageSize: 15,
+    logistikRawData: null,
+    logistikCache: new Map(),
+    logistikSort: {
+        orders: { column: 'tgl_jatuh_tempo', dir: 'desc' },
+        items: { column: 'tgl_jatuh_tempo', dir: 'desc' }
+    },
 };
 
 // ====================================================================
@@ -134,6 +151,7 @@ function initEventListeners() {
             closeSubconModal();
             closePurchasingModal();
             closeProduksiModal();
+            closeLogistikModal();
         }
     });
 
@@ -179,6 +197,15 @@ function initEventListeners() {
         produksiModalOverlay.addEventListener('click', (e) => {
             if (e.target === produksiModalOverlay) {
                 closeProduksiModal();
+            }
+        });
+    }
+
+    const logistikModalOverlay = document.getElementById('logistikModal');
+    if (logistikModalOverlay) {
+        logistikModalOverlay.addEventListener('click', (e) => {
+            if (e.target === logistikModalOverlay) {
+                closeLogistikModal();
             }
         });
     }
@@ -531,6 +558,32 @@ function renderKpiTrackerTicker(data) {
                 <span>Penyelesaian PP Produksi:</span>
                 <b style="color: #2563eb;">${prodKpi.total_memenuhi}/${prodKpi.total_pp} PP</b>
                 <span class="ticker-kpi-sub">(${prodKpi.persentase}% • Live Atena ERP)</span>
+            </span>
+        `);
+    }
+
+    // 7. Realisasi Pemenuhan PR Purchasing (Atena ERP)
+    if (layanan.PURCHASING && (layanan.PURCHASING.total_tiket > 0 || layanan.PURCHASING.is_active)) {
+        const pur = layanan.PURCHASING;
+        items.push(`
+            <span class="ticker-item">
+                <i class="fa-solid fa-cart-shopping" style="color: #0284c7;"></i>
+                <span>Pemenuhan PR Purchasing:</span>
+                <b style="color: #0284c7;">${pur.selesai}/${pur.total_tiket} PR</b>
+                <span class="ticker-kpi-sub">(${pur.persentase_selesai}% • Live Atena ERP)</span>
+            </span>
+        `);
+    }
+
+    // 8. Realisasi Pemenuhan Order Logistik (Atena ERP)
+    if (layanan.LOGISTIK && (layanan.LOGISTIK.total_tiket > 0 || layanan.LOGISTIK.is_active)) {
+        const log = layanan.LOGISTIK;
+        items.push(`
+            <span class="ticker-item">
+                <i class="fa-solid fa-truck-fast" style="color: #10b981;"></i>
+                <span>Pemenuhan Order Logistik:</span>
+                <b style="color: #10b981;">${log.selesai}/${log.total_tiket} Order</b>
+                <span class="ticker-kpi-sub">(${log.persentase_selesai}% • Live Atena ERP)</span>
             </span>
         `);
     }
@@ -2882,3 +2935,734 @@ function updateProduksiSortHeaders() {
         }
     });
 }
+
+// ====================================================================
+// ====================================================================
+// 14. LOGIKA INTERAKTIF MODAL LOGISTIK (PEMENUHAN ORDER ATENA ERP)
+// ====================================================================
+
+/**
+ * Helper format tanggal YYYY-MM-DD
+ */
+function formatLogistikDate(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Buka Modal Monitoring Logistik
+ */
+function openLogistikModal(range = 'month') {
+    const modal = document.getElementById('logistikModal');
+    if (!modal) return;
+
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+
+    state.logistikSearchQuery = '';
+    state.logistikCurrentPage = 1;
+    state.logistikFilteredOrder = '';
+
+    const searchInput = document.getElementById('logistikSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectLogistikStatus');
+    if (selectStatus) selectStatus.value = 'all';
+    state.currentLogistikStatus = 'all';
+
+    const chipContainer = document.getElementById('logistikActiveOrderChipContainer');
+    if (chipContainer) chipContainer.style.display = 'none';
+
+    // Inisialisasi preset tanggal
+    setLogistikQuickDate(range);
+}
+
+/**
+ * Tutup Modal Logistik
+ */
+function closeLogistikModal() {
+    const modal = document.getElementById('logistikModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+/**
+ * Mengatur rentang tanggal cepat (Bulan Ini, Bulan Lalu, 7 Hari, Hari Ini, Semua)
+ */
+function setLogistikQuickDate(preset = 'month') {
+    state.currentLogistikRange = preset;
+    state.logistikCurrentPage = 1;
+
+    const now = new Date();
+    const today = formatLogistikDate(now);
+    let startDate = today;
+    let endDate = today;
+
+    if (preset === 'month') {
+        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        endDate = today;
+    } else if (preset === 'last_month') {
+        const year = now.getFullYear();
+        const month = now.getMonth(); // 0-indexed (bulan lalu)
+        const prevYear = month === 0 ? year - 1 : year;
+        const prevMonth = month === 0 ? 12 : month;
+        const lastDay = new Date(year, month, 0).getDate();
+        startDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
+        endDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    } else if (preset === 'week') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        startDate = formatLogistikDate(d);
+        endDate = today;
+    } else if (preset === 'today') {
+        startDate = today;
+        endDate = today;
+    } else if (preset === 'all') {
+        startDate = '2026-01-01';
+        endDate = today;
+    }
+
+    state.logistikDateStart = startDate;
+    state.logistikDateEnd = endDate;
+
+    // Sinkronisasi ke input DOM
+    const startInput = document.getElementById('logistikDateStart');
+    const endInput = document.getElementById('logistikDateEnd');
+    if (startInput) startInput.value = startDate;
+    if (endInput) endInput.value = endDate;
+
+    // Update active class pada pill
+    const pills = document.querySelectorAll('.logistik-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    const btnMap = {
+        'month': 'btnQuickLogistikMonth',
+        'week': 'btnQuickLogistikWeek',
+        'today': 'btnQuickLogistikToday',
+        'all': 'btnQuickLogistikAll'
+    };
+    const activeBtn = document.getElementById(btnMap[preset]);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    loadLogistikData();
+}
+
+/**
+ * Handle perubahan tanggal manual pada input Date Picker
+ */
+function handleLogistikDateChange(field) {
+    const startInput = document.getElementById('logistikDateStart');
+    const endInput = document.getElementById('logistikDateEnd');
+
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (field === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.logistikDateStart = start;
+    state.logistikDateEnd = end;
+    state.currentLogistikRange = 'custom';
+    state.logistikCurrentPage = 1;
+
+    // Hapus active pill preset
+    const pills = document.querySelectorAll('.logistik-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    loadLogistikData();
+}
+
+/**
+ * Reset seluruh filter Logistik ke default (Bulan Ini)
+ */
+function resetLogistikFilter() {
+    state.logistikSearchQuery = '';
+    state.currentLogistikStatus = 'all';
+    state.logistikFilteredOrder = '';
+    state.logistikCurrentPage = 1;
+
+    const searchInput = document.getElementById('logistikSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectLogistikStatus');
+    if (selectStatus) selectStatus.value = 'all';
+
+    const chipContainer = document.getElementById('logistikActiveOrderChipContainer');
+    if (chipContainer) chipContainer.style.display = 'none';
+
+    setLogistikQuickDate('month');
+}
+
+/**
+ * Drill-down: Filter rincian item barang berdasarkan satu nomor order tertentu
+ */
+function viewOrderItems(noOrder) {
+    if (!noOrder) return;
+    state.logistikFilteredOrder = noOrder;
+    state.logistikCurrentPage = 1;
+
+    // Tampilkan chip filter order aktif
+    const chipContainer = document.getElementById('logistikActiveOrderChipContainer');
+    const orderNumEl = document.getElementById('logistikFilteredOrderNum');
+    if (orderNumEl) orderNumEl.textContent = noOrder;
+    if (chipContainer) chipContainer.style.display = 'inline-flex';
+
+    // Beralih ke tab rincian item barang
+    switchLogistikView('items');
+}
+
+/**
+ * Hapus filter drill-down order aktif
+ */
+function clearLogistikOrderFilter() {
+    state.logistikFilteredOrder = '';
+    state.logistikCurrentPage = 1;
+
+    const chipContainer = document.getElementById('logistikActiveOrderChipContainer');
+    if (chipContainer) chipContainer.style.display = 'none';
+
+    if (state.logistikRawData) {
+        renderLogistikModalData(state.logistikRawData);
+    }
+}
+
+/**
+ * Beralih Filter Status Pemenuhan Logistik ('all' | 'memenuhi' | 'belum')
+ */
+function switchLogistikStatus(status) {
+    state.currentLogistikStatus = status;
+    state.logistikCurrentPage = 1;
+    if (state.logistikRawData) {
+        renderLogistikModalData(state.logistikRawData);
+    }
+}
+
+/**
+ * Beralih Tampilan Tab Logistik ('orders' | 'items')
+ */
+function switchLogistikView(viewMode) {
+    state.currentLogistikView = viewMode;
+    state.logistikCurrentPage = 1;
+
+    const btnOrders = document.getElementById('btnViewLogistikOrders');
+    const btnItems = document.getElementById('btnViewLogistikItems');
+    const panelOrders = document.getElementById('tabPanelLogistikOrders');
+    const panelItems = document.getElementById('tabPanelLogistikItems');
+
+    if (btnOrders) btnOrders.classList.toggle('active', viewMode === 'orders');
+    if (btnItems) btnItems.classList.toggle('active', viewMode === 'items');
+
+    if (panelOrders) panelOrders.classList.toggle('active', viewMode === 'orders');
+    if (panelItems) panelItems.classList.toggle('active', viewMode === 'items');
+
+    updateLogistikSortHeaders(viewMode);
+
+    if (state.logistikRawData) {
+        renderLogistikModalData(state.logistikRawData);
+    }
+}
+
+/**
+ * Pencarian Instan Logistik (Debounced)
+ */
+let logistikSearchTimeout = null;
+function handleLogistikSearch(query) {
+    clearTimeout(logistikSearchTimeout);
+    logistikSearchTimeout = setTimeout(() => {
+        state.logistikSearchQuery = (query || '').trim().toLowerCase();
+        state.logistikCurrentPage = 1;
+        if (state.logistikRawData) {
+            renderLogistikModalData(state.logistikRawData);
+        }
+    }, 200);
+}
+
+/**
+ * Memaksa sinkronisasi ulang data Logistik dari server Atena ERP
+ */
+async function syncLogistikData() {
+    const syncBtn = document.getElementById('btnSyncLogistik');
+    const icon = syncBtn ? syncBtn.querySelector('i') : null;
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        renderLogistikTablesLoading();
+        state.logistikCache.clear();
+        await fetch('/api/dashboard/logistik/sync', { method: 'POST' });
+        await loadLogistikData(true);
+        await fetchDashboardStats();
+    } catch (err) {
+        console.error('Error sync logistik:', err);
+        renderLogistikTablesError(err.message);
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+    }
+}
+
+/**
+ * Muat data Logistik dari API
+ */
+async function loadLogistikData(force = false) {
+    let url = '/api/dashboard/logistik?';
+    if (state.logistikDateStart && state.logistikDateEnd) {
+        url += `tglawal=${encodeURIComponent(state.logistikDateStart)}&tglakhir=${encodeURIComponent(state.logistikDateEnd)}`;
+    } else {
+        url += `range=${encodeURIComponent(state.currentLogistikRange)}`;
+    }
+    if (force) url += '&force=true';
+
+    const cacheKey = `logistik_${state.logistikDateStart}_${state.logistikDateEnd}_${state.currentLogistikRange}`;
+
+    if (!force && state.logistikCache.has(cacheKey)) {
+        const cached = state.logistikCache.get(cacheKey);
+        state.logistikRawData = cached.data;
+        renderLogistikModalData(cached.data);
+        return;
+    }
+
+    renderLogistikTablesLoading();
+
+    try {
+        const res = await fetch(url);
+        const result = await res.json();
+
+        if (!result.success || !result.data) {
+            throw new Error(result.message || 'Gagal mengambil data monitoring logistik');
+        }
+
+        state.logistikCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+        state.logistikRawData = result.data;
+        renderLogistikModalData(result.data);
+    } catch (err) {
+        console.error('Error memuat data logistik:', err);
+        renderLogistikTablesError(err.message);
+    }
+}
+
+/**
+ * Render semua elemen di Modal Logistik
+ */
+function renderLogistikModalData(data) {
+    if (!data) return;
+
+    const kpi = data.kpi || {};
+    const meta = data.meta || {};
+
+    // 1. Tampilkan 5 KPI Utama Logistik
+    const elTotalOrder = document.getElementById('modalKpiLogistikTotalOrder');
+    const elTerpenuhi = document.getElementById('modalKpiLogistikTerpenuhi');
+    const elBelum = document.getElementById('modalKpiLogistikBelum');
+    const elPercent = document.getElementById('modalKpiLogistikPercent');
+    const elTotalQty = document.getElementById('modalKpiLogistikTotalQtyOrder');
+    const elTotalDn = document.getElementById('modalKpiLogistikTotalQtyDn');
+
+    if (elTotalOrder) elTotalOrder.textContent = Number(kpi.total_order || 0).toLocaleString('id-ID');
+    if (elTerpenuhi) elTerpenuhi.textContent = Number(kpi.order_terpenuhi || 0).toLocaleString('id-ID');
+    if (elBelum) elBelum.textContent = Number(kpi.order_belum_terpenuhi || 0).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = `${kpi.persentase_selesai || 0}%`;
+    if (elTotalQty) elTotalQty.textContent = Number(kpi.total_jumlah || 0).toLocaleString('id-ID');
+    if (elTotalDn) elTotalDn.textContent = Number(kpi.total_jumlah_dn || 0).toLocaleString('id-ID');
+
+    // 2. Info Waktu Sinkronisasi
+    const syncTimeEl = document.getElementById('logistikLastSyncTime');
+    if (syncTimeEl) {
+        if (meta.sync_time) {
+            const d = new Date(meta.sync_time);
+            syncTimeEl.textContent = `• Sinkronisasi: ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+        } else if (meta.generated_at) {
+            const d = new Date(meta.generated_at);
+            syncTimeEl.textContent = `• Diperbarui: ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+        }
+    }
+
+    // 3. Filter List Order dan Items
+    const q = state.logistikSearchQuery;
+    const status = state.currentLogistikStatus;
+    const filteredOrder = state.logistikFilteredOrder;
+
+    // Filter daftar Order
+    let orderList = (data.summary_by_order || []).filter(ord => {
+        if (filteredOrder && ord.no_order !== filteredOrder) return false;
+        if (status !== 'all' && ord.status_order_code !== status) return false;
+        if (q) {
+            const matchNoOrder = ord.no_order && ord.no_order.toLowerCase().includes(q);
+            const matchNoPesanan = ord.no_pesanan && ord.no_pesanan.toLowerCase().includes(q);
+            const matchCust = ord.customer && ord.customer.toLowerCase().includes(q);
+            const matchDr = ord.no_dr && ord.no_dr.toLowerCase().includes(q);
+            const matchDn = ord.no_dn && ord.no_dn.toLowerCase().includes(q);
+            const matchItem = (ord.items || []).some(i =>
+                (i.kode_barang && i.kode_barang.toLowerCase().includes(q)) ||
+                (i.nama_barang && i.nama_barang.toLowerCase().includes(q))
+            );
+            if (!matchNoOrder && !matchNoPesanan && !matchCust && !matchDr && !matchDn && !matchItem) return false;
+        }
+        return true;
+    });
+
+    // Filter daftar Item
+    let itemList = (data.items || []).filter(item => {
+        if (filteredOrder && item.no_order !== filteredOrder) return false;
+        if (status !== 'all' && item.status_code !== status) return false;
+        if (q) {
+            const matchNoOrder = item.no_order && item.no_order.toLowerCase().includes(q);
+            const matchNoPesanan = item.no_pesanan && item.no_pesanan.toLowerCase().includes(q);
+            const matchCust = item.customer && item.customer.toLowerCase().includes(q);
+            const matchKode = item.kode_barang && item.kode_barang.toLowerCase().includes(q);
+            const matchNama = item.nama_barang && item.nama_barang.toLowerCase().includes(q);
+            const matchDr = item.no_dr && item.no_dr.toLowerCase().includes(q);
+            const matchDn = item.no_dn && item.no_dn.toLowerCase().includes(q);
+            if (!matchNoOrder && !matchNoPesanan && !matchCust && !matchKode && !matchNama && !matchDr && !matchDn) return false;
+        }
+        return true;
+    });
+
+    // 4. Update Counter Tab
+    const countOrdersEl = document.getElementById('countLogistikOrders');
+    const countItemsEl = document.getElementById('countLogistikItems');
+    if (countOrdersEl) countOrdersEl.textContent = `${orderList.length}`;
+    if (countItemsEl) countItemsEl.textContent = `${itemList.length}`;
+
+    // 5. Sorting Data
+    const ordSort = state.logistikSort?.orders || { column: 'tgl_jatuh_tempo', dir: 'desc' };
+    orderList.sort((a, b) => {
+        let valA = a[ordSort.column] ?? '';
+        let valB = b[ordSort.column] ?? '';
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return ordSort.dir === 'asc' ? valA - valB : valB - valA;
+        }
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+        return ordSort.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
+
+    const itemSort = state.logistikSort?.items || { column: 'tgl_jatuh_tempo', dir: 'desc' };
+    itemList.sort((a, b) => {
+        let valA = a[itemSort.column] ?? '';
+        let valB = b[itemSort.column] ?? '';
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return itemSort.dir === 'asc' ? valA - valB : valB - valA;
+        }
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+        return itemSort.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
+
+    updateLogistikSortHeaders(state.currentLogistikView);
+
+    if (state.currentLogistikView === 'orders') {
+        renderLogistikOrderTable(orderList);
+    } else {
+        renderLogistikItemsTable(itemList);
+    }
+}
+
+/**
+ * Render Tabel Per Order
+ */
+function renderLogistikOrderTable(orderList) {
+    const tbody = document.getElementById('logistikOrdersTableBody');
+    const footerStats = document.getElementById('logistikModalFooterStats');
+    const pageInfo = document.getElementById('logistikPageInfo');
+    const btnPrev = document.getElementById('btnLogistikPrevPage');
+    const btnNext = document.getElementById('btnLogistikNextPage');
+
+    if (!tbody) return;
+
+    if (orderList.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="12" class="text-center" style="padding: 2.5rem 1rem; color: var(--text-muted);">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem; color: #cbd5e1;">
+                        <i class="fa-solid fa-box-open"></i>
+                    </div>
+                    Tidak ada data Order Logistik yang sesuai dengan filter pencarian.
+                </td>
+            </tr>
+        `;
+        if (pageInfo) pageInfo.textContent = 'Menampilkan 0 Order';
+        if (btnPrev) btnPrev.disabled = true;
+        if (btnNext) btnNext.disabled = true;
+        return;
+    }
+
+    const pageSize = state.logistikPageSize;
+    const totalPages = Math.ceil(orderList.length / pageSize) || 1;
+    if (state.logistikCurrentPage > totalPages) state.logistikCurrentPage = totalPages;
+    if (state.logistikCurrentPage < 1) state.logistikCurrentPage = 1;
+
+    const startIndex = (state.logistikCurrentPage - 1) * pageSize;
+    const pageOrders = orderList.slice(startIndex, startIndex + pageSize);
+
+    let html = '';
+    pageOrders.forEach((ord, idx) => {
+        const rowNo = startIndex + idx + 1;
+        const isMemenuhi = ord.status_order_code === 'memenuhi';
+        const statusBadge = isMemenuhi
+            ? `<span class="badge-logistik-memenuhi"><i class="fa-solid fa-circle-check"></i> Memenuhi</span>`
+            : `<span class="badge-logistik-belum"><i class="fa-solid fa-clock-rotate-left"></i> Belum Memenuhi</span>`;
+
+        const progressPercent = ord.progress_percent || 0;
+        const progressClass = progressPercent >= 100 ? 'fill-complete' : '';
+
+        html += `
+            <tr>
+                <td class="text-center" style="color: var(--text-muted); font-size: 0.75rem;">${rowNo}</td>
+                <td>
+                    <span class="logistik-order-link" onclick="viewOrderItems('${escapeHtml(ord.no_order)}')" title="Klik untuk memfilter rincian item barang order ini">
+                        ${escapeHtml(ord.no_order)}
+                    </span>
+                </td>
+                <td style="font-family: monospace; font-size: 0.75rem;">${escapeHtml(ord.no_pesanan)}</td>
+                <td>
+                    <span class="badge-customer-pill" title="${escapeHtml(ord.customer)}">
+                        ${escapeHtml(ord.customer)}
+                    </span>
+                </td>
+                <td class="text-center" style="font-size: 0.75rem;">${ord.tgl_jatuh_tempo_label || ord.tgl_jatuh_tempo}</td>
+                <td>
+                    <span class="badge-ekspedisi-pill">
+                        <i class="fa-solid fa-truck"></i> ${escapeHtml(ord.ekspedisi)}
+                    </span>
+                </td>
+                <td class="text-center font-weight-bold">${ord.item_count}</td>
+                <td class="text-right" style="font-weight: 600;">${Number(ord.total_jumlah).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="font-weight: 700; color: #16a34a;">${Number(ord.total_jumlah_dn).toLocaleString('id-ID')}</td>
+                <td>
+                    <div style="font-size: 0.72rem; display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>${progressPercent}%</span>
+                    </div>
+                    <div class="pr-progress-track">
+                        <div class="pr-progress-fill ${progressClass}" style="width: ${progressPercent}%"></div>
+                    </div>
+                </td>
+                <td style="font-size: 0.72rem; font-family: monospace; color: #475569; max-width: 120px;">
+                    <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(ord.no_dr)}">${escapeHtml(ord.no_dr || '-')}</div>
+                    <div style="color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(ord.no_dn)}">${escapeHtml(ord.no_dn || '-')}</div>
+                </td>
+                <td class="text-center" style="white-space: nowrap;">${statusBadge}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+
+    if (pageInfo) {
+        pageInfo.textContent = `Halaman ${state.logistikCurrentPage} dari ${totalPages} (${orderList.length} Order)`;
+    }
+    if (btnPrev) btnPrev.disabled = state.logistikCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = state.logistikCurrentPage >= totalPages;
+
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${pageOrders.length} dari ${orderList.length} Order Logistik`;
+    }
+}
+
+/**
+ * Render Tabel Rincian Item Barang
+ */
+function renderLogistikItemsTable(itemList) {
+    const tbody = document.getElementById('logistikItemsTableBody');
+    const footerStats = document.getElementById('logistikModalFooterStats');
+    const pageInfo = document.getElementById('logistikPageInfo');
+    const btnPrev = document.getElementById('btnLogistikPrevPage');
+    const btnNext = document.getElementById('btnLogistikNextPage');
+
+    if (!tbody) return;
+
+    if (itemList.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="12" class="text-center" style="padding: 2.5rem 1rem; color: var(--text-muted);">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem; color: #cbd5e1;">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                    Tidak ada rincian item barang yang sesuai dengan filter pencarian.
+                </td>
+            </tr>
+        `;
+        if (pageInfo) pageInfo.textContent = 'Menampilkan 0 Item';
+        if (btnPrev) btnPrev.disabled = true;
+        if (btnNext) btnNext.disabled = true;
+        return;
+    }
+
+    const pageSize = state.logistikPageSize;
+    const totalPages = Math.ceil(itemList.length / pageSize) || 1;
+    if (state.logistikCurrentPage > totalPages) state.logistikCurrentPage = totalPages;
+    if (state.logistikCurrentPage < 1) state.logistikCurrentPage = 1;
+
+    const startIndex = (state.logistikCurrentPage - 1) * pageSize;
+    const pageItems = itemList.slice(startIndex, startIndex + pageSize);
+
+    let html = '';
+    pageItems.forEach((item, idx) => {
+        const rowNo = startIndex + idx + 1;
+        const isMemenuhi = item.status_code === 'memenuhi';
+        const statusBadge = isMemenuhi
+            ? `<span class="badge-logistik-memenuhi"><i class="fa-solid fa-circle-check"></i> Memenuhi</span>`
+            : `<span class="badge-logistik-belum"><i class="fa-solid fa-clock-rotate-left"></i> Belum</span>`;
+
+        html += `
+            <tr>
+                <td class="text-center" style="color: var(--text-muted); font-size: 0.75rem;">${rowNo}</td>
+                <td>
+                    <span class="logistik-order-link" onclick="viewOrderItems('${escapeHtml(item.no_order)}')" title="Filter hanya order ini">
+                        ${escapeHtml(item.no_order)}
+                    </span>
+                </td>
+                <td><span class="badge-customer-pill" title="${escapeHtml(item.customer)}">${escapeHtml(item.customer)}</span></td>
+                <td style="font-family: monospace; font-size: 0.75rem;">${escapeHtml(item.kode_barang)}</td>
+                <td style="font-weight: 500;">${escapeHtml(item.nama_barang)}</td>
+                <td class="text-center" style="font-size: 0.75rem;">${escapeHtml(item.satuan)}</td>
+                <td class="text-right" style="font-weight: 600;">${Number(item.jumlah).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="font-weight: 700; color: #16a34a;">${Number(item.jumlah_dn).toLocaleString('id-ID')}</td>
+                <td class="text-center" style="font-size: 0.75rem;">${item.tgl_jatuh_tempo_label || item.tgl_jatuh_tempo}</td>
+                <td style="font-size: 0.72rem; font-family: monospace; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(item.no_dr)}">${escapeHtml(item.no_dr || '-')}</td>
+                <td style="font-size: 0.72rem; font-family: monospace; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(item.no_dn)}">${escapeHtml(item.no_dn || '-')}</td>
+                <td class="text-center" style="white-space: nowrap;">${statusBadge}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+
+    if (pageInfo) {
+        pageInfo.textContent = `Halaman ${state.logistikCurrentPage} dari ${totalPages} (${itemList.length} Item)`;
+    }
+    if (btnPrev) btnPrev.disabled = state.logistikCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = state.logistikCurrentPage >= totalPages;
+
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${pageItems.length} dari ${itemList.length} Item Barang Logistik`;
+    }
+}
+
+/**
+ * Handle Pagination Logistik
+ */
+function changeLogistikPage(delta) {
+    state.logistikCurrentPage += delta;
+    if (state.logistikRawData) {
+        renderLogistikModalData(state.logistikRawData);
+    }
+}
+
+/**
+ * Skeleton Loading Tabel Logistik
+ */
+function renderLogistikTablesLoading() {
+    const ordersTbody = document.getElementById('logistikOrdersTableBody');
+    const itemsTbody = document.getElementById('logistikItemsTableBody');
+    const skeleton = `
+        <tr class="skeleton-row">
+            <td class="text-center"><span class="skeleton-box" style="width: 20px; height: 16px;"></span></td>
+            <td><span class="skeleton-box" style="width: 110px; height: 16px;"></span></td>
+            <td><span class="skeleton-box" style="width: 100px; height: 16px;"></span></td>
+            <td><span class="skeleton-box" style="width: 150px; height: 16px;"></span></td>
+            <td class="text-center"><span class="skeleton-box" style="width: 80px; height: 14px;"></span></td>
+            <td><span class="skeleton-box" style="width: 90px; height: 14px;"></span></td>
+            <td class="text-center"><span class="skeleton-box" style="width: 30px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 50px; height: 14px;"></span></td>
+            <td class="text-right"><span class="skeleton-box" style="width: 50px; height: 14px;"></span></td>
+            <td><span class="skeleton-box" style="width: 70px; height: 8px;"></span></td>
+            <td><span class="skeleton-box" style="width: 100px; height: 14px;"></span></td>
+            <td class="text-center"><span class="skeleton-badge" style="width: 80px;"></span></td>
+        </tr>
+    `;
+    if (ordersTbody) ordersTbody.innerHTML = skeleton.repeat(4);
+    if (itemsTbody) itemsTbody.innerHTML = skeleton.repeat(4);
+}
+
+/**
+ * Error State Tabel Logistik
+ */
+function renderLogistikTablesError(msg) {
+    ['logistikOrdersTableBody', 'logistikItemsTableBody'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = `
+                <tr>
+                    <td colspan="12" class="text-center" style="padding: 2.5rem 1rem; color: #dc2626;">
+                        <i class="fa-solid fa-circle-exclamation"></i> Gagal memuat data Logistik: ${escapeHtml(msg)}
+                    </td>
+                </tr>
+            `;
+        }
+    });
+}
+
+/**
+ * Sorting Kolom Tabel Logistik
+ */
+function sortLogistik(viewMode, column) {
+    if (!state.logistikSort) {
+        state.logistikSort = {
+            orders: { column: 'tgl_jatuh_tempo', dir: 'desc' },
+            items: { column: 'tgl_jatuh_tempo', dir: 'desc' },
+        };
+    }
+
+    const currentSort = state.logistikSort[viewMode] || { column: 'tgl_jatuh_tempo', dir: 'desc' };
+    if (currentSort.column === column) {
+        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        const numericColumns = ['total_jumlah', 'total_jumlah_dn', 'jumlah', 'jumlah_dn', 'item_count', 'progress_percent'];
+        currentSort.dir = numericColumns.includes(column) ? 'desc' : 'asc';
+    }
+
+    state.logistikSort[viewMode] = currentSort;
+    state.logistikCurrentPage = 1;
+
+    updateLogistikSortHeaders(viewMode);
+
+    if (state.logistikRawData) {
+        renderLogistikModalData(state.logistikRawData);
+    }
+}
+
+/**
+ * Update Icon Header Sorting Logistik
+ */
+function updateLogistikSortHeaders(viewMode) {
+    const panelId = viewMode === 'orders' ? 'tabPanelLogistikOrders' : 'tabPanelLogistikItems';
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    const currentSort = (state.logistikSort && state.logistikSort[viewMode])
+        ? state.logistikSort[viewMode]
+        : { column: 'tgl_jatuh_tempo', dir: 'desc' };
+
+    const ths = panel.querySelectorAll('th.sortable-th');
+    ths.forEach(th => {
+        const key = th.getAttribute('data-sort-key');
+        const icon = th.querySelector('.sort-icon');
+
+        if (key === currentSort.column) {
+            th.classList.add('active-sort');
+            if (icon) {
+                icon.className = currentSort.dir === 'asc'
+                    ? 'fa-solid fa-arrow-up-wide-short sort-icon'
+                    : 'fa-solid fa-arrow-down-wide-short sort-icon';
+            }
+        } else {
+            th.classList.remove('active-sort');
+            if (icon) {
+                icon.className = 'fa-solid fa-sort sort-icon';
+            }
+        }
+    });
+}
+

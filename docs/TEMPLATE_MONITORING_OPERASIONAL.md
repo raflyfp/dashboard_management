@@ -24,9 +24,9 @@ Dokumen ini memuat standarisasi data, sumber data resmi, metrik KPI, dan format 
 | **12** | **Produksi Surgical Packing** | Penyelesaian PP (PP Surgical Packing vs actual) | Program Atena (PP Surgical Packing vs haasil actual) | Lini Produksi Atena | 🟡 **Template Standby** |
 | **14** | **HR (SDM)** | Kehadiran TK vs jadwal | Sistem Absensi HR / Jadwal Kerja | HR, DC & QA | 🟡 **Template Standby** |
 | **15** | **DC (Document Control)** | Penyelesaian pengerjaan dokumen | Aplikasi Paperless (menu pengajuan vs pengesahan) | HR, DC & QA | 🟡 **Template Standby** |
-| **16** | **Purchasing** | Pemenuhan PR Material & PR Non-Material | Laporan PR Material, Lap PR nonmat Atena | Supply Chain & Gudang | 🟡 **Template Standby** |
+| **16** | **Purchasing** | Pemenuhan PR Material & PR Non-Material | Atena ERP REST API (PemenuhanPR) | Supply Chain & Gudang | 🟢 **Live** |
 | **17** | **QA (Quality)** | Release material & Release produk jadi | GRS, SCN dan Accept BR | HR, DC & QA | 🟡 **Template Standby** |
-| **18** | **Logistik** | Pemenuhan order pengiriman | Sistem Logistik & Distribusi Pengiriman | Supply Chain & Gudang | 🟡 **Template Standby** |
+| **18** | **Logistik** | Pemenuhan order pengiriman | Atena ERP REST API (PemenuhanOrder) | Supply Chain & Gudang | 🟢 **Live** |
 | **19** | **WH FG (Gudang Jadi)** | Penyelesaian DR Barang Jadi | Sistem Warehouse Finished Goods (WH FG) | Supply Chain & Gudang | 🟡 **Template Standby** |
 | **20** | **WH Mat (Gudang Bahan)** | Pemenuhan DR & Pemenuhan Permintaan barang | Realisasi DR paskot & Permintaan bahan (MR +1) | Supply Chain & Gudang | 🟡 **Template Standby** |
 | **21** | **PBF (Distribusi Farmasi)** | Pemenuhan order pelanggan PBF | Sistem Distribusi / Order Penjualan PBF | Supply Chain & Gudang | 🟡 **Template Standby** |

@@ -16,6 +16,7 @@ const ticketingService = require('../services/ticketingService');
 const subconService = require('../services/subconService');
 const purchasingService = require('../services/purchasingService');
 const produksiService = require('../services/produksiService');
+const logistikService = require('../services/logistikService');
 
 // In-memory cache sederhana untuk efisiensi beban server
 const cache = {
@@ -81,12 +82,13 @@ router.get('/stats', async (req, res) => {
     }
 
     try {
-        // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing & Produksi secara paralel
-        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled] = await Promise.allSettled([
+        // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi & Logistik secara paralel
+        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled] = await Promise.allSettled([
             ticketingService.getSummary(forceRefresh),
             subconService.getMonitoringToday(forceRefresh),
             purchasingService.getSummary(forceRefresh),
-            produksiService.getRingkasanAll(forceRefresh)
+            produksiService.getRingkasanAll(forceRefresh),
+            logistikService.getSummary(forceRefresh)
         ]);
 
         let apiData = null;
@@ -124,6 +126,14 @@ router.get('/stats', async (req, res) => {
         }
         const prodModules = produksiData?.modules || {};
         const prodKpi = produksiData?.kpi || {};
+
+        let logistikData = null;
+        if (logistikSettled.status === 'fulfilled') {
+            logistikData = logistikSettled.value;
+        } else {
+            console.error(`❌ [API LOGISTIK ERROR]: ${logistikSettled.reason?.message}`);
+        }
+        const logistikKpi = logistikData?.kpi || {};
 
         const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
@@ -563,7 +573,7 @@ router.get('/stats', async (req, res) => {
             },
 
             // ==============================================================
-            // 6. SUPPLY CHAIN & GUDANG (TEMPLATE STANDBY SIAP INTEGRASI)
+            // 6. SUPPLY CHAIN & GUDANG (LIVE ATENA REST API & TEMPLATE)
             // ==============================================================
             PURCHASING: {
                 no: 16,
@@ -573,12 +583,12 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Supply Chain & Gudang',
                 data_ditampilkan: 'Pemenuhan PR Mat & PR Non Mat',
                 sub_nama: 'PR Material & PR Non-Mat Atena',
-                sumber_data: 'Laporan PR Atena ERP (Live)',
+                sumber_data: 'Atena ERP REST API (PemenuhanPR)',
                 sumber: 'Atena ERP',
                 catatan: 'Pemenuhan Purchase Requisition Material & Non-Material',
                 icon: 'cart-shopping',
                 is_active: true,
-                metric_labels: { total: 'Total PR', selesai: 'Sudah PO / GRS', belum: 'Belum PO' },
+                metric_labels: { total: 'Total PR', selesai: 'Terpenuhi', belum: 'Belum' },
                 unit: 'PR',
                 total_tiket: purchasingKpi.total_pr ?? 0,
                 selesai: purchasingKpi.pr_terpenuhi ?? 0,
@@ -602,17 +612,30 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Supply Chain & Gudang',
                 data_ditampilkan: 'Pemenuhan Order',
                 sub_nama: 'Realisasi Pengiriman Pesanan',
-                sumber_data: 'Sistem Logistik & Distribusi Pengiriman',
-                sumber: 'Sistem Logistik',
+                sumber_data: 'Atena ERP REST API (PemenuhanOrder)',
+                sumber: 'Atena ERP',
                 catatan: 'Pemenuhan order pengiriman tepat waktu',
                 icon: 'truck-fast',
-                is_active: false,
-                metric_labels: { total: 'Total Order', selesai: 'Terkirim', belum: 'Antrean' },
+                is_active: true,
+                metric_labels: { total: 'Total Order', selesai: 'Terpenuhi', belum: 'Belum' },
                 unit: 'Order',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                total_tiket: logistikKpi.total_order ?? 0,
+                selesai: logistikKpi.order_terpenuhi ?? 0,
+                belum_selesai: logistikKpi.order_belum_terpenuhi ?? 0,
+                ditolak: 0,
+                total_efektif: logistikKpi.total_order ?? 0,
+                persentase_selesai: logistikKpi.persentase_selesai ?? 0,
+                total_item: logistikKpi.total_item ?? 0,
+                today: logistikData?.today || {},
+                month: logistikData?.month || {},
+                today_total: logistikData?.today?.total_order ?? 0,
+                today_selesai: logistikData?.today?.order_terpenuhi ?? 0,
+                today_belum: logistikData?.today?.order_belum_terpenuhi ?? 0,
+                today_persentase: logistikData?.today?.persentase_selesai ?? 0,
+                month_total: logistikData?.month?.total_order ?? 0,
+                month_selesai: logistikData?.month?.order_terpenuhi ?? 0,
+                month_belum: logistikData?.month?.order_belum_terpenuhi ?? 0,
+                month_persentase: logistikData?.month?.persentase_selesai ?? 0,
             },
             WH_FG: {
                 no: 19,
@@ -732,6 +755,7 @@ router.get('/stats', async (req, res) => {
             },
             kpi_produksi: prodKpi,
             kpi_purchasing: purchasingKpi,
+            kpi_logistik: logistikKpi,
             layanan: servicesResult,
             perlu_perhatian: sanitizedPerluPerhatian,
         };
@@ -953,6 +977,61 @@ router.post('/produksi/sync', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Gagal sinkronisasi data produksi Atena ERP: ' + error.message
+        });
+    }
+});
+
+/**
+ * GET /api/dashboard/logistik
+ * Mengambil detail data Pemenuhan Order pengiriman logistik dari Atena ERP REST API
+ * Query params:
+ * - range: 'today' | 'week' | 'month' | 'all' (default: 'month')
+ * - status: 'all' | 'memenuhi' | 'belum'
+ * - search: pencarian No. Order, Customer, Nama Barang, No. Resi DR/DN
+ * - force: boolean
+ */
+router.get('/logistik', async (req, res) => {
+    try {
+        const { range = 'month', status = 'all', search = '', force = false, tglawal, tglakhir } = req.query;
+        const data = await logistikService.getMonitoringData({
+            range,
+            status,
+            search,
+            force: force === 'true',
+            tglawal,
+            tglakhir,
+        });
+
+        return res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('[API ERROR /logistik]:', error.message);
+        return res.status(502).json({
+            success: false,
+            message: 'Gagal mengambil data monitoring logistik Atena ERP: ' + error.message,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/dashboard/logistik/sync
+ * Memaksa sinkronisasi ulang data logistik langsung dari server Atena ERP REST API
+ */
+router.post('/logistik/sync', async (req, res) => {
+    try {
+        const data = await logistikService.fetchData(true);
+        return res.json({
+            success: true,
+            message: 'Sinkronisasi data Logistik dari Atena ERP berhasil',
+            data
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Gagal sinkronisasi data logistik Atena ERP: ' + error.message
         });
     }
 });

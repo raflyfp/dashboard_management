@@ -721,7 +721,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPURCHASING">0%</span>
-                                <span class="percent-lbl">SELESAI</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPURCHASING" style="width: 0%">
@@ -731,15 +731,15 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PR</span>
                                 <span class="m-val" id="totalPURCHASING">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Terpenuhi</span>
                                 <span class="m-val text-success" id="selesaiPURCHASING">0</span>
                             </div>
                             <div class="metric-box m-warning">
-                                <span class="m-lbl">Belum PO</span>
+                                <span class="m-lbl">Belum</span>
                                 <span class="m-val text-warning" id="belumPURCHASING">0</span>
                             </div>
                         </div>
@@ -799,21 +799,24 @@
                     </div>
                 </section>
 
-                <!-- CARD: LOGISTIK (STANDBY) -->
+                <!-- CARD: LOGISTIK (LIVE ATENA ERP) -->
                 <section class="service-card" id="card-LOGISTIK">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-truck-fast"></i></div>
-                            <h2>Logistik</h2>
+                            <div class="service-icon-box logistik-theme"><i class="fa-solid fa-truck-fast"></i></div>
+                            <div>
+                                <h2>Logistik</h2>
+                                <span class="card-sub-title">Pemenuhan Order Pengiriman</span>
+                            </div>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
                     <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentLOGISTIK">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillLOGISTIK" style="width: 0%">
@@ -823,11 +826,11 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total Order</span>
                                 <span class="m-val" id="totalLOGISTIK">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Terpenuhi</span>
                                 <span class="m-val text-success" id="selesaiLOGISTIK">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -838,9 +841,9 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
-                            <span>Lihat Detail</span>
+                        <button class="btn-detail logistik-btn"
+                            onclick="openLogistikModal()">
+                            <span>Lihat Detail Order</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
@@ -2009,6 +2012,324 @@
                 <button class="btn-secondary" onclick="closeProduksiModal()">Tutup</button>
             </div>
 
+        </div>
+    </div>
+
+    <!-- 8. MODAL MONITORING PEMENUHAN ORDER (LOGISTIK ATENA ERP) -->
+    <div class="modal-overlay" id="logistikModal" aria-hidden="true">
+        <div class="modal-card modal-card-xl">
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon logistik-theme"><i class="fa-solid fa-truck-fast"></i></div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h1 style="font-size: 1.15rem; margin: 0;">Monitoring Pemenuhan Order Logistik</h1>
+                                <span class="service-status-pill status-live" style="font-size: 0.72rem;">Live Atena</span>
+                            </div>
+                            <p id="logistikModalSubtitle" style="margin: 2px 0 0; font-size: 0.78rem; color: var(--text-secondary);">
+                                Data Realisasi Pemenuhan Order & Pengiriman Pesanan ke Customer dari Atena ERP
+                            </p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="modal-close-btn" onclick="closeLogistikModal()" title="Tutup">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bar Filter: Date Range Picker, Presets, Reset, Search & Sync -->
+                <div class="subcon-filter-bar" style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="date" id="logistikDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleLogistikDateChange('start')">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="date" id="logistikDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleLogistikDateChange('end')">
+                                </div>
+                            </div>
+
+                            <!-- Shortcut Presets Cepat -->
+                            <div class="filter-pills logistik-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnQuickLogistikMonth" onclick="setLogistikQuickDate('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickLogistikWeek" onclick="setLogistikQuickDate('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnQuickLogistikToday" onclick="setLogistikQuickDate('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickLogistikAll" onclick="setLogistikQuickDate('all')">
+                                    <i class="fa-solid fa-layer-group"></i> Semua
+                                </button>
+                            </div>
+
+                            <!-- Tombol Reset Filter -->
+                            <button class="filter-reset-btn" id="btnResetLogistikFilter" onclick="resetLogistikFilter()" title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Right Group: Search Box + Sync Atena (Hanya Icon Putar) -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="logistikSearchInput" placeholder="Cari No Order, Customer, Barang, Resi..."
+                                    oninput="handleLogistikSearch(this.value)">
+                            </div>
+
+                            <button class="modal-refresh-btn" id="btnSyncLogistik" onclick="syncLogistikData()"
+                                title="Sinkronisasi data langsung dari Atena ERP">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Modal Logistik -->
+            <div class="modal-body subcon-modal-body" style="padding-top: 0.85rem;">
+                <!-- 5 Kotak KPI Utama Logistik -->
+                <div class="subcon-kpi-grid logistik-kpi-grid">
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #0284c7;"><i class="fa-solid fa-truck-ramp-box"></i></div>
+                        <div>
+                            <div class="kpi-num" id="modalKpiLogistikTotalOrder">0</div>
+                            <div class="kpi-label">Total Order / SO</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
+                        <div>
+                            <div class="kpi-num text-success" id="modalKpiLogistikTerpenuhi">0</div>
+                            <div class="kpi-label">Order Memenuhi (<span id="modalKpiLogistikPercent">0%</span>)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-warning"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        <div>
+                            <div class="kpi-num text-warning" id="modalKpiLogistikBelum">0</div>
+                            <div class="kpi-label">Belum Memenuhi</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-boxes-stacked"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiLogistikTotalQtyOrder">0</div>
+                            <div class="kpi-label">Total Qty Order</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #10b981;"><i class="fa-solid fa-dolly"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #10b981;" id="modalKpiLogistikTotalQtyDn">0</div>
+                            <div class="kpi-label">Total Qty Kirim (DN)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Order Filter Chip (Muncul saat user drill-down rincian per order) -->
+                <div id="logistikActiveOrderChipContainer" style="display: none; margin-top: 0.6rem; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Filter Aktif:</span>
+                    <div class="logistik-order-chip">
+                        <i class="fa-solid fa-filter"></i>
+                        <span>No. Order: <strong id="logistikFilteredOrderNum">-</strong></span>
+                        <button class="chip-close" onclick="clearLogistikOrderFilter()" title="Hapus Filter Order">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sub-Navbar: Tab View (Per Order vs Rincian Item) & Filter Status -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: -2px;">
+                        <button class="logistik-tab-btn active" id="btnViewLogistikOrders"
+                            onclick="switchLogistikView('orders')">
+                            <i class="fa-solid fa-file-invoice"></i> Ringkasan Per Order / SO
+                            <span class="subcon-tab-badge" id="countLogistikOrders">0</span>
+                        </button>
+                        <button class="logistik-tab-btn" id="btnViewLogistikItems"
+                            onclick="switchLogistikView('items')">
+                            <i class="fa-solid fa-boxes-stacked"></i> Rincian Item Barang
+                            <span class="subcon-tab-badge" id="countLogistikItems">0</span>
+                        </button>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-shrink: 0;">
+                        <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Status:</span>
+                        <select id="selectLogistikStatus" class="purchasing-select"
+                            onchange="switchLogistikStatus(this.value)">
+                            <option value="all">Semua Status</option>
+                            <option value="memenuhi">Memenuhi Saja</option>
+                            <option value="belum">Belum Memenuhi Saja</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- PANEL 1: TABEL RINGKASAN PER ORDER / SO -->
+                <div class="subcon-tab-panel active" id="tabPanelLogistikOrders" style="margin-top: 0.75rem;">
+                    <div class="table-responsive">
+                        <table class="tickets-table subcon-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;" class="text-center">No</th>
+                                    <th style="width: 130px;" class="sortable-th"
+                                        onclick="sortLogistik('orders', 'no_order')" data-sort-key="no_order">
+                                        No. Order <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 115px;" class="sortable-th"
+                                        onclick="sortLogistik('orders', 'no_pesanan')" data-sort-key="no_pesanan">
+                                        No. Pesanan <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="sortable-th"
+                                        onclick="sortLogistik('orders', 'customer')" data-sort-key="customer">
+                                        Customer <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 105px;" class="text-center sortable-th"
+                                        onclick="sortLogistik('orders', 'tgl_jatuh_tempo')" data-sort-key="tgl_jatuh_tempo">
+                                        Jatuh Tempo <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 125px;">Ekspedisi</th>
+                                    <th style="width: 55px;" class="text-center sortable-th"
+                                        onclick="sortLogistik('orders', 'item_count')" data-sort-key="item_count">
+                                        Item <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 80px;" class="text-right sortable-th"
+                                        onclick="sortLogistik('orders', 'total_jumlah')" data-sort-key="total_jumlah">
+                                        Qty Order <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 80px;" class="text-right sortable-th"
+                                        onclick="sortLogistik('orders', 'total_jumlah_dn')" data-sort-key="total_jumlah_dn">
+                                        Qty DN <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 90px;" class="sortable-th"
+                                        onclick="sortLogistik('orders', 'progress_percent')" data-sort-key="progress_percent">
+                                        Progress <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 120px;">No. DR / DN</th>
+                                    <th style="width: 105px;" class="text-center sortable-th"
+                                        onclick="sortLogistik('orders', 'status_order_code')" data-sort-key="status_order_code">
+                                        Status <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="logistikOrdersTableBody">
+                                <tr class="skeleton-row">
+                                    <td class="text-center"><span class="skeleton-box" style="width: 20px; height: 16px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 110px; height: 16px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 100px; height: 16px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 150px; height: 16px;"></span></td>
+                                    <td class="text-center"><span class="skeleton-box" style="width: 80px; height: 14px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 90px; height: 14px;"></span></td>
+                                    <td class="text-center"><span class="skeleton-box" style="width: 30px; height: 14px;"></span></td>
+                                    <td class="text-right"><span class="skeleton-box" style="width: 50px; height: 14px;"></span></td>
+                                    <td class="text-right"><span class="skeleton-box" style="width: 50px; height: 14px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 70px; height: 8px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 100px; height: 14px;"></span></td>
+                                    <td class="text-center"><span class="skeleton-badge" style="width: 80px;"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PANEL 2: TABEL RINCIAN ITEM BARANG -->
+                <div class="subcon-tab-panel" id="tabPanelLogistikItems" style="margin-top: 0.75rem;">
+                    <div class="table-responsive">
+                        <table class="tickets-table subcon-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;" class="text-center">No</th>
+                                    <th style="width: 130px;" class="sortable-th"
+                                        onclick="sortLogistik('items', 'no_order')" data-sort-key="no_order">
+                                        No. Order <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 150px;" class="sortable-th"
+                                        onclick="sortLogistik('items', 'customer')" data-sort-key="customer">
+                                        Customer <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 85px;">Kode</th>
+                                    <th class="sortable-th"
+                                        onclick="sortLogistik('items', 'nama_barang')" data-sort-key="nama_barang">
+                                        Nama Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 70px;" class="text-center">Satuan</th>
+                                    <th style="width: 80px;" class="text-right sortable-th"
+                                        onclick="sortLogistik('items', 'jumlah')" data-sort-key="jumlah">
+                                        Order <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 80px;" class="text-right sortable-th"
+                                        onclick="sortLogistik('items', 'jumlah_dn')" data-sort-key="jumlah_dn">
+                                        Kirim (DN) <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 105px;" class="text-center sortable-th"
+                                        onclick="sortLogistik('items', 'tgl_jatuh_tempo')" data-sort-key="tgl_jatuh_tempo">
+                                        Jatuh Tempo <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 125px;">No. DR</th>
+                                    <th style="width: 135px;">No. DN</th>
+                                    <th style="width: 105px;" class="text-center sortable-th"
+                                        onclick="sortLogistik('items', 'status_code')" data-sort-key="status_code">
+                                        Status <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="logistikItemsTableBody">
+                                <tr class="skeleton-row">
+                                    <td class="text-center"><span class="skeleton-box" style="width: 20px; height: 16px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 110px; height: 16px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 120px; height: 16px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 60px; height: 14px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 160px; height: 14px;"></span></td>
+                                    <td class="text-center"><span class="skeleton-box" style="width: 40px; height: 14px;"></span></td>
+                                    <td class="text-right"><span class="skeleton-box" style="width: 45px; height: 14px;"></span></td>
+                                    <td class="text-right"><span class="skeleton-box" style="width: 45px; height: 14px;"></span></td>
+                                    <td class="text-center"><span class="skeleton-box" style="width: 80px; height: 14px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 100px; height: 14px;"></span></td>
+                                    <td><span class="skeleton-box" style="width: 100px; height: 14px;"></span></td>
+                                    <td class="text-center"><span class="skeleton-badge" style="width: 80px;"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Baris Navigasi Pagination & Info Baris -->
+                <div class="purchasing-pagination-bar" id="logistikPaginationBar"
+                    style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.25rem;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="logistikPageInfo">
+                        Menampilkan 0 baris
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="filter-pill" id="btnLogistikPrevPage" onclick="changeLogistikPage(-1)">
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button class="filter-pill" id="btnLogistikNextPage" onclick="changeLogistikPage(1)">
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Modal Logistik -->
+            <div class="modal-footer">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div class="modal-stats" id="logistikModalFooterStats">
+                        Menampilkan data monitoring Pemenuhan Order Logistik Atena ERP
+                    </div>
+                    <span id="logistikLastSyncTime"
+                        style="font-size: 0.75rem; color: var(--text-muted); margin-left: 8px;"></span>
+                </div>
+                <button class="btn-secondary" onclick="closeLogistikModal()">Tutup</button>
+            </div>
         </div>
     </div>
 
