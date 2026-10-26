@@ -747,18 +747,21 @@
 
                     <div class="card-footer">
                         <button class="btn-detail purchasing-btn" onclick="openPurchasingModal()">
-                            <span>Lihat Detail PR</span>
+                            <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- CARD: QA (STANDBY) -->
+                <!-- CARD: QA (LIVE ATENA ERP - RELEASE MATERIAL GRS) -->
                 <section class="service-card" id="card-QA">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-clipboard-check"></i></div>
-                            <h2>QA</h2>
+                            <div class="service-icon-box qa-theme"><i class="fa-solid fa-clipboard-check"></i></div>
+                            <div>
+                                <h2>QA</h2>
+                                <span class="card-sub-title">Release Material (GRS)</span>
+                            </div>
                         </div>
                         <span class="service-status-pill status-standby">Standby</span>
                     </div>
@@ -767,7 +770,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentQA">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Release Material</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillQA" style="width: 0%"></div>
@@ -776,23 +779,23 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PR Mat</span>
                                 <span class="m-val" id="totalQA">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Released</span>
                                 <span class="m-val text-success" id="selesaiQA">0</span>
                             </div>
                             <div class="metric-box m-warning">
-                                <span class="m-lbl">Belum</span>
+                                <span class="m-lbl">Pending</span>
                                 <span class="m-val text-warning" id="belumQA">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail qa-btn"
+                            onclick="openQaModal()">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -843,7 +846,7 @@
                     <div class="card-footer">
                         <button class="btn-detail logistik-btn"
                             onclick="openLogistikModal()">
-                            <span>Lihat Detail Order</span>
+                            <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
@@ -1266,31 +1269,49 @@
                     </button>
                 </div>
 
-                <div class="modal-header-actions">
-                    <!-- Filter Rentang Waktu: Hari Ini / 7 Hari Terakhir / 30 Hari Terakhir -->
-                    <div class="filter-pills subcon-range-pills">
-                        <button class="filter-pill active" id="btnRangeToday" onclick="switchSubconRange('today')">
-                            <i class="fa-solid fa-calendar-day"></i> Hari Ini
-                        </button>
-                        <button class="filter-pill" id="btnRangeWeek" onclick="switchSubconRange('week')">
-                            <i class="fa-solid fa-calendar-week"></i> 7 Hari Terakhir
-                        </button>
-                        <button class="filter-pill" id="btnRangeMonth" onclick="switchSubconRange('month')">
-                            <i class="fa-solid fa-calendar-days"></i> 30 Hari Terakhir
-                        </button>
-                    </div>
+                <!-- Bar Filter Subcon (Sama rapi seperti Logistik) -->
+                <div class="subcon-filter-bar" style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="date" id="subconDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleSubconDateChange('start')">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="date" id="subconDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleSubconDateChange('end')">
+                                </div>
+                            </div>
 
-                    <!-- Tombol Reset Filter -->
-                    <button class="filter-reset-btn" id="btnResetSubconFilter" onclick="resetSubconFilter()"
-                        title="Reset Filter ke Default">
-                        <i class="fa-solid fa-rotate-left"></i> Reset
-                    </button>
+                            <div class="filter-pills subcon-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnRangeToday" onclick="switchSubconRange('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnRangeWeek" onclick="switchSubconRange('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnRangeMonth" onclick="switchSubconRange('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                            </div>
 
-                    <!-- Search Input -->
-                    <div class="search-box">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="subconSearchInput" placeholder="Cari nama barang / subcon..."
-                            oninput="handleSubconSearch(this.value)">
+                            <!-- Tombol Reset Filter -->
+                            <button class="filter-reset-btn" id="btnResetSubconFilter" onclick="resetSubconFilter()"
+                                title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Right Group: Search Box -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="subconSearchInput" placeholder="Cari nama barang / subcon..."
+                                    oninput="handleSubconSearch(this.value)">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1465,35 +1486,58 @@
                     </button>
                 </div>
 
-                <div class="modal-header-actions">
-                    <!-- Filter Rentang Waktu: Semua / Bulan Ini / 7 Hari / Hari Ini -->
-                    <div class="filter-pills purchasing-range-pills">
-                        <button class="filter-pill active" id="btnPrRangeAll" onclick="switchPurchasingRange('all')">
-                            <i class="fa-solid fa-database"></i> Semua
-                        </button>
-                        <button class="filter-pill" id="btnPrRangeMonth" onclick="switchPurchasingRange('month')">
-                            <i class="fa-solid fa-calendar-days"></i> Bulan Ini
-                        </button>
-                        <button class="filter-pill" id="btnPrRangeWeek" onclick="switchPurchasingRange('week')">
-                            <i class="fa-solid fa-calendar-week"></i> 7 Hari
-                        </button>
-                        <button class="filter-pill" id="btnPrRangeToday" onclick="switchPurchasingRange('today')">
-                            <i class="fa-solid fa-calendar-day"></i> Hari Ini
-                        </button>
-                    </div>
+                <!-- Bar Filter: Date Range Picker, Presets, Reset, Search & Sync (Sama seperti Logistik) -->
+                <div class="subcon-filter-bar" style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="date" id="purchasingDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handlePurchasingDateChange('start')">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="date" id="purchasingDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handlePurchasingDateChange('end')">
+                                </div>
+                            </div>
 
-                    <!-- Search Input -->
-                    <div class="search-box">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="purchasingSearchInput" placeholder="Cari No PR / Kode / Nama Barang..."
-                            oninput="handlePurchasingSearch(this.value)">
-                    </div>
+                            <!-- Shortcut Presets Cepat -->
+                            <div class="filter-pills purchasing-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnQuickPurchasingMonth" onclick="setPurchasingQuickDate('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickPurchasingWeek" onclick="setPurchasingQuickDate('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnQuickPurchasingToday" onclick="setPurchasingQuickDate('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickPurchasingAll" onclick="setPurchasingQuickDate('all')">
+                                    <i class="fa-solid fa-layer-group"></i> Semua
+                                </button>
+                            </div>
 
-                    <!-- Sync Button -->
-                    <button class="modal-refresh-btn" id="btnSyncPurchasing" onclick="syncPurchasingData()"
-                        title="Sinkronkan dengan Atena ERP">
-                        <i class="fa-solid fa-arrows-rotate"></i>
-                    </button>
+                            <!-- Tombol Reset Filter -->
+                            <button class="filter-reset-btn" id="btnResetPurchasingFilter" onclick="resetPurchasingFilter()" title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Right Group: Search Box + Sync Atena (Hanya Icon Putar) -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="purchasingSearchInput" placeholder="Cari No PR / Kode / Nama Barang..."
+                                    oninput="handlePurchasingSearch(this.value)">
+                            </div>
+
+                            <button class="modal-refresh-btn" id="btnSyncPurchasing" onclick="syncPurchasingData()"
+                                title="Sinkronkan dengan Atena ERP">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1764,12 +1808,12 @@
                         <div style="font-size: 0.8rem; color: var(--text-muted);" id="purchasingPageInfo">
                             Halaman 1 dari 1
                         </div>
-                        <div style="display: flex; gap: 6px;">
+                        <div style="display: flex; gap: 5px;">
                             <button class="filter-pill" id="btnPurchasingPrevPage" onclick="changePurchasingPage(-1)">
-                                <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+                                <i class="fa-solid fa-chevron-left"></i> Prev
                             </button>
                             <button class="filter-pill" id="btnPurchasingNextPage" onclick="changePurchasingPage(1)">
-                                Selanjutnya <i class="fa-solid fa-chevron-right"></i>
+                                Next <i class="fa-solid fa-chevron-right"></i>
                             </button>
                         </div>
                     </div>
@@ -1786,6 +1830,276 @@
                         style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
                 </div>
                 <button class="btn-secondary" onclick="closePurchasingModal()">Tutup</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 6B. MODAL MONITORING QA (RELEASE MATERIAL GRS ATENA ERP) -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="qaModal" aria-hidden="true">
+        <div class="modal-card modal-card-xl">
+
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon qa-theme"><i class="fa-solid fa-clipboard-check"></i></div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h3 style="margin: 0; font-size: 1.15rem;">Monitoring QA - Release Material (GRS)</h3>
+                                <span class="service-status-pill status-live" style="font-size: 0.72rem;">Live Atena</span>
+                            </div>
+                            <p id="qaModalSubtitle" style="margin: 2px 0 0; font-size: 0.78rem; color: var(--text-secondary);">
+                                Data Hasil Inspeksi & Release Penerimaan Material (Goods Receipt Slip) dari Atena ERP
+                            </p>
+                        </div>
+                    </div>
+                    <!-- Close Button -->
+                    <button class="modal-close-btn" onclick="closeQaModal()" title="Tutup">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Bar Filter: Date Range Picker, Presets, Reset, Search & Sync -->
+                <div class="subcon-filter-bar" style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="date" id="qaDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleQaDateChange('start')">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="date" id="qaDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleQaDateChange('end')">
+                                </div>
+                            </div>
+
+                            <!-- Shortcut Presets Cepat -->
+                            <div class="filter-pills qa-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnQuickQaMonth" onclick="setQaQuickDate('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickQaWeek" onclick="setQaQuickDate('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnQuickQaToday" onclick="setQaQuickDate('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickQaAll" onclick="setQaQuickDate('all')">
+                                    <i class="fa-solid fa-layer-group"></i> Semua
+                                </button>
+                            </div>
+
+                            <!-- Tombol Reset Filter -->
+                            <button class="filter-reset-btn" id="btnResetQaFilter" onclick="resetQaFilter()" title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Right Group: Search Box + Sync Atena (Icon Putar) -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="qaSearchInput" placeholder="Cari No PR / GRS / Kode / Nama Barang..."
+                                    oninput="handleQaSearch(this.value)">
+                            </div>
+
+                            <button class="modal-refresh-btn" id="btnSyncQa" onclick="syncQaData()"
+                                title="Sinkronkan dengan Atena ERP">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Modal QA -->
+            <div class="modal-body subcon-modal-body">
+                <!-- 5 KPI Ringkasan Release Material QA di Modal -->
+                <div class="subcon-kpi-grid qa-kpi-grid">
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-boxes-packing"></i></div>
+                        <div>
+                            <div class="kpi-num" id="modalKpiQaTotalPr">0</div>
+                            <div class="kpi-label">Total PR Material</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
+                        <div>
+                            <div class="kpi-num text-success" id="modalKpiQaReleased">0</div>
+                            <div class="kpi-label">Released / GRS (<span id="modalKpiQaPercent">0%</span>)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-warning"><i class="fa-solid fa-hourglass-half"></i></div>
+                        <div>
+                            <div class="kpi-num text-warning" id="modalKpiQaPending">0</div>
+                            <div class="kpi-label">Pending Release</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-list-ol"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiQaTotalItem">0</div>
+                            <div class="kpi-label">Total Item Material</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #10b981;"><i class="fa-solid fa-truck-ramp-box"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #10b981;" id="modalKpiQaQtyGrs">0</div>
+                            <div class="kpi-label">Total Qty GRS (Masuk)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigasi Tampilan & Status Filter -->
+                <div class="subcon-detail-section" style="margin-top: 1rem;">
+                    <!-- Sub-Navbar: Tab View (Per No. PR vs Rincian Item) & Filter Status (Persis Logistik) -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0;">
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: -2px;">
+                            <button class="logistik-tab-btn active" id="btnViewQaPr"
+                                onclick="switchQaView('pr')">
+                                <i class="fa-solid fa-list-check"></i> Per No. PR Material
+                                <span class="subcon-tab-badge" id="countQaPr">0</span>
+                            </button>
+                            <button class="logistik-tab-btn" id="btnViewQaItems" onclick="switchQaView('items')">
+                                <i class="fa-solid fa-table-list"></i> Rincian Item GRS
+                                <span class="subcon-tab-badge" id="countQaItems">0</span>
+                            </button>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-shrink: 0;">
+                            <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Status:</span>
+                            <select id="selectQaStatus" class="purchasing-select"
+                                onchange="switchQaStatus(this.value)">
+                                <option value="all">Semua Status</option>
+                                <option value="terpenuhi">Status: Released (Selesai GRS)</option>
+                                <option value="pending">Status: Pending (Belum GRS)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Panel 1: Tampilan Ringkasan Per No. PR Material -->
+                    <div class="subcon-tab-panel active" id="tabPanelQaPr">
+                        <div class="table-responsive">
+                            <table class="tickets-table subcon-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 45px; text-align: center;">No</th>
+                                        <th class="sortable-th" onclick="sortQa('pr', 'no_pr')" data-sort-key="no_pr" title="Klik untuk mengurutkan No PR">
+                                            No. PR <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('pr', 'tanggal')" data-sort-key="tanggal" title="Klik untuk mengurutkan Tanggal">
+                                            Tanggal <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('pr', 'item_count')" data-sort-key="item_count" title="Klik untuk mengurutkan Jumlah Item">
+                                            Jumlah Item <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th text-right" onclick="sortQa('pr', 'total_request')" data-sort-key="total_request" title="Klik untuk mengurutkan Total Qty Request">
+                                            Total Request <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th text-right" onclick="sortQa('pr', 'total_po')" data-sort-key="total_po" title="Klik untuk mengurutkan Total Qty PO">
+                                            Total PO <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th text-right" onclick="sortQa('pr', 'total_grs')" data-sort-key="total_grs" title="Klik untuk mengurutkan Realisasi GRS">
+                                            Realisasi GRS <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th text-right" onclick="sortQa('pr', 'total_os')" data-sort-key="total_os" title="Klik untuk mengurutkan Sisa OS">
+                                            Sisa OS <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('pr', 'status_code')" data-sort-key="status_code" style="text-align: center;" title="Klik untuk mengurutkan Status Release">
+                                            Status Release <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qaPrTableBody">
+                                    <!-- Diisi oleh app.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Panel 2: Tampilan Rincian Item GRS Material -->
+                    <div class="subcon-tab-panel" id="tabPanelQaItems">
+                        <div class="table-responsive">
+                            <table class="tickets-table subcon-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px; text-align: center;">No</th>
+                                        <th class="sortable-th" onclick="sortQa('items', 'no_pr')" data-sort-key="no_pr" title="Klik untuk mengurutkan No PR">
+                                            No. PR <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('items', 'tanggal')" data-sort-key="tanggal" title="Klik untuk mengurutkan Tanggal">
+                                            Tanggal <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('items', 'kode_barang')" data-sort-key="kode_barang" title="Klik untuk mengurutkan Kode Barang">
+                                            Kode Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('items', 'nama_barang')" data-sort-key="nama_barang" title="Klik untuk mengurutkan Nama Barang">
+                                            Nama Barang Material <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('items', 'satuan')" data-sort-key="satuan" style="text-align: center;" title="Klik untuk mengurutkan Satuan">
+                                            Satuan <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th text-right" onclick="sortQa('items', 'qty_request')" data-sort-key="qty_request" title="Klik untuk mengurutkan Qty Request">
+                                            Qty Request <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th text-right" onclick="sortQa('items', 'qty_po')" data-sort-key="qty_po" title="Klik untuk mengurutkan Qty PO">
+                                            Qty PO <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th text-right" onclick="sortQa('items', 'qty_grs')" data-sort-key="qty_grs" title="Klik untuk mengurutkan Qty GRS">
+                                            Qty GRS <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th text-right" onclick="sortQa('items', 'qty_os')" data-sort-key="qty_os" title="Klik untuk mengurutkan Sisa OS">
+                                            Sisa OS <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th text-right" onclick="sortQa('items', 'progress_percent')" data-sort-key="progress_percent" title="Klik untuk mengurutkan Capaian Release">
+                                            Capaian % <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('items', 'status_code')" data-sort-key="status_code" style="text-align: center;" title="Klik untuk mengurutkan Status Release">
+                                            Status Release <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qaItemsTableBody">
+                                    <!-- Diisi oleh app.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pagination Controls QA -->
+                    <div class="purchasing-pagination-bar" id="qaPaginationBar"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                        <div style="font-size: 0.8rem; color: var(--text-muted);" id="qaPageInfo">
+                            Halaman 1 dari 1
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="filter-pill" id="btnQaPrevPage" onclick="changeQaPage(-1)">
+                                <i class="fa-solid fa-chevron-left"></i> Prev
+                            </button>
+                            <button class="filter-pill" id="btnQaNextPage" onclick="changeQaPage(1)">
+                                Next <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div class="modal-stats" id="qaModalFooterStats">
+                        Menampilkan data monitoring QA Release Material (GRS) Atena ERP
+                    </div>
+                    <span id="qaLastSyncTime" style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
+                </div>
+                <button class="btn-secondary" onclick="closeQaModal()">Tutup</button>
             </div>
 
         </div>
@@ -1815,49 +2129,58 @@
                     </button>
                 </div>
 
-                <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <!-- Filter Rentang Tanggal (Date Range Picker - Auto Filter) -->
-                    <div class="prod-date-picker-group">
-                        <div class="prod-date-input-wrap">
-                            <span>Dari:</span>
-                            <input type="date" id="prodDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleProduksiDateChange('start')">
+                <!-- Bar Filter: Date Range Picker, Presets, Reset, Search & Sync (Sama seperti Logistik) -->
+                <div class="subcon-filter-bar" style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="date" id="prodDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleProduksiDateChange('start')">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="date" id="prodDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleProduksiDateChange('end')">
+                                </div>
+                            </div>
+
+                            <!-- Shortcut Presets Cepat -->
+                            <div class="filter-pills prod-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnQuickProdMonth" onclick="setProduksiQuickDate('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickProdWeek" onclick="setProduksiQuickDate('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnQuickProdToday" onclick="setProduksiQuickDate('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickProdAll" onclick="setProduksiQuickDate('all')">
+                                    <i class="fa-solid fa-layer-group"></i> Semua
+                                </button>
+                            </div>
+
+                            <!-- Tombol Reset Filter -->
+                            <button class="filter-reset-btn" id="btnResetProdFilter" onclick="resetProduksiFilter()" title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
                         </div>
-                        <div class="prod-date-input-wrap">
-                            <span>s/d:</span>
-                            <input type="date" id="prodDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleProduksiDateChange('end')">
+
+                        <!-- Right Group: Search Box + Sync Atena (Hanya Icon Putar) -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="produksiSearchInput" placeholder="Cari No. PP / Kode / Nama Barang..."
+                                    oninput="handleProduksiSearch(this.value)">
+                            </div>
+
+                            <button class="modal-refresh-btn" id="btnSyncProduksi" onclick="syncProduksiData()"
+                                title="Sinkronkan dengan Atena ERP">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
                         </div>
                     </div>
-
-                    <!-- Shortcut Presets Cepat -->
-                    <div class="filter-pills" style="margin: 0;">
-                        <button class="filter-pill active" id="btnQuickProdMonth" onclick="setProduksiQuickDate('month')">
-                            <i class="fa-solid fa-calendar-days"></i> Bulan Ini
-                        </button>
-                        <button class="filter-pill" id="btnQuickProdToday" onclick="setProduksiQuickDate('today')">
-                            <i class="fa-solid fa-calendar-day"></i> Hari Ini
-                        </button>
-                        <button class="filter-pill" id="btnQuickProdWeek" onclick="setProduksiQuickDate('week')">
-                            <i class="fa-solid fa-calendar-week"></i> 7 Hari
-                        </button>
-                    </div>
-
-                    <!-- Tombol Reset Filter -->
-                    <button class="filter-reset-btn" id="btnResetProdFilter" onclick="resetProduksiFilter()" title="Reset Filter ke Default">
-                        <i class="fa-solid fa-rotate-left"></i> Reset
-                    </button>
-
-                    <!-- Search Input -->
-                    <div class="search-box">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="produksiSearchInput" placeholder="Cari No. PP / Kode / Nama Barang..."
-                            oninput="handleProduksiSearch(this.value)">
-                    </div>
-
-                    <!-- Sync Button -->
-                    <button class="modal-refresh-btn" id="btnSyncProduksi" onclick="syncProduksiData()"
-                        title="Sinkronkan dengan Atena ERP">
-                        <i class="fa-solid fa-arrows-rotate"></i>
-                    </button>
                 </div>
             </div>
 
@@ -1989,12 +2312,12 @@
                         <div style="font-size: 0.8rem; color: var(--text-muted);" id="produksiPageInfo">
                             Halaman 1 dari 1
                         </div>
-                        <div style="display: flex; gap: 6px;">
+                        <div style="display: flex; gap: 5px;">
                             <button class="filter-pill" id="btnProduksiPrevPage" onclick="changeProduksiPage(-1)">
-                                <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+                                <i class="fa-solid fa-chevron-left"></i> Prev
                             </button>
                             <button class="filter-pill" id="btnProduksiNextPage" onclick="changeProduksiPage(1)">
-                                Selanjutnya <i class="fa-solid fa-chevron-right"></i>
+                                Next <i class="fa-solid fa-chevron-right"></i>
                             </button>
                         </div>
                     </div>

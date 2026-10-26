@@ -41,7 +41,9 @@ const state = {
     subconSearchQuery: '',
 
     // State Khusus Modul Purchasing (Atena ERP)
-    currentPurchasingRange: 'all',
+    currentPurchasingRange: 'month',
+    purchasingDateStart: '',
+    purchasingDateEnd: '',
     currentPurchasingJenis: 'all',
     currentPurchasingStatus: 'all',
     currentPurchasingView: 'pr',
@@ -87,6 +89,22 @@ const state = {
     logistikSort: {
         orders: { column: 'tgl_jatuh_tempo', dir: 'desc' },
         items: { column: 'tgl_jatuh_tempo', dir: 'desc' }
+    },
+
+    // State Khusus Modul QA (Release Material GRS)
+    currentQaRange: 'month',
+    qaDateStart: '',
+    qaDateEnd: '',
+    currentQaStatus: 'all',
+    currentQaView: 'pr', // 'pr' | 'items'
+    qaSearchQuery: '',
+    qaCurrentPage: 1,
+    qaPageSize: 30,
+    qaRawData: null,
+    qaCache: new Map(),
+    qaSort: {
+        pr: { column: 'tanggal', dir: 'desc' },
+        items: { column: 'tanggal', dir: 'desc' },
     },
 };
 
@@ -150,6 +168,7 @@ function initEventListeners() {
             closeAppModal();
             closeSubconModal();
             closePurchasingModal();
+            closeQaModal();
             closeProduksiModal();
             closeLogistikModal();
         }
@@ -188,6 +207,15 @@ function initEventListeners() {
         purchasingModalOverlay.addEventListener('click', (e) => {
             if (e.target === purchasingModalOverlay) {
                 closePurchasingModal();
+            }
+        });
+    }
+
+    const qaModalOverlay = document.getElementById('qaModal');
+    if (qaModalOverlay) {
+        qaModalOverlay.addEventListener('click', (e) => {
+            if (e.target === qaModalOverlay) {
+                closeQaModal();
             }
         });
     }
@@ -584,6 +612,19 @@ function renderKpiTrackerTicker(data) {
                 <span>Pemenuhan Order Logistik:</span>
                 <b style="color: #10b981;">${log.selesai}/${log.total_tiket} Order</b>
                 <span class="ticker-kpi-sub">(${log.persentase_selesai}% • Live Atena ERP)</span>
+            </span>
+        `);
+    }
+
+    // 9. Realisasi Release Material QA (GRS Atena ERP)
+    if (layanan.QA && (layanan.QA.total_tiket > 0 || layanan.QA.is_active)) {
+        const qa = layanan.QA;
+        items.push(`
+            <span class="ticker-item">
+                <i class="fa-solid fa-clipboard-check" style="color: #8b5cf6;"></i>
+                <span>Release Material QA (GRS):</span>
+                <b style="color: #8b5cf6;">${qa.selesai}/${qa.total_tiket} PR Mat</b>
+                <span class="ticker-kpi-sub">(${qa.persentase_selesai}% • Live GRS)</span>
             </span>
         `);
     }
@@ -1123,11 +1164,46 @@ function closeSubconModal() {
     }
 }
 
+function formatSubconDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 /**
  * Mengganti Rentang Waktu (Hari Ini / 7 Hari Terakhir / 30 Hari Terakhir)
  */
-async function switchSubconRange(range) {
+async function switchSubconRange(range = 'today') {
     state.currentSubconRange = range;
+
+    const now = new Date();
+    const today = formatSubconDate(now);
+    let startDate = today;
+    let endDate = today;
+
+    if (range === 'today') {
+        startDate = today;
+        endDate = today;
+    } else if (range === 'week') {
+        const past7 = new Date();
+        past7.setDate(now.getDate() - 6);
+        startDate = formatSubconDate(past7);
+        endDate = today;
+    } else if (range === 'month') {
+        const past30 = new Date();
+        past30.setDate(now.getDate() - 29);
+        startDate = formatSubconDate(past30);
+        endDate = today;
+    }
+
+    state.subconDateStart = startDate;
+    state.subconDateEnd = endDate;
+
+    const startInput = document.getElementById('subconDateStart');
+    const endInput = document.getElementById('subconDateEnd');
+    if (startInput) startInput.value = startDate;
+    if (endInput) endInput.value = endDate;
 
     // Update tampilan tombol range
     const btnToday = document.getElementById('btnRangeToday');
@@ -1152,7 +1228,7 @@ async function switchSubconRange(range) {
     }
 
     try {
-        const response = await fetch(`/api/dashboard/subcon?range=${range}`);
+        const response = await fetch(`/api/dashboard/subcon?range=${encodeURIComponent(range)}`);
         const result = await response.json();
 
         if (!result.success) {
@@ -1165,6 +1241,67 @@ async function switchSubconRange(range) {
 
     } catch (err) {
         console.error('Error memuat data subcon:', err);
+        if (!cached) {
+            renderSubconTablesError(err.message);
+        }
+    }
+}
+
+/**
+ * Handle perubahan tanggal manual pada input Date Picker Subcon
+ */
+async function handleSubconDateChange(changedField) {
+    const startInput = document.getElementById('subconDateStart');
+    const endInput = document.getElementById('subconDateEnd');
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (changedField === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.subconDateStart = start;
+    state.subconDateEnd = end;
+    state.currentSubconRange = 'custom';
+
+    const pills = document.querySelectorAll('.subcon-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    const cacheKey = `custom_${start}_${end}`;
+    if (!state.subconCache) state.subconCache = new Map();
+    const cached = state.subconCache.get(cacheKey);
+    if (cached) {
+        state.subconRawData = cached.data;
+        renderSubconModalData(cached.data);
+        if (Date.now() - cached.timestamp < 30000) {
+            return;
+        }
+    } else {
+        renderSubconTablesLoading();
+    }
+
+    try {
+        const response = await fetch(`/api/dashboard/subcon?tanggal_mulai=${encodeURIComponent(start)}&tanggal_akhir=${encodeURIComponent(end)}`);
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Gagal mengambil data monitoring subcon');
+        }
+
+        state.subconCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+        state.subconRawData = result.data;
+        renderSubconModalData(result.data);
+
+    } catch (err) {
+        console.error('Error memuat data subcon kustom:', err);
         if (!cached) {
             renderSubconTablesError(err.message);
         }
@@ -1596,13 +1733,25 @@ function renderSubconTablesError(msg) {
 // ====================================================================
 
 /**
+ * Helper format tanggal YYYY-MM-DD untuk Purchasing
+ */
+function formatPurchasingDate(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
  * Buka Modal Monitoring Purchasing
  */
-function openPurchasingModal(range = 'all') {
+function openPurchasingModal(range = 'month', defaultJenis = 'all') {
     const modal = document.getElementById('purchasingModal');
     if (!modal) return;
 
     modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+
     state.purchasingSearchQuery = '';
     state.purchasingCurrentPage = 1;
 
@@ -1613,7 +1762,17 @@ function openPurchasingModal(range = 'all') {
     if (selectStatus) selectStatus.value = 'all';
     state.currentPurchasingStatus = 'all';
 
-    switchPurchasingRange(range);
+    if (defaultJenis) {
+        state.currentPurchasingJenis = defaultJenis;
+        const btnAll = document.getElementById('tabBtnPrAll');
+        const btnMat = document.getElementById('tabBtnPrMaterial');
+        const btnNon = document.getElementById('tabBtnPrNonMaterial');
+        if (btnAll) btnAll.classList.toggle('active', defaultJenis === 'all');
+        if (btnMat) btnMat.classList.toggle('active', defaultJenis === 'material');
+        if (btnNon) btnNon.classList.toggle('active', defaultJenis === 'non_material');
+    }
+
+    setPurchasingQuickDate(range);
 }
 
 /**
@@ -1621,23 +1780,128 @@ function openPurchasingModal(range = 'all') {
  */
 function closePurchasingModal() {
     const modal = document.getElementById('purchasingModal');
-    if (modal) modal.classList.remove('active');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
 }
 
 /**
- * Mengganti rentang waktu (all, month, week, today)
+ * Mengatur rentang tanggal cepat (Bulan Ini, 7 Hari, Hari Ini, Semua)
  */
-async function switchPurchasingRange(range) {
-    state.currentPurchasingRange = range;
+function setPurchasingQuickDate(preset = 'month') {
+    state.currentPurchasingRange = preset;
     state.purchasingCurrentPage = 1;
 
-    // Update active class tombol
-    ['All', 'Month', 'Week', 'Today'].forEach(r => {
-        const btn = document.getElementById(`btnPrRange${r}`);
-        if (btn) btn.classList.toggle('active', r.toLowerCase() === range.toLowerCase());
-    });
+    const now = new Date();
+    const today = formatPurchasingDate(now);
+    let startDate = today;
+    let endDate = today;
 
-    await loadPurchasingData();
+    if (preset === 'month') {
+        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        endDate = today;
+    } else if (preset === 'week') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        startDate = formatPurchasingDate(d);
+        endDate = today;
+    } else if (preset === 'today') {
+        startDate = today;
+        endDate = today;
+    } else if (preset === 'all') {
+        startDate = '2026-01-01';
+        endDate = today;
+    }
+
+    state.purchasingDateStart = startDate;
+    state.purchasingDateEnd = endDate;
+
+    // Sinkronisasi ke input DOM
+    const startInput = document.getElementById('purchasingDateStart');
+    const endInput = document.getElementById('purchasingDateEnd');
+    if (startInput) startInput.value = startDate;
+    if (endInput) endInput.value = endDate;
+
+    // Update active class pada pill
+    const pills = document.querySelectorAll('.purchasing-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    const btnMap = {
+        'month': 'btnQuickPurchasingMonth',
+        'week': 'btnQuickPurchasingWeek',
+        'today': 'btnQuickPurchasingToday',
+        'all': 'btnQuickPurchasingAll'
+    };
+    const activeBtn = document.getElementById(btnMap[preset]);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    loadPurchasingData();
+}
+
+/**
+ * Handle perubahan tanggal manual pada input Date Picker Purchasing
+ */
+function handlePurchasingDateChange(field) {
+    const startInput = document.getElementById('purchasingDateStart');
+    const endInput = document.getElementById('purchasingDateEnd');
+
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (field === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.purchasingDateStart = start;
+    state.purchasingDateEnd = end;
+    state.currentPurchasingRange = 'custom';
+    state.purchasingCurrentPage = 1;
+
+    // Hapus active pill preset
+    const pills = document.querySelectorAll('.purchasing-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    loadPurchasingData();
+}
+
+/**
+ * Reset seluruh filter Purchasing ke default (Bulan Ini)
+ */
+function resetPurchasingFilter() {
+    state.purchasingSearchQuery = '';
+    state.currentPurchasingStatus = 'all';
+    state.currentPurchasingJenis = 'all';
+    state.purchasingCurrentPage = 1;
+
+    const searchInput = document.getElementById('purchasingSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectPurchasingStatus');
+    if (selectStatus) selectStatus.value = 'all';
+
+    const btnAll = document.getElementById('tabBtnPrAll');
+    const btnMat = document.getElementById('tabBtnPrMaterial');
+    const btnNon = document.getElementById('tabBtnPrNonMaterial');
+    if (btnAll) btnAll.classList.add('active');
+    if (btnMat) btnMat.classList.remove('active');
+    if (btnNon) btnNon.classList.remove('active');
+
+    setPurchasingQuickDate('month');
+}
+
+/**
+ * Alias kompatibilitas fungsi lama
+ */
+function switchPurchasingRange(range) {
+    setPurchasingQuickDate(range);
 }
 
 /**
@@ -1747,8 +2011,15 @@ async function syncPurchasingData() {
  * Muat data purchasing dari API
  */
 async function loadPurchasingData(force = false) {
-    const range = state.currentPurchasingRange;
-    const cacheKey = `${range}`;
+    let url = '/api/dashboard/purchasing?';
+    if (state.purchasingDateStart && state.purchasingDateEnd) {
+        url += `tglawal=${encodeURIComponent(state.purchasingDateStart)}&tglakhir=${encodeURIComponent(state.purchasingDateEnd)}`;
+    } else {
+        url += `range=${encodeURIComponent(state.currentPurchasingRange)}`;
+    }
+    if (force) url += '&force=true';
+
+    const cacheKey = `purchasing_${state.purchasingDateStart}_${state.purchasingDateEnd}_${state.currentPurchasingRange}`;
 
     if (!force && state.purchasingCache.has(cacheKey)) {
         const cached = state.purchasingCache.get(cacheKey);
@@ -1760,10 +2031,10 @@ async function loadPurchasingData(force = false) {
     }
 
     try {
-        const res = await fetch(`/api/dashboard/purchasing?range=${range}${force ? '&force=true' : ''}`);
+        const res = await fetch(url);
         const result = await res.json();
 
-        if (!result.success) {
+        if (!result.success || !result.data) {
             throw new Error(result.message || 'Gagal mengambil data monitoring purchasing');
         }
 
@@ -2402,6 +2673,9 @@ function setProduksiQuickDate(preset) {
         weekAgo.setDate(now.getDate() - 7);
         tglawal = formatProdDate(weekAgo);
         tglakhir = today;
+    } else if (preset === 'all') {
+        tglawal = '2026-01-01';
+        tglakhir = today;
     }
 
     state.produksiTglAwal = tglawal;
@@ -2520,8 +2794,9 @@ function resetProduksiFilter() {
 function updateProduksiQuickPills(activePreset) {
     const presets = [
         { id: 'btnQuickProdMonth', key: 'month' },
+        { id: 'btnQuickProdWeek', key: 'week' },
         { id: 'btnQuickProdToday', key: 'today' },
-        { id: 'btnQuickProdWeek', key: 'week' }
+        { id: 'btnQuickProdAll', key: 'all' }
     ];
     presets.forEach(p => {
         const btn = document.getElementById(p.id);
@@ -3664,5 +3939,632 @@ function updateLogistikSortHeaders(viewMode) {
             }
         }
     });
+}
+
+// ====================================================================
+// 15. LOGIKA INTERAKTIF MODAL QA (RELEASE MATERIAL GRS ATENA ERP)
+// ====================================================================
+
+/**
+ * Helper format tanggal YYYY-MM-DD untuk QA
+ */
+function formatQaDate(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Buka Modal Monitoring QA (Release Material GRS)
+ */
+function openQaModal(range = 'month') {
+    const modal = document.getElementById('qaModal');
+    if (!modal) return;
+
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+
+    state.qaSearchQuery = '';
+    state.qaCurrentPage = 1;
+
+    const searchInput = document.getElementById('qaSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectQaStatus');
+    if (selectStatus) selectStatus.value = 'all';
+    state.currentQaStatus = 'all';
+
+    setQaQuickDate(range);
+}
+
+/**
+ * Tutup Modal QA
+ */
+function closeQaModal() {
+    const modal = document.getElementById('qaModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+/**
+ * Mengatur rentang tanggal cepat QA (Bulan Ini, 7 Hari, Hari Ini, Semua)
+ */
+function setQaQuickDate(preset = 'month') {
+    state.currentQaRange = preset;
+    state.qaCurrentPage = 1;
+
+    const now = new Date();
+    const today = formatQaDate(now);
+    let startDate = today;
+    let endDate = today;
+
+    if (preset === 'month') {
+        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        endDate = today;
+    } else if (preset === 'week') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        startDate = formatQaDate(d);
+        endDate = today;
+    } else if (preset === 'today') {
+        startDate = today;
+        endDate = today;
+    } else if (preset === 'all') {
+        startDate = '2026-01-01';
+        endDate = today;
+    }
+
+    state.qaDateStart = startDate;
+    state.qaDateEnd = endDate;
+
+    const startInput = document.getElementById('qaDateStart');
+    const endInput = document.getElementById('qaDateEnd');
+    if (startInput) startInput.value = startDate;
+    if (endInput) endInput.value = endDate;
+
+    const pills = document.querySelectorAll('.qa-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    const btnMap = {
+        'month': 'btnQuickQaMonth',
+        'week': 'btnQuickQaWeek',
+        'today': 'btnQuickQaToday',
+        'all': 'btnQuickQaAll'
+    };
+    const activeBtn = document.getElementById(btnMap[preset]);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    loadQaData();
+}
+
+/**
+ * Handle perubahan tanggal manual pada input Date Picker QA
+ */
+function handleQaDateChange(field) {
+    const startInput = document.getElementById('qaDateStart');
+    const endInput = document.getElementById('qaDateEnd');
+
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (field === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.qaDateStart = start;
+    state.qaDateEnd = end;
+    state.currentQaRange = 'custom';
+    state.qaCurrentPage = 1;
+
+    const pills = document.querySelectorAll('.qa-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    loadQaData();
+}
+
+/**
+ * Reset seluruh filter QA ke default (Bulan Ini)
+ */
+function resetQaFilter() {
+    state.qaSearchQuery = '';
+    state.currentQaStatus = 'all';
+    state.qaCurrentPage = 1;
+
+    const searchInput = document.getElementById('qaSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectQaStatus');
+    if (selectStatus) selectStatus.value = 'all';
+
+    setQaQuickDate('month');
+}
+
+/**
+ * Ganti filter Status QA (all, terpenuhi, pending)
+ */
+function switchQaStatus(status) {
+    state.currentQaStatus = status;
+    state.qaCurrentPage = 1;
+    if (state.qaRawData) {
+        renderQaModalData(state.qaRawData);
+    }
+}
+
+/**
+ * Ganti Mode Tampilan Tab QA: 'pr' vs 'items'
+ */
+function switchQaView(viewMode) {
+    state.currentQaView = viewMode;
+    state.qaCurrentPage = 1;
+
+    const btnPr = document.getElementById('btnViewQaPr');
+    const btnItems = document.getElementById('btnViewQaItems');
+    const panelPr = document.getElementById('tabPanelQaPr');
+    const panelItems = document.getElementById('tabPanelQaItems');
+
+    if (btnPr) btnPr.classList.toggle('active', viewMode === 'pr');
+    if (btnItems) btnItems.classList.toggle('active', viewMode === 'items');
+
+    if (panelPr) panelPr.classList.toggle('active', viewMode === 'pr');
+    if (panelItems) panelItems.classList.toggle('active', viewMode === 'items');
+
+    updateQaSortHeaders(viewMode);
+
+    if (state.qaRawData) {
+        renderQaModalData(state.qaRawData);
+    }
+}
+
+/**
+ * Pencarian Instan QA (Debounced)
+ */
+let qaSearchTimeout = null;
+function handleQaSearch(query) {
+    clearTimeout(qaSearchTimeout);
+    qaSearchTimeout = setTimeout(() => {
+        state.qaSearchQuery = (query || '').trim().toLowerCase();
+        state.qaCurrentPage = 1;
+        if (state.qaRawData) {
+            renderQaModalData(state.qaRawData);
+        }
+    }, 200);
+}
+
+/**
+ * Sinkronisasi Paksa Data QA dengan Atena ERP
+ */
+async function syncQaData() {
+    const syncBtn = document.getElementById('btnSyncQa');
+    const icon = syncBtn?.querySelector('i');
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        renderQaTablesLoading();
+        const res = await fetch('/api/dashboard/qa/sync', { method: 'POST' });
+        const json = await res.json();
+        if (json.success) {
+            state.qaCache.clear();
+            await loadQaData(true);
+            fetchDashboardStats(true);
+        } else {
+            throw new Error(json.message || 'Gagal sinkronisasi data QA');
+        }
+    } catch (err) {
+        console.error('Error sync QA:', err);
+        renderQaTablesError(err.message);
+    } finally {
+        if (icon) {
+            setTimeout(() => icon.classList.remove('fa-spin'), 600);
+        }
+    }
+}
+
+/**
+ * Muat data QA dari API
+ */
+async function loadQaData(force = false) {
+    let url = '/api/dashboard/qa?';
+    if (state.qaDateStart && state.qaDateEnd) {
+        url += `tglawal=${encodeURIComponent(state.qaDateStart)}&tglakhir=${encodeURIComponent(state.qaDateEnd)}`;
+    } else {
+        url += `range=${encodeURIComponent(state.currentQaRange)}`;
+    }
+    if (force) url += '&force=true';
+
+    const cacheKey = `qa_${state.qaDateStart}_${state.qaDateEnd}_${state.currentQaRange}`;
+
+    if (!force && state.qaCache.has(cacheKey)) {
+        const cached = state.qaCache.get(cacheKey);
+        state.qaRawData = cached.data;
+        renderQaModalData(cached.data);
+        if (Date.now() - cached.timestamp < 30000) return;
+    } else {
+        renderQaTablesLoading();
+    }
+
+    try {
+        const res = await fetch(url);
+        const result = await res.json();
+
+        if (!result.success || !result.data) {
+            throw new Error(result.message || 'Gagal mengambil data monitoring QA');
+        }
+
+        state.qaCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+        state.qaRawData = result.data;
+        renderQaModalData(result.data);
+    } catch (err) {
+        console.error('Error memuat data QA:', err);
+        renderQaTablesError(err.message);
+    }
+}
+
+/**
+ * Render semua elemen di Modal QA
+ */
+function renderQaModalData(data) {
+    if (!data) return;
+
+    const kpi = data.kpi || {};
+    const meta = data.meta || {};
+
+    const elTotalPr = document.getElementById('modalKpiQaTotalPr');
+    const elReleased = document.getElementById('modalKpiQaReleased');
+    const elPercent = document.getElementById('modalKpiQaPercent');
+    const elPending = document.getElementById('modalKpiQaPending');
+    const elTotalItem = document.getElementById('modalKpiQaTotalItem');
+    const elQtyGrs = document.getElementById('modalKpiQaQtyGrs');
+
+    if (elTotalPr) elTotalPr.textContent = Number(kpi.total_pr || 0).toLocaleString('id-ID');
+    if (elReleased) elReleased.textContent = Number(kpi.pr_released || 0).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = `${kpi.persentase_selesai || 0}%`;
+    if (elPending) elPending.textContent = Number(kpi.pr_pending || 0).toLocaleString('id-ID');
+    if (elTotalItem) elTotalItem.textContent = Number(kpi.total_item || 0).toLocaleString('id-ID');
+    if (elQtyGrs) elQtyGrs.textContent = Number(kpi.total_qty_grs || 0).toLocaleString('id-ID');
+
+    const countPrEl = document.getElementById('countQaPr');
+    const countItemsEl = document.getElementById('countQaItems');
+    if (countPrEl) countPrEl.textContent = `${(data.summary_by_pr || []).length}`;
+    if (countItemsEl) countItemsEl.textContent = `${(data.items || []).length}`;
+
+    const syncTimeEl = document.getElementById('qaLastSyncTime');
+    if (syncTimeEl) {
+        if (meta.sync_time) {
+            const d = new Date(meta.sync_time);
+            syncTimeEl.textContent = `• Sinkronisasi: ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+        } else if (meta.generated_at) {
+            const d = new Date(meta.generated_at);
+            syncTimeEl.textContent = `• Diperbarui: ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+        }
+    }
+
+    const q = state.qaSearchQuery;
+    const status = state.currentQaStatus;
+
+    // Filter daftar PR
+    let prList = (data.summary_by_pr || []).filter(pr => {
+        if (status !== 'all' && pr.status_code !== status) return false;
+        if (q) {
+            const matchPr = pr.no_pr && pr.no_pr.toLowerCase().includes(q);
+            const matchItem = (pr.items || []).some(i =>
+                (i.kode_barang && i.kode_barang.toLowerCase().includes(q)) ||
+                (i.nama_barang && i.nama_barang.toLowerCase().includes(q))
+            );
+            if (!matchPr && !matchItem) return false;
+        }
+        return true;
+    });
+
+    // Filter daftar Item
+    let itemList = (data.items || []).filter(item => {
+        if (status !== 'all' && item.status_code !== status) return false;
+        if (q) {
+            const matchPr = item.no_pr && item.no_pr.toLowerCase().includes(q);
+            const matchCode = item.kode_barang && item.kode_barang.toLowerCase().includes(q);
+            const matchName = item.nama_barang && item.nama_barang.toLowerCase().includes(q);
+            if (!matchPr && !matchCode && !matchName) return false;
+        }
+        return true;
+    });
+
+    // Sorting
+    const sortPr = (state.qaSort && state.qaSort.pr) || { column: 'tanggal', dir: 'desc' };
+    prList.sort((a, b) => {
+        let valA = a[sortPr.column];
+        let valB = b[sortPr.column];
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        if (valA < valB) return sortPr.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return sortPr.dir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    const sortItem = (state.qaSort && state.qaSort.items) || { column: 'tanggal', dir: 'desc' };
+    itemList.sort((a, b) => {
+        let valA = a[sortItem.column];
+        let valB = b[sortItem.column];
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        if (valA < valB) return sortItem.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return sortItem.dir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    // Render Tabel sesuai mode tampilan
+    if (state.currentQaView === 'pr') {
+        renderQaPrTable(prList);
+    } else {
+        renderQaItemsTable(itemList);
+    }
+
+    updateQaSortHeaders(state.currentQaView);
+}
+
+/**
+ * Render Tabel Ringkasan Per No. PR Material QA
+ */
+function renderQaPrTable(list) {
+    const tbody = document.getElementById('qaPrTableBody');
+    const footerStats = document.getElementById('qaModalFooterStats');
+    const pageInfo = document.getElementById('qaPageInfo');
+    const btnPrev = document.getElementById('btnQaPrevPage');
+    const btnNext = document.getElementById('btnQaNextPage');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="subcon-empty-row">
+                    <i class="fa-solid fa-box-open"></i>
+                    <div>Tidak ada data PR Material QA yang cocok dengan filter saat ini</div>
+                </td>
+            </tr>
+        `;
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 No. PR';
+        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
+        if (btnPrev) btnPrev.disabled = true;
+        if (btnNext) btnNext.disabled = true;
+        return;
+    }
+
+    const pageSize = state.qaPageSize;
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (state.qaCurrentPage > totalPages) state.qaCurrentPage = totalPages;
+    if (state.qaCurrentPage < 1) state.qaCurrentPage = 1;
+
+    const startIdx = (state.qaCurrentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const paged = list.slice(startIdx, endIdx);
+
+    let html = '';
+    paged.forEach((pr, idx) => {
+        const isMemenuhi = pr.status_code === 'terpenuhi';
+        const badgeStatusHtml = isMemenuhi
+            ? `<span class="badge-status-terpenuhi"><i class="fa-solid fa-circle-check"></i> Released (GRS)</span>`
+            : `<span class="badge-status-pending"><i class="fa-solid fa-hourglass-half"></i> Pending</span>`;
+
+        html += `
+            <tr>
+                <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
+                <td>
+                    <span class="subcon-spk-num" style="cursor: pointer;" onclick="viewQaPrItems('${pr.no_pr}')" title="Klik untuk melihat rincian item PR ini">
+                        <i class="fa-solid fa-file-lines" style="color: #8b5cf6;"></i> ${pr.no_pr || '-'}
+                    </span>
+                </td>
+                <td style="white-space: nowrap;">${pr.tanggal_label || pr.tanggal || '-'}</td>
+                <td style="text-align: center;"><span class="badge-satuan">${pr.item_count || 1} item</span></td>
+                <td class="text-right" style="font-weight: 600;">${Number(pr.total_request || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #0284c7; font-weight: 600;">${Number(pr.total_po || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #16a34a; font-weight: 600; white-space: nowrap;">${Number(pr.total_grs || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #d97706; font-weight: 600;">${Number(pr.total_os || 0).toLocaleString('id-ID')}</td>
+                <td style="text-align: center;">${badgeStatusHtml}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} PR Material`;
+    }
+    if (pageInfo) {
+        pageInfo.textContent = `Halaman ${state.qaCurrentPage} dari ${totalPages} (${totalItems} PR)`;
+    }
+    if (btnPrev) btnPrev.disabled = state.qaCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = state.qaCurrentPage >= totalPages;
+}
+
+/**
+ * Render Tabel Rincian Item Barang Material QA
+ */
+function renderQaItemsTable(list) {
+    const tbody = document.getElementById('qaItemsTableBody');
+    const footerStats = document.getElementById('qaModalFooterStats');
+    const pageInfo = document.getElementById('qaPageInfo');
+    const btnPrev = document.getElementById('btnQaPrevPage');
+    const btnNext = document.getElementById('btnQaNextPage');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="12" class="subcon-empty-row">
+                    <i class="fa-solid fa-box-open"></i>
+                    <div>Tidak ada item material GRS yang cocok dengan filter saat ini</div>
+                </td>
+            </tr>
+        `;
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 Item';
+        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
+        if (btnPrev) btnPrev.disabled = true;
+        if (btnNext) btnNext.disabled = true;
+        return;
+    }
+
+    const pageSize = state.qaPageSize;
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (state.qaCurrentPage > totalPages) state.qaCurrentPage = totalPages;
+    if (state.qaCurrentPage < 1) state.qaCurrentPage = 1;
+
+    const startIdx = (state.qaCurrentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const paged = list.slice(startIdx, endIdx);
+
+    let html = '';
+    paged.forEach((item, idx) => {
+        const isMemenuhi = item.status_code === 'terpenuhi';
+        const badgeStatusHtml = isMemenuhi
+            ? `<span class="badge-status-terpenuhi"><i class="fa-solid fa-check"></i> Released</span>`
+            : `<span class="badge-status-pending"><i class="fa-solid fa-hourglass-half"></i> Belum</span>`;
+
+        const percent = Number(item.progress_percent || 0);
+        let progressColor = '#ef4444';
+        if (percent >= 100) progressColor = '#16a34a';
+        else if (percent >= 75) progressColor = '#eab308';
+
+        html += `
+            <tr>
+                <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
+                <td><span class="subcon-spk-num font-mono">${item.no_pr || '-'}</span></td>
+                <td style="white-space: nowrap;">${item.tanggal_label || item.tanggal || '-'}</td>
+                <td class="font-mono" style="font-size: 0.75rem; color: #475569;">${item.kode_barang || '-'}</td>
+                <td style="font-weight: 500;">${item.nama_barang || '-'}</td>
+                <td style="text-align: center;"><span class="badge-satuan">${item.satuan || 'PCS'}</span></td>
+                <td class="text-right" style="font-weight: 600;">${Number(item.qty_request || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #0284c7; font-weight: 600;">${Number(item.qty_po || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #16a34a; font-weight: 600; white-space: nowrap;">${Number(item.qty_grs || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right" style="color: #d97706; font-weight: 600;">${Number(item.qty_os || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="font-weight: 700; color: ${progressColor};">${percent}%</td>
+                <td style="text-align: center;">${badgeStatusHtml}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Item Material`;
+    }
+    if (pageInfo) {
+        pageInfo.textContent = `Halaman ${state.qaCurrentPage} dari ${totalPages} (${totalItems} Item)`;
+    }
+    if (btnPrev) btnPrev.disabled = state.qaCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = state.qaCurrentPage >= totalPages;
+}
+
+/**
+ * Drill-down melihat item PR di QA Modal
+ */
+function viewQaPrItems(noPr) {
+    if (!noPr) return;
+    const searchInput = document.getElementById('qaSearchInput');
+    if (searchInput) searchInput.value = noPr;
+    state.qaSearchQuery = noPr.trim().toLowerCase();
+    switchQaView('items');
+}
+
+/**
+ * Navigasi ganti halaman QA
+ */
+function changeQaPage(delta) {
+    state.qaCurrentPage += delta;
+    if (state.qaRawData) {
+        renderQaModalData(state.qaRawData);
+    }
+}
+
+/**
+ * Sorting Kolom Tabel QA
+ */
+function sortQa(viewMode, column) {
+    if (!state.qaSort) state.qaSort = { pr: { column: 'tanggal', dir: 'desc' }, items: { column: 'tanggal', dir: 'desc' } };
+    if (!state.qaSort[viewMode]) state.qaSort[viewMode] = { column: 'tanggal', dir: 'desc' };
+
+    const currentSort = state.qaSort[viewMode];
+    if (currentSort.column === column) {
+        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.dir = ['tanggal', 'total_request', 'total_po', 'total_grs', 'total_os', 'qty_request', 'qty_po', 'qty_grs', 'qty_os', 'progress_percent'].includes(column) ? 'desc' : 'asc';
+    }
+
+    state.qaCurrentPage = 1;
+    if (state.qaRawData) {
+        renderQaModalData(state.qaRawData);
+    }
+}
+
+/**
+ * Update Icon Header Sorting QA
+ */
+function updateQaSortHeaders(viewMode) {
+    const panelId = viewMode === 'pr' ? 'tabPanelQaPr' : 'tabPanelQaItems';
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    const currentSort = (state.qaSort && state.qaSort[viewMode])
+        ? state.qaSort[viewMode]
+        : { column: 'tanggal', dir: 'desc' };
+
+    const ths = panel.querySelectorAll('th.sortable-th');
+    ths.forEach(th => {
+        const key = th.getAttribute('data-sort-key');
+        const icon = th.querySelector('.sort-icon');
+
+        if (key === currentSort.column) {
+            th.classList.add('active-sort');
+            if (icon) {
+                icon.className = currentSort.dir === 'asc'
+                    ? 'fa-solid fa-arrow-up-wide-short sort-icon'
+                    : 'fa-solid fa-arrow-down-wide-short sort-icon';
+            }
+        } else {
+            th.classList.remove('active-sort');
+            if (icon) {
+                icon.className = 'fa-solid fa-sort sort-icon';
+            }
+        }
+    });
+}
+
+function renderQaTablesLoading() {
+    const tbodyPr = document.getElementById('qaPrTableBody');
+    const tbodyItems = document.getElementById('qaItemsTableBody');
+    const skeleton = `
+        <tr>
+            <td colspan="12" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #8b5cf6;"></i>
+                <div style="margin-top: 8px; font-weight: 500;">Memuat data Release Material QA dari Atena ERP...</div>
+            </td>
+        </tr>
+    `;
+    if (tbodyPr) tbodyPr.innerHTML = skeleton;
+    if (tbodyItems) tbodyItems.innerHTML = skeleton;
+}
+
+function renderQaTablesError(message) {
+    const tbodyPr = document.getElementById('qaPrTableBody');
+    const tbodyItems = document.getElementById('qaItemsTableBody');
+    const errHtml = `
+        <tr>
+            <td colspan="12" class="subcon-empty-row" style="color: #ef4444;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; color: #ef4444;"></i>
+                <div style="margin-top: 8px; font-weight: 600;">Gagal Mengambil Data QA</div>
+                <div style="font-size: 0.8rem; color: #64748b;">${message || 'Terjadi kesalahan sistem'}</div>
+            </td>
+        </tr>
+    `;
+    if (tbodyPr) tbodyPr.innerHTML = errHtml;
+    if (tbodyItems) tbodyItems.innerHTML = errHtml;
 }
 
