@@ -18,6 +18,8 @@ const purchasingService = require('../services/purchasingService');
 const produksiService = require('../services/produksiService');
 const logistikService = require('../services/logistikService');
 const qaService = require('../services/qaService');
+const whFgService = require('../services/whFgService');
+const whMatService = require('../services/whMatService');
 
 // In-memory cache sederhana untuk efisiensi beban server
 const cache = {
@@ -83,14 +85,16 @@ router.get('/stats', async (req, res) => {
     }
 
     try {
-        // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi, Logistik & QA secara paralel
-        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled] = await Promise.allSettled([
+        // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi, Logistik, QA, WH FG & WH Mat secara paralel
+        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled] = await Promise.allSettled([
             ticketingService.getSummary(forceRefresh),
             subconService.getMonitoringToday(forceRefresh),
             purchasingService.getSummary(forceRefresh),
             produksiService.getRingkasanAll(forceRefresh),
             logistikService.getSummary(forceRefresh),
-            qaService.getSummary(forceRefresh)
+            qaService.getSummary(forceRefresh),
+            whFgService.getSummary(forceRefresh),
+            whMatService.getSummary(forceRefresh)
         ]);
 
         let apiData = null;
@@ -144,6 +148,22 @@ router.get('/stats', async (req, res) => {
             console.error(`❌ [API QA ERROR]: ${qaSettled.reason?.message}`);
         }
         const qaKpi = qaData?.kpi || {};
+
+        let whFgData = null;
+        if (whFgSettled.status === 'fulfilled') {
+            whFgData = whFgSettled.value;
+        } else {
+            console.error(`❌ [API WH FG ERROR]: ${whFgSettled.reason?.message}`);
+        }
+        const whFgKpi = whFgData?.kpi || {};
+
+        let whMatData = null;
+        if (whMatSettled.status === 'fulfilled') {
+            whMatData = whMatSettled.value;
+        } else {
+            console.error(`❌ [API WH MAT ERROR]: ${whMatSettled.reason?.message}`);
+        }
+        const whMatKpi = whMatData?.kpi || {};
 
         const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
@@ -472,17 +492,30 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Lini Produksi Atena',
                 data_ditampilkan: 'Penyelesaian PP',
                 sub_nama: 'PP Surgical Mesin vs Hasil Actual',
-                sumber_data: 'Program Atena (PP Surgical Mesin vs haasil actual)',
-                sumber: 'Program Atena',
+                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+                sumber: 'Atena ERP',
                 catatan: 'Perbandingan PP Surgical Mesin dengan hasil aktual',
                 icon: 'gears',
-                is_active: false,
+                is_active: prodModules.PROD_SURGICAL_MESIN ? Boolean(prodModules.PROD_SURGICAL_MESIN.is_active) : false,
                 metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: 'PCS / Box',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                unit: prodModules.PROD_SURGICAL_MESIN?.unit || 'PCS / Box',
+                total_tiket: prodModules.PROD_SURGICAL_MESIN?.total_tiket ?? 0,
+                selesai: prodModules.PROD_SURGICAL_MESIN?.selesai ?? 0,
+                belum_selesai: prodModules.PROD_SURGICAL_MESIN?.belum_selesai ?? 0,
+                persentase_selesai: prodModules.PROD_SURGICAL_MESIN?.persentase_selesai ?? 0,
+                bagian: 'surgicalmesin',
+                tglawal: prodModules.PROD_SURGICAL_MESIN?.tglawal,
+                tglakhir: prodModules.PROD_SURGICAL_MESIN?.tglakhir,
+                today: prodModules.PROD_SURGICAL_MESIN?.today,
+                month: prodModules.PROD_SURGICAL_MESIN?.month,
+                today_total: prodModules.PROD_SURGICAL_MESIN?.today_total ?? 0,
+                today_selesai: prodModules.PROD_SURGICAL_MESIN?.today_selesai ?? 0,
+                today_belum: prodModules.PROD_SURGICAL_MESIN?.today_belum ?? 0,
+                today_persentase: prodModules.PROD_SURGICAL_MESIN?.today_persentase ?? 0,
+                month_total: prodModules.PROD_SURGICAL_MESIN?.month_total ?? 0,
+                month_selesai: prodModules.PROD_SURGICAL_MESIN?.month_selesai ?? 0,
+                month_belum: prodModules.PROD_SURGICAL_MESIN?.month_belum ?? 0,
+                month_persentase: prodModules.PROD_SURGICAL_MESIN?.month_persentase ?? 0,
             },
             PROD_SURGICAL_PACKING: {
                 no: 12,
@@ -567,23 +600,30 @@ router.get('/stats', async (req, res) => {
                 nama: 'QA (Quality Assurance)',
                 kategori: 'support_qa',
                 kategori_label: 'HR, Dokumen & Mutu',
-                data_ditampilkan: 'Release Material (GRS) & QC Approval',
-                sub_nama: 'Release Material (GRS)',
+                data_ditampilkan: 'Release Material (GRS) & Release Produk Jadi (SCN, BR)',
+                sub_nama: 'Release Material & Produk Jadi',
                 sumber_data: 'Atena ERP REST API (ReleaseQA)',
-                sumber: 'Atena ERP (GRS)',
-                catatan: 'Release material GRS berbasis PO & QC Approval',
+                sumber: 'Atena ERP',
+                catatan: 'Release Material GRS, Sample Test SCN Subcon, dan Accept Batch Record (BR)',
                 icon: 'clipboard-check',
-                is_active: Boolean((qaKpi.total_grs ?? 0) > 0),
-                metric_labels: { total: 'Total GRS', selesai: 'Released', belum: 'Pending' },
-                unit: 'GRS',
-                total_tiket: qaKpi.total_grs ?? 0,
-                selesai: qaKpi.grs_released ?? qaKpi.grs_approve ?? 0,
-                belum_selesai: ((qaKpi.total_grs ?? 0) - (qaKpi.grs_released ?? qaKpi.grs_approve ?? 0)),
-                ditolak: qaKpi.grs_ditolak ?? 0,
-                total_efektif: qaKpi.total_grs ?? 0,
-                persentase_selesai: qaKpi.persentase ?? 0,
-                total_po: qaKpi.total_po ?? 0,
-                total_supplier: qaKpi.total_supplier ?? 0,
+                is_active: Boolean((qaKpi.total_dokumen ?? qaKpi.total_grs ?? 0) > 0),
+                metric_labels: { total: 'Total Dokumen', selesai: 'Released', belum: 'Pending' },
+                unit: 'Dokumen',
+                total_tiket: qaKpi.total_dokumen ?? qaKpi.total_grs ?? 0,
+                selesai: qaKpi.total_selesai ?? qaKpi.grs_approve ?? 0,
+                belum_selesai: qaKpi.total_belum ?? qaKpi.grs_belum_approve ?? 0,
+                ditolak: qaKpi.total_ditolak ?? 0,
+                total_efektif: qaKpi.total_dokumen ?? 0,
+                persentase_selesai: qaKpi.persentase_selesai ?? qaKpi.persentase ?? 0,
+                total_grs: qaKpi.total_grs ?? 0,
+                grs_approve: qaKpi.grs_approve ?? 0,
+                total_scn: qaKpi.total_scn ?? 0,
+                scn_release: qaKpi.scn_sudah_release ?? 0,
+                total_br: qaKpi.total_br ?? 0,
+                br_belum: qaKpi.br_belum ?? 0,
+                grs: qaKpi.grs || {},
+                scn: qaKpi.scn || {},
+                acceptbr: qaKpi.acceptbr || {},
                 kpi: qaKpi,
             },
 
@@ -660,17 +700,27 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Supply Chain & Gudang',
                 data_ditampilkan: 'Penyelesaian DR',
                 sub_nama: 'Delivery Receipt Barang Jadi',
-                sumber_data: 'Sistem Warehouse Finished Goods (WH FG)',
-                sumber: 'Sistem WH FG',
-                catatan: 'Penyelesaian Delivery Receipt (DR) Barang Jadi',
+                sumber_data: 'Atena ERP REST API (PenyelesaianDR)',
+                sumber: 'Atena ERP',
+                catatan: 'Penyelesaian Delivery Receipt (DR) Barang Jadi ke Delivery Note (DN)',
                 icon: 'warehouse',
-                is_active: false,
-                metric_labels: { total: 'Total DR', selesai: 'Selesai', belum: 'Pending' },
+                is_active: Boolean(whFgKpi.total_dr > 0 || (whFgData && whFgData.success)),
+                metric_labels: { total: 'Total DR', selesai: 'Sudah DN', belum: 'Belum DN' },
                 unit: 'DR',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                total_tiket: whFgKpi.total_dr ?? 0,
+                selesai: whFgKpi.dr_sudah_dn ?? 0,
+                belum_selesai: whFgKpi.dr_belum_dn ?? 0,
+                persentase_selesai: whFgKpi.persentase_selesai ?? 0,
+                today: whFgData?.today || {},
+                month: whFgData?.month || {},
+                today_total: whFgData?.today?.total_dr ?? 0,
+                today_selesai: whFgData?.today?.dr_sudah_dn ?? 0,
+                today_belum: whFgData?.today?.dr_belum_dn ?? 0,
+                today_persentase: whFgData?.today?.persentase_selesai ?? 0,
+                month_total: whFgData?.month?.total_dr ?? 0,
+                month_selesai: whFgData?.month?.dr_sudah_dn ?? 0,
+                month_belum: whFgData?.month?.dr_belum_dn ?? 0,
+                month_persentase: whFgData?.month?.persentase_selesai ?? 0,
             },
             WH_MAT: {
                 no: 20,
@@ -680,17 +730,31 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Supply Chain & Gudang',
                 data_ditampilkan: 'Pemenuhan DR & Permintaan Barang',
                 sub_nama: 'DR Paskot & MR Bahan (MR +1)',
-                sumber_data: 'Realisasi DR lain & DR customer paskot sesuai jadwal, Realisasi permintaan bahan (hari MR +1 & sesuai tanggal kirim)',
-                sumber: 'Sistem WH Mat & MR',
-                catatan: 'Realisasi DR lain & DR customer paskot sesuai jadwal. Realisasi permintaan bahan hari MR+1 & sesuai tgl kirim (Sabtu & Minggu tidak dihitung)',
+                sumber_data: 'Atena ERP REST API (PemenuhanWHMat)',
+                sumber: 'Atena ERP',
+                catatan: 'Realisasi DR lain & DR customer paskot serta realisasi permintaan bahan (MR)',
                 icon: 'dolly',
-                is_active: false,
-                metric_labels: { total: 'Permintaan', selesai: 'Realisasi', belum: 'Outstanding' },
-                unit: 'Item / MR',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: Boolean(whMatKpi.total_mr > 0 || (whMatData && whMatData.success)),
+                metric_labels: { total: 'Total MR', selesai: 'Terpenuhi', belum: 'Belum' },
+                unit: 'MR',
+                total_tiket: whMatKpi.total_mr ?? 0,
+                selesai: whMatKpi.mr_terpenuhi ?? 0,
+                belum_selesai: whMatKpi.mr_belum_terpenuhi ?? 0,
+                persentase_selesai: whMatData?.persentase_selesai ?? whMatKpi.persentase_selesai ?? 0,
+                persentase_mr: whMatData?.persentase_mr ?? whMatKpi.persentase_mr ?? (whMatData?.month?.persentase_selesai ?? 0),
+                persentase_dr: whMatData?.persentase_dr ?? whMatKpi.persentase_dr ?? (whMatData?.dr_month?.persentase_selesai ?? 0),
+                today: whMatData?.today || {},
+                month: whMatData?.month || {},
+                today_total: whMatData?.today?.total_mr ?? 0,
+                today_selesai: whMatData?.today?.mr_terpenuhi ?? 0,
+                today_belum: whMatData?.today?.mr_belum_terpenuhi ?? 0,
+                today_persentase: whMatData?.today?.persentase_selesai ?? 0,
+                month_total: whMatData?.month?.total_mr ?? 0,
+                month_selesai: whMatData?.month?.mr_terpenuhi ?? 0,
+                month_belum: whMatData?.month?.mr_belum_terpenuhi ?? 0,
+                month_persentase: whMatData?.persentase_selesai ?? whMatKpi.persentase_selesai ?? 0,
+                mr: whMatData?.month || {},
+                dr: whMatKpi.dr || whMatData?.dr_month || {},
             },
             PBF: {
                 no: 21,
@@ -771,6 +835,8 @@ router.get('/stats', async (req, res) => {
             kpi_produksi: prodKpi,
             kpi_purchasing: purchasingKpi,
             kpi_logistik: logistikKpi,
+            kpi_wh_fg: whFgKpi,
+            kpi_wh_mat: whMatKpi,
             layanan: servicesResult,
             perlu_perhatian: sanitizedPerluPerhatian,
         };
@@ -943,17 +1009,19 @@ router.post('/purchasing/sync', async (req, res) => {
 
 /**
  * GET /api/dashboard/qa
- * Mengambil data Release Material (GRS) QA Atena ERP dalam format JSON
+ * Mengambil data monitoring QA dari Atena ERP (GRS Material, Subcon SCN, Accept BR)
  * Query params:
+ * - bagian: 'grsmaterial' | 'scn' | 'acceptbr' (default: 'grsmaterial')
  * - range: 'all' | 'today' | 'week' | 'month' (default: 'month')
- * - status: 'all' | 'terpenuhi' (approved) | 'pending' (belum approve)
- * - search: pencarian No GRS, No PO, Supplier, Surat Jalan, Disposisi QC
- * - tglawal, tglakhir
+ * - status: 'all' | 'terpenuhi' | 'pending' | 'ditolak'
+ * - search: kata kunci pencarian
+ * - tglawal, tglakhir, force
  */
 router.get('/qa', async (req, res) => {
     try {
-        const { range = 'month', status = 'all', search = '', force = false, tglawal, tglakhir } = req.query;
+        const { bagian = 'grsmaterial', range = 'month', status = 'all', search = '', force = false, tglawal, tglakhir } = req.query;
         const data = await qaService.getMonitoringData({
+            bagian,
             range,
             status,
             search,
@@ -970,7 +1038,7 @@ router.get('/qa', async (req, res) => {
         console.error('[API ERROR /qa]:', error.message);
         return res.status(502).json({
             success: false,
-            message: 'Gagal mengambil data monitoring QA release material Atena ERP: ' + error.message,
+            message: 'Gagal mengambil data monitoring QA Atena ERP: ' + error.message,
             error: error.message
         });
     }
@@ -982,10 +1050,11 @@ router.get('/qa', async (req, res) => {
  */
 router.post('/qa/sync', async (req, res) => {
     try {
-        const rawData = await qaService.fetchData(true);
+        const bagian = req.body.bagian || 'grsmaterial';
+        const rawData = await qaService.fetchData(bagian, true);
         return res.json({
             success: true,
-            message: 'Sinkronisasi data QA Release Material dari Atena ERP berhasil',
+            message: `Sinkronisasi data QA (${bagian}) dari Atena ERP berhasil`,
             data: rawData
         });
     } catch (error) {
@@ -1104,6 +1173,110 @@ router.post('/logistik/sync', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Gagal sinkronisasi data logistik Atena ERP: ' + error.message
+        });
+    }
+});
+
+/**
+ * GET /api/dashboard/wh-fg
+ * Mengambil detail data Penyelesaian DR WH Finished Goods Atena ERP
+ * Query params: range ('today'|'week'|'month'|'all'), status, search, force, tglawal, tglakhir
+ */
+router.get('/wh-fg', async (req, res) => {
+    try {
+        const { range = 'month', status = 'all', search = '', force = false, tglawal, tglakhir } = req.query;
+        const data = await whFgService.getMonitoringData({
+            range,
+            status,
+            search,
+            force: force === 'true',
+            tglawal,
+            tglakhir,
+        });
+
+        return res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('[API ERROR /wh-fg]:', error.message);
+        return res.status(502).json({
+            success: false,
+            message: 'Gagal mengambil data monitoring WH FG Atena ERP: ' + error.message,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/dashboard/wh-fg/sync
+ * Memaksa sinkronisasi data WH FG terbaru dari Atena ERP
+ */
+router.post('/wh-fg/sync', async (req, res) => {
+    try {
+        const data = await whFgService.fetchData(true);
+        return res.json({
+            success: true,
+            message: 'Sinkronisasi data WH FG dari Atena ERP berhasil',
+            data
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Gagal sinkronisasi data WH FG: ' + error.message
+        });
+    }
+});
+
+/**
+ * GET /api/dashboard/wh-mat
+ * Mengambil detail data Pemenuhan WH Material (MR & DR) Atena ERP
+ * Query params: bagian ('permintaanbahan'|'dr'), range, status, search, force, tglawal, tglakhir
+ */
+router.get('/wh-mat', async (req, res) => {
+    try {
+        const { bagian = 'permintaanbahan', range = 'month', status = 'all', search = '', force = false, tglawal, tglakhir } = req.query;
+        const data = await whMatService.getMonitoringData({
+            bagian,
+            range,
+            status,
+            search,
+            force: force === 'true',
+            tglawal,
+            tglakhir,
+        });
+
+        return res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('[API ERROR /wh-mat]:', error.message);
+        return res.status(502).json({
+            success: false,
+            message: 'Gagal mengambil data monitoring WH Material Atena ERP: ' + error.message,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/dashboard/wh-mat/sync
+ * Memaksa sinkronisasi data WH Material terbaru dari Atena ERP
+ */
+router.post('/wh-mat/sync', async (req, res) => {
+    try {
+        const { bagian = 'permintaanbahan' } = req.body || {};
+        const data = await whMatService.fetchData(true, {}, bagian);
+        return res.json({
+            success: true,
+            message: 'Sinkronisasi data WH Material dari Atena ERP berhasil',
+            data
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Gagal sinkronisasi data WH Material: ' + error.message
         });
     }
 });

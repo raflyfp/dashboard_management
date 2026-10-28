@@ -91,12 +91,13 @@ const state = {
         items: { column: 'tgl_jatuh_tempo', dir: 'desc' }
     },
 
-    // State Khusus Modul QA (Release Material GRS Atena ERP)
+    // State Khusus Modul QA (Release Material GRS, Subcon SCN, Accept BR)
     currentQaRange: 'month',
+    currentQaBagian: 'grsmaterial', // 'grsmaterial' | 'scn' | 'acceptbr'
     qaDateStart: '',
     qaDateEnd: '',
     currentQaStatus: 'all',
-    currentQaView: 'grs', // 'grs' (Daftar GRS) | 'po' (Ringkasan Per PO)
+    currentQaGrsSubView: 'grs', // 'grs' (Daftar GRS) | 'po' (Ringkasan Per PO)
     qaSearchQuery: '',
     qaCurrentPage: 1,
     qaPageSize: 30,
@@ -105,6 +106,44 @@ const state = {
     qaSort: {
         grs: { column: 'tanggal', dir: 'desc' },
         po: { column: 'tanggal', dir: 'desc' },
+        scn: { column: 'tanggal', dir: 'desc' },
+        acceptbr: { column: 'tgl_prh', dir: 'desc' },
+    },
+
+    // State Khusus Modul WH FG (Atena ERP REST API)
+    currentWhFgRange: 'month',
+    whFgDateStart: '',
+    whFgDateEnd: '',
+    currentWhFgStatus: 'all',
+    currentWhFgView: 'dr', // 'dr' | 'items'
+    whFgSearchQuery: '',
+    whFgCurrentPage: 1,
+    whFgPageSize: 15,
+    whFgRawData: null,
+    whFgCache: new Map(),
+    whFgSort: {
+        dr: { column: 'tanggal', dir: 'desc' },
+        items: { column: 'tanggal', dir: 'desc' }
+    },
+
+    // State Khusus Modul WH Mat (Atena ERP REST API)
+    currentWhMatBagian: 'permintaanbahan', // 'permintaanbahan' | 'dr'
+    currentWhMatRange: 'month',
+    whMatDateStart: '',
+    whMatDateEnd: '',
+    currentWhMatStatus: 'all',
+    whMatMrSubView: 'doc', // 'doc' (Dokumen MR) | 'item' (Rincian MR)
+    whMatDrSubView: 'doc', // 'doc' (Dokumen DR) | 'item' (Rincian DR)
+    whMatSearchQuery: '',
+    whMatCurrentPage: 1,
+    whMatPageSize: 15,
+    whMatRawData: null,
+    whMatCache: new Map(),
+    whMatSort: {
+        mr_doc: { column: 'tgl_kirim', dir: 'desc' },
+        mr: { column: 'tgl_kirim', dir: 'desc' },
+        dr_doc: { column: 'tgl_kirim', dir: 'desc' },
+        dr: { column: 'tgl_kirim', dir: 'desc' }
     },
 };
 
@@ -171,6 +210,8 @@ function initEventListeners() {
             closeQaModal();
             closeProduksiModal();
             closeLogistikModal();
+            closeWhFgModal();
+            closeWhMatModal();
         }
     });
 
@@ -234,6 +275,24 @@ function initEventListeners() {
         logistikModalOverlay.addEventListener('click', (e) => {
             if (e.target === logistikModalOverlay) {
                 closeLogistikModal();
+            }
+        });
+    }
+
+    const whFgModalOverlay = document.getElementById('whFgModal');
+    if (whFgModalOverlay) {
+        whFgModalOverlay.addEventListener('click', (e) => {
+            if (e.target === whFgModalOverlay) {
+                closeWhFgModal();
+            }
+        });
+    }
+
+    const whMatModalOverlay = document.getElementById('whMatModal');
+    if (whMatModalOverlay) {
+        whMatModalOverlay.addEventListener('click', (e) => {
+            if (e.target === whMatModalOverlay) {
+                closeWhMatModal();
             }
         });
     }
@@ -433,7 +492,18 @@ function renderServiceCards(layanan) {
         }
 
         // 2. Persentase & Progress Bar Fill (Standarisasi Warna Traffic Light KPI)
-        const percent = item.persentase_selesai || 0;
+        let percent = item.persentase_selesai || 0;
+        if (code === 'WH_MAT') {
+            const pctMr = Number(item.persentase_mr ?? item.mr?.persentase_selesai ?? 0);
+            const pctDr = Number(item.persentase_dr ?? item.dr?.persentase_selesai ?? 0);
+            if (pctMr > 0 && pctDr > 0) {
+                percent = Number(((pctMr + pctDr) / 2).toFixed(2));
+            } else if (pctMr > 0) {
+                percent = pctMr;
+            } else if (pctDr > 0) {
+                percent = pctDr;
+            }
+        }
         const percentEl = document.getElementById(`percent${code}`);
         const barFill = document.getElementById(`barFill${code}`);
 
@@ -464,6 +534,24 @@ function renderServiceCards(layanan) {
         }
 
         // 3. Update Status Badge (Live vs Standby) secara dinamis
+        if (code === 'QA') {
+            const miniGrs = document.getElementById('qaMiniGrsPercent');
+            if (miniGrs) miniGrs.textContent = `${item.grs?.persentase ?? item.persentase_grs ?? 0}%`;
+            const miniScn = document.getElementById('qaMiniScnPercent');
+            if (miniScn) miniScn.textContent = `${item.scn?.persentase ?? item.persentase_scn ?? 0}%`;
+            const miniBr = document.getElementById('qaMiniBrPercent');
+            if (miniBr) miniBr.textContent = `${item.acceptbr?.persentase ?? item.persentase_br ?? 0}%`;
+        }
+
+        if (code === 'WH_MAT') {
+            const pctMr = Number(item.persentase_mr ?? item.mr?.persentase_selesai ?? 0);
+            const pctDr = Number(item.persentase_dr ?? item.dr?.persentase_selesai ?? 0);
+            const miniMr = document.getElementById('whMatMiniMrPercent');
+            if (miniMr) miniMr.textContent = `${pctMr}%`;
+            const miniDr = document.getElementById('whMatMiniDrPercent');
+            if (miniDr) miniDr.textContent = `${pctDr}%`;
+        }
+
         const cardEl = document.getElementById(`card-${code}`);
         if (cardEl) {
             const statusPill = cardEl.querySelector('.service-status-pill');
@@ -2580,6 +2668,7 @@ const PRODUKSI_BAGIAN_MAP = {
     sizing: { name: 'Produksi Sizing', judul: 'Penyelesaian PP Sizing', unit: 'Meter / Beam', icon: 'fa-ruler-combined' },
     poligyp: { name: 'Produksi Poligyp', judul: 'Penyelesaian PP Poligyp Packing', unit: 'Roll / PCS', icon: 'fa-bandage' },
     ironing: { name: 'Produksi Ironing', judul: 'Penyelesaian PP Ironing', unit: 'PCS / Meter', icon: 'fa-shirt' },
+    surgicalmesin: { name: 'Produksi Surgical Mesin', judul: 'Penyelesaian PP Surgical Mesin', unit: 'PCS / Box', icon: 'fa-gears' },
     surgicalpacking: { name: 'Produksi Surgical Packing', judul: 'Penyelesaian PP Surgical Packing', unit: 'Box / Karton', icon: 'fa-box-tissue' }
 };
 
@@ -3956,7 +4045,7 @@ function formatQaDate(d) {
 }
 
 /**
- * Buka Modal Monitoring QA (Release Material GRS)
+ * Buka Modal Monitoring QA (Release Material GRS & Produk Jadi)
  */
 function openQaModal(range = 'month') {
     const modal = document.getElementById('qaModal');
@@ -3964,6 +4053,7 @@ function openQaModal(range = 'month') {
 
     modal.classList.add('active');
     modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
 
     state.qaSearchQuery = '';
     state.qaCurrentPage = 1;
@@ -3975,6 +4065,14 @@ function openQaModal(range = 'month') {
     if (selectStatus) selectStatus.value = 'all';
     state.currentQaStatus = 'all';
 
+    if (!state.currentQaBagian) {
+        state.currentQaBagian = 'grsmaterial';
+    }
+    if (!state.currentQaGrsSubView) {
+        state.currentQaGrsSubView = 'detail';
+    }
+
+    updateQaBagianTabUI();
     setQaQuickDate(range);
 }
 
@@ -3986,6 +4084,96 @@ function closeQaModal() {
     if (!modal) return;
     modal.classList.remove('active');
     modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+/**
+ * Switch bagian QA: 'grsmaterial', 'scn', atau 'acceptbr'
+ */
+function switchQaBagian(bagian) {
+    if (state.currentQaBagian === bagian) return;
+    state.currentQaBagian = bagian;
+    state.qaCurrentPage = 1;
+    state.qaSearchQuery = '';
+
+    const searchInput = document.getElementById('qaSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectQaStatus');
+    if (selectStatus) selectStatus.value = 'all';
+    state.currentQaStatus = 'all';
+
+    updateQaBagianTabUI();
+    loadQaData(true);
+}
+
+/**
+ * Update UI Navigasi Tab & Kontainer Table Sesuai Bagian Aktif
+ */
+function updateQaBagianTabUI() {
+    const bagian = state.currentQaBagian || 'grsmaterial';
+
+    const btnGrs = document.getElementById('btnTabQaGrs');
+    const btnScn = document.getElementById('btnTabQaScn');
+    const btnBr = document.getElementById('btnTabQaAcceptBr');
+
+    if (btnGrs) btnGrs.classList.toggle('active', bagian === 'grsmaterial');
+    if (btnScn) btnScn.classList.toggle('active', bagian === 'scn');
+    if (btnBr) btnBr.classList.toggle('active', bagian === 'acceptbr');
+
+    const panelGrs = document.getElementById('tabPanelQaGrs');
+    const panelScn = document.getElementById('tabPanelQaScn');
+    const panelBr = document.getElementById('tabPanelQaAcceptBr');
+
+    if (panelGrs) panelGrs.style.display = bagian === 'grsmaterial' ? 'block' : 'none';
+    if (panelScn) panelScn.style.display = bagian === 'scn' ? 'block' : 'none';
+    if (panelBr) panelBr.style.display = bagian === 'acceptbr' ? 'block' : 'none';
+
+    // Sub-view switcher GRS
+    const isDetail = state.currentQaGrsSubView !== 'po';
+    const subRows = document.getElementById('subPanelQaGrsRows');
+    const subPo = document.getElementById('subPanelQaPoRows');
+    const btnSubGrs = document.getElementById('btnSubViewQaGrs');
+    const btnSubPo = document.getElementById('btnSubViewQaPo');
+
+    if (subRows) subRows.style.display = isDetail ? 'block' : 'none';
+    if (subPo) subPo.style.display = !isDetail ? 'block' : 'none';
+    if (btnSubGrs) btnSubGrs.classList.toggle('active', isDetail);
+    if (btnSubPo) btnSubPo.classList.toggle('active', !isDetail);
+
+    // Dynamic Title & Subtitle
+    const titleEl = document.getElementById('qaModalTitle');
+    const subtitleEl = document.getElementById('qaModalSubtitle');
+    if (titleEl) {
+        if (bagian === 'grsmaterial') {
+            titleEl.textContent = 'Monitoring QA - Release Material (GRS)';
+        } else if (bagian === 'scn') {
+            titleEl.textContent = 'Monitoring QA - Release Produk Jadi (SCN Subcon)';
+        } else if (bagian === 'acceptbr') {
+            titleEl.textContent = 'Monitoring QA - Accept Batch Record (Acc BR)';
+        }
+    }
+    if (subtitleEl) {
+        if (bagian === 'grsmaterial') {
+            subtitleEl.textContent = 'Laporan GRS Material Masuk: Perbandingan GRS Sudah Approve vs Total GRS Masuk';
+        } else if (bagian === 'scn') {
+            subtitleEl.textContent = 'Laporan Hasil Sample Test: Release SC Subcon vs Subcon Status Belum Selesai';
+        } else if (bagian === 'acceptbr') {
+            subtitleEl.textContent = 'Laporan Jurnal Batch Record: Transaksi PRH yang Sudah Ada vs Belum Ada Batch Record';
+        }
+    }
+}
+
+/**
+ * Switch Sub-view GRS: 'grs' (rincian GRS) atau 'po' (ringkasan PO)
+ */
+function switchQaGrsSubView(view) {
+    state.currentQaGrsSubView = view === 'po' ? 'po' : 'detail';
+    state.qaCurrentPage = 1;
+    updateQaBagianTabUI();
+    if (state.qaRawData) {
+        renderQaModalData(state.qaRawData);
+    }
 }
 
 /**
@@ -4090,36 +4278,11 @@ function resetQaFilter() {
 }
 
 /**
- * Ganti filter Status QA (all, terpenuhi, pending)
+ * Ganti filter Status QA (all, terpenuhi, pending, ditolak)
  */
 function switchQaStatus(status) {
     state.currentQaStatus = status;
     state.qaCurrentPage = 1;
-    if (state.qaRawData) {
-        renderQaModalData(state.qaRawData);
-    }
-}
-
-/**
- * Ganti Mode Tampilan Tab QA: 'grs' vs 'po'
- */
-function switchQaView(viewMode) {
-    state.currentQaView = viewMode;
-    state.qaCurrentPage = 1;
-
-    const btnGrs = document.getElementById('btnViewQaGrs');
-    const btnPo = document.getElementById('btnViewQaPo');
-    const panelGrs = document.getElementById('tabPanelQaGrs');
-    const panelPo = document.getElementById('tabPanelQaPo');
-
-    if (btnGrs) btnGrs.classList.toggle('active', viewMode === 'grs');
-    if (btnPo) btnPo.classList.toggle('active', viewMode === 'po');
-
-    if (panelGrs) panelGrs.classList.toggle('active', viewMode === 'grs');
-    if (panelPo) panelPo.classList.toggle('active', viewMode === 'po');
-
-    updateQaSortHeaders(viewMode);
-
     if (state.qaRawData) {
         renderQaModalData(state.qaRawData);
     }
@@ -4147,43 +4310,58 @@ async function syncQaData() {
     const syncBtn = document.getElementById('btnSyncQa');
     const icon = syncBtn?.querySelector('i');
     if (icon) icon.classList.add('fa-spin');
+    if (syncBtn) syncBtn.disabled = true;
+
+    const bagian = state.currentQaBagian || 'grsmaterial';
 
     try {
         renderQaTablesLoading();
-        const res = await fetch('/api/dashboard/qa/sync', { method: 'POST' });
+        const res = await fetch('/api/dashboard/qa/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bagian: bagian,
+                startDate: state.qaDateStart,
+                endDate: state.qaDateEnd
+            })
+        });
         const json = await res.json();
         if (json.success) {
             state.qaCache.clear();
             await loadQaData(true);
             fetchDashboardStats(true);
+            showToast(`Sinkronisasi QA (${bagian.toUpperCase()}) berhasil!`, 'success');
         } else {
             throw new Error(json.message || 'Gagal sinkronisasi data QA');
         }
     } catch (err) {
         console.error('Error sync QA:', err);
         renderQaTablesError(err.message);
+        showToast(`Sinkronisasi QA gagal: ${err.message}`, 'error');
     } finally {
         if (icon) {
             setTimeout(() => icon.classList.remove('fa-spin'), 600);
         }
+        if (syncBtn) syncBtn.disabled = false;
     }
 }
 
 /**
- * Muat data QA dari API
+ * Muat data QA dari API sesuai bagian aktif (grsmaterial, scn, acceptbr)
  */
 async function loadQaData(force = false) {
-    let url = '/api/dashboard/qa?';
+    const bagian = state.currentQaBagian || 'grsmaterial';
+    let url = `/api/dashboard/qa?bagian=${encodeURIComponent(bagian)}&`;
     if (state.qaDateStart && state.qaDateEnd) {
-        url += `tglawal=${encodeURIComponent(state.qaDateStart)}&tglakhir=${encodeURIComponent(state.qaDateEnd)}`;
+        url += `startDate=${encodeURIComponent(state.qaDateStart)}&endDate=${encodeURIComponent(state.qaDateEnd)}`;
     } else {
         url += `range=${encodeURIComponent(state.currentQaRange)}`;
     }
     if (force) url += '&force=true';
 
-    const cacheKey = `qa_${state.qaDateStart}_${state.qaDateEnd}_${state.currentQaRange}`;
+    const cacheKey = `qa_${bagian}_${state.qaDateStart}_${state.qaDateEnd}_${state.currentQaRange}`;
 
-    if (!force && state.qaCache.has(cacheKey)) {
+    if (!force && state.qaCache && state.qaCache.has(cacheKey)) {
         const cached = state.qaCache.get(cacheKey);
         state.qaRawData = cached.data;
         renderQaModalData(cached.data);
@@ -4200,7 +4378,9 @@ async function loadQaData(force = false) {
             throw new Error(result.message || 'Gagal mengambil data monitoring QA');
         }
 
-        state.qaCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+        if (state.qaCache) {
+            state.qaCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+        }
         state.qaRawData = result.data;
         renderQaModalData(result.data);
     } catch (err) {
@@ -4210,32 +4390,86 @@ async function loadQaData(force = false) {
 }
 
 /**
- * Render semua elemen di Modal QA
+ * Render semua elemen di Modal QA sesuai bagian aktif
  */
 function renderQaModalData(data) {
     if (!data) return;
 
-    const kpi = data.kpi || {};
+    const bagian = state.currentQaBagian || 'grsmaterial';
+    const ringkasan = data.ringkasan || data.kpi || {};
+    const items = Array.isArray(data.items) ? data.items : [];
     const meta = data.meta || {};
 
-    const elTotalGrs = document.getElementById('modalKpiQaTotalGrs');
+    const elTotal = document.getElementById('modalKpiQaTotal');
+    const elTotalLbl = document.getElementById('modalKpiQaTotalLbl');
     const elReleased = document.getElementById('modalKpiQaReleased');
+    const elReleasedLbl = document.getElementById('modalKpiQaReleasedLbl');
     const elPercent = document.getElementById('modalKpiQaPercent');
     const elReject = document.getElementById('modalKpiQaReject');
+    const elRejectLbl = document.getElementById('modalKpiQaRejectLbl');
     const elPending = document.getElementById('modalKpiQaPending');
-    const elTotalPo = document.getElementById('modalKpiQaTotalPo');
+    const elPendingLbl = document.getElementById('modalKpiQaPendingLbl');
+    const elExtra = document.getElementById('modalKpiQaExtra');
+    const elExtraLbl = document.getElementById('modalKpiQaExtraLbl');
 
-    if (elTotalGrs) elTotalGrs.textContent = Number(kpi.total_grs || 0).toLocaleString('id-ID');
-    if (elReleased) elReleased.textContent = Number(kpi.grs_released || kpi.grs_approve || 0).toLocaleString('id-ID');
-    if (elPercent) elPercent.textContent = `${kpi.persentase || kpi.persentase_selesai || 0}%`;
-    if (elReject) elReject.textContent = Number((kpi.grs_ditolak || 0) + (kpi.grs_ditahan || 0)).toLocaleString('id-ID');
-    if (elPending) elPending.textContent = Number(kpi.grs_pending || 0).toLocaleString('id-ID');
-    if (elTotalPo) elTotalPo.textContent = Number(kpi.total_po || 0).toLocaleString('id-ID');
+    if (bagian === 'grsmaterial') {
+        if (elTotalLbl) elTotalLbl.textContent = 'Total GRS';
+        if (elTotal) elTotal.textContent = Number(ringkasan.total_grs || 0).toLocaleString('id-ID');
 
-    const countGrsEl = document.getElementById('countQaGrs');
-    const countPoEl = document.getElementById('countQaPo');
-    if (countGrsEl) countGrsEl.textContent = `${(data.items || []).length}`;
-    if (countPoEl) countPoEl.textContent = `${(data.summary_by_po || []).length}`;
+        if (elReleasedLbl) elReleasedLbl.textContent = 'Sudah Approve';
+        if (elReleased) elReleased.textContent = Number(ringkasan.grs_approve || 0).toLocaleString('id-ID');
+        if (elPercent) elPercent.textContent = `${ringkasan.persentase_selesai || 0}%`;
+
+        if (elPendingLbl) elPendingLbl.textContent = 'Belum Selesai';
+        if (elPending) elPending.textContent = Number(ringkasan.grs_belum || 0).toLocaleString('id-ID');
+
+        if (elRejectLbl) elRejectLbl.textContent = 'Ditolak / Batal';
+        if (elReject) elReject.textContent = Number(ringkasan.grs_batal || 0).toLocaleString('id-ID');
+
+        if (elExtraLbl) elExtraLbl.textContent = 'Total PO Terkait';
+        if (elExtra) elExtra.textContent = Number(ringkasan.total_po || (data.ringkasan_po || []).length || 0).toLocaleString('id-ID');
+
+        const tabBadgeGrs = document.getElementById('countQaTabGrs');
+        if (tabBadgeGrs) tabBadgeGrs.textContent = `${items.length}`;
+    } else if (bagian === 'scn') {
+        if (elTotalLbl) elTotalLbl.textContent = 'Total SCN Subcon';
+        if (elTotal) elTotal.textContent = Number(ringkasan.total_scn || 0).toLocaleString('id-ID');
+
+        if (elReleasedLbl) elReleasedLbl.textContent = 'Sudah Release';
+        if (elReleased) elReleased.textContent = Number(ringkasan.scn_sudah_release || 0).toLocaleString('id-ID');
+        if (elPercent) elPercent.textContent = `${ringkasan.persentase_selesai || 0}%`;
+
+        if (elPendingLbl) elPendingLbl.textContent = 'Belum Release';
+        if (elPending) elPending.textContent = Number(ringkasan.scn_belum_release || 0).toLocaleString('id-ID');
+
+        if (elRejectLbl) elRejectLbl.textContent = 'Ditolak';
+        if (elReject) elReject.textContent = Number(ringkasan.scn_ditolak || 0).toLocaleString('id-ID');
+
+        if (elExtraLbl) elExtraLbl.textContent = 'Total Item';
+        if (elExtra) elExtra.textContent = `${items.length}`;
+
+        const tabBadgeScn = document.getElementById('countQaTabScn');
+        if (tabBadgeScn) tabBadgeScn.textContent = `${items.length}`;
+    } else if (bagian === 'acceptbr') {
+        if (elTotalLbl) elTotalLbl.textContent = 'Total Transaksi PRH';
+        if (elTotal) elTotal.textContent = Number(ringkasan.total_br || 0).toLocaleString('id-ID');
+
+        if (elReleasedLbl) elReleasedLbl.textContent = 'Sudah Ada BR';
+        if (elReleased) elReleased.textContent = Number(ringkasan.br_sudah || 0).toLocaleString('id-ID');
+        if (elPercent) elPercent.textContent = `${ringkasan.persentase_selesai || 0}%`;
+
+        if (elPendingLbl) elPendingLbl.textContent = 'Belum Ada BR';
+        if (elPending) elPending.textContent = Number(ringkasan.br_belum || 0).toLocaleString('id-ID');
+
+        if (elRejectLbl) elRejectLbl.textContent = 'Ditolak';
+        if (elReject) elReject.textContent = '0';
+
+        if (elExtraLbl) elExtraLbl.textContent = 'Baris Pending';
+        if (elExtra) elExtra.textContent = `${items.length}`;
+
+        const tabBadgeBr = document.getElementById('countQaTabBr');
+        if (tabBadgeBr) tabBadgeBr.textContent = `${items.length}`;
+    }
 
     const syncTimeEl = document.getElementById('qaLastSyncTime');
     if (syncTimeEl) {
@@ -4248,69 +4482,123 @@ function renderQaModalData(data) {
         }
     }
 
-    const q = state.qaSearchQuery;
+    const q = (state.qaSearchQuery || '').toLowerCase();
     const status = state.currentQaStatus;
 
-    // Filter daftar Release GRS
-    let grsList = (data.items || []).filter(item => {
-        if (status !== 'all' && item.status_code !== status) return false;
-        if (q) {
-            const matchGrs = item.no_grs && item.no_grs.toLowerCase().includes(q);
-            const matchPo = item.no_po && item.no_po.toLowerCase().includes(q);
-            const matchSupp = item.supplier && item.supplier.toLowerCase().includes(q);
-            const matchSj = item.surat_jalan && item.surat_jalan.toLowerCase().includes(q);
-            const matchDisp = item.disposisi_qc && item.disposisi_qc.toLowerCase().includes(q);
-            if (!matchGrs && !matchPo && !matchSupp && !matchSj && !matchDisp) return false;
+    if (bagian === 'grsmaterial') {
+        const isDetail = state.currentQaGrsSubView !== 'po';
+
+        if (isDetail) {
+            let grsList = items.filter(item => {
+                if (status === 'terpenuhi' && item.status_code !== 'approve') return false;
+                if (status === 'pending' && item.status_code !== 'belum') return false;
+                if (status === 'ditolak' && item.status_code !== 'batal') return false;
+                if (q) {
+                    const matchGrs = item.no_grs && item.no_grs.toLowerCase().includes(q);
+                    const matchPo = item.no_po && item.no_po.toLowerCase().includes(q);
+                    const matchSupp = item.supplier && item.supplier.toLowerCase().includes(q);
+                    const matchDisp = item.disposisi_qc && item.disposisi_qc.toLowerCase().includes(q);
+                    if (!matchGrs && !matchPo && !matchSupp && !matchDisp) return false;
+                }
+                return true;
+            });
+
+            const sortGrs = (state.qaSort && state.qaSort.grs) || { column: 'tanggal', dir: 'desc' };
+            grsList.sort((a, b) => {
+                let valA = a[sortGrs.column] ?? '';
+                let valB = b[sortGrs.column] ?? '';
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return sortGrs.dir === 'asc' ? -1 : 1;
+                if (valA > valB) return sortGrs.dir === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            renderQaGrsTable(grsList);
+            renderQaPagination(grsList.length, state.qaCurrentPage, state.qaPageSize);
+        } else {
+            const poSummary = Array.isArray(data.ringkasan_po) ? data.ringkasan_po : [];
+            let poList = poSummary.filter(po => {
+                if (status === 'terpenuhi' && po.status_code !== 'selesai') return false;
+                if (status === 'pending' && po.status_code !== 'belum') return false;
+                if (q) {
+                    const matchPo = po.no_po && po.no_po.toLowerCase().includes(q);
+                    const matchSupp = po.supplier && po.supplier.toLowerCase().includes(q);
+                    if (!matchPo && !matchSupp) return false;
+                }
+                return true;
+            });
+
+            const sortPo = (state.qaSort && state.qaSort.po) || { column: 'tanggal', dir: 'desc' };
+            poList.sort((a, b) => {
+                let valA = a[sortPo.column] ?? '';
+                let valB = b[sortPo.column] ?? '';
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return sortPo.dir === 'asc' ? -1 : 1;
+                if (valA > valB) return sortPo.dir === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            renderQaPoTable(poList);
+            renderQaPagination(poList.length, state.qaCurrentPage, state.qaPageSize);
         }
-        return true;
-    });
+    } else if (bagian === 'scn') {
+        let scnList = items.filter(item => {
+            if (status === 'terpenuhi' && item.status_code !== 'sudah_release') return false;
+            if (status === 'pending' && item.status_code !== 'belum_release') return false;
+            if (status === 'ditolak' && item.status_code !== 'ditolak') return false;
+            if (q) {
+                const matchScn = item.no_subcon && item.no_subcon.toLowerCase().includes(q);
+                const matchSupp = item.supplier && item.supplier.toLowerCase().includes(q);
+                const matchKode = item.kode_barang && item.kode_barang.toLowerCase().includes(q);
+                const matchNama = item.nama_barang && item.nama_barang.toLowerCase().includes(q);
+                const matchBatch = item.batch && item.batch.toLowerCase().includes(q);
+                const matchQc = item.no_qc && item.no_qc.toLowerCase().includes(q);
+                if (!matchScn && !matchSupp && !matchKode && !matchNama && !matchBatch && !matchQc) return false;
+            }
+            return true;
+        });
 
-    // Filter daftar Ringkasan Per PO
-    let poList = (data.summary_by_po || []).filter(po => {
-        if (status !== 'all') {
-            if (status === 'terpenuhi' && po.status_code !== 'terpenuhi') return false;
-            if (status === 'pending' && po.status_code === 'terpenuhi') return false;
-        }
-        if (q) {
-            const matchPo = po.no_po && po.no_po.toLowerCase().includes(q);
-            const matchSupp = po.supplier && po.supplier.toLowerCase().includes(q);
-            const matchGrs = (po.grs_list || []).some(g => g.no_grs && g.no_grs.toLowerCase().includes(q));
-            if (!matchPo && !matchSupp && !matchGrs) return false;
-        }
-        return true;
-    });
+        const sortScn = (state.qaSort && state.qaSort.scn) || { column: 'tanggal', dir: 'desc' };
+        scnList.sort((a, b) => {
+            let valA = a[sortScn.column] ?? '';
+            let valB = b[sortScn.column] ?? '';
+            const cmp = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+            return sortScn.dir === 'asc' ? cmp : -cmp;
+        });
 
-    // Sorting
-    const sortGrs = (state.qaSort && state.qaSort.grs) || { column: 'tanggal', dir: 'desc' };
-    grsList.sort((a, b) => {
-        let valA = a[sortGrs.column];
-        let valB = b[sortGrs.column];
-        if (typeof valA === 'string') valA = valA.toLowerCase();
-        if (typeof valB === 'string') valB = valB.toLowerCase();
-        if (valA < valB) return sortGrs.dir === 'asc' ? -1 : 1;
-        if (valA > valB) return sortGrs.dir === 'asc' ? 1 : -1;
-        return 0;
-    });
+        renderQaScnTable(scnList);
+        renderQaPagination(scnList.length, state.qaCurrentPage, state.qaPageSize);
+    } else if (bagian === 'acceptbr') {
+        let brList = items.filter(item => {
+            if (status === 'terpenuhi' && item.status_code !== 'sudah_ada') return false;
+            if (status === 'pending' && item.status_code !== 'belum_ada') return false;
+            if (q) {
+                const matchPrh = item.no_prh && item.no_prh.toLowerCase().includes(q);
+                const matchProd = item.no_trans_prod && item.no_trans_prod.toLowerCase().includes(q);
+                const matchKode = item.kode_barang && item.kode_barang.toLowerCase().includes(q);
+                const matchNama = item.nama_barang && item.nama_barang.toLowerCase().includes(q);
+                const matchBatch = item.batch && item.batch.toLowerCase().includes(q);
+                const matchUser = item.user_entry && item.user_entry.toLowerCase().includes(q);
+                if (!matchPrh && !matchProd && !matchKode && !matchNama && !matchBatch && !matchUser) return false;
+            }
+            return true;
+        });
 
-    const sortPo = (state.qaSort && state.qaSort.po) || { column: 'tanggal', dir: 'desc' };
-    poList.sort((a, b) => {
-        let valA = a[sortPo.column];
-        let valB = b[sortPo.column];
-        if (typeof valA === 'string') valA = valA.toLowerCase();
-        if (typeof valB === 'string') valB = valB.toLowerCase();
-        if (valA < valB) return sortPo.dir === 'asc' ? -1 : 1;
-        if (valA > valB) return sortPo.dir === 'asc' ? 1 : -1;
-        return 0;
-    });
+        const sortBr = (state.qaSort && state.qaSort.acceptbr) || { column: 'tgl_prh', dir: 'desc' };
+        brList.sort((a, b) => {
+            let valA = a[sortBr.column] ?? '';
+            let valB = b[sortBr.column] ?? '';
+            const cmp = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+            return sortBr.dir === 'asc' ? cmp : -cmp;
+        });
 
-    // Render Tabel sesuai mode tampilan
-    if (state.currentQaView === 'grs') {
-        renderQaGrsTable(grsList);
-    } else {
-        renderQaPoTable(poList);
+        renderQaAcceptBrTable(brList);
+        renderQaPagination(brList.length, state.qaCurrentPage, state.qaPageSize);
     }
 
-    updateQaSortHeaders(state.currentQaView);
+    updateQaSortHeaders(bagian);
 }
 
 /**
@@ -4319,9 +4607,6 @@ function renderQaModalData(data) {
 function renderQaGrsTable(list) {
     const tbody = document.getElementById('qaGrsTableBody');
     const footerStats = document.getElementById('qaModalFooterStats');
-    const pageInfo = document.getElementById('qaPageInfo');
-    const btnPrev = document.getElementById('btnQaPrevPage');
-    const btnNext = document.getElementById('btnQaNextPage');
     if (!tbody) return;
 
     if (!list || list.length === 0) {
@@ -4329,14 +4614,11 @@ function renderQaGrsTable(list) {
             <tr>
                 <td colspan="8" class="subcon-empty-row">
                     <i class="fa-solid fa-boxes-packing"></i>
-                    <div>Tidak ada data Release Material GRS yang cocok dengan filter saat ini</div>
+                    <div style="margin-top: 8px;">Tidak ada data Release Material GRS yang cocok</div>
                 </td>
             </tr>
         `;
         if (footerStats) footerStats.textContent = 'Menampilkan 0 GRS';
-        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
-        if (btnPrev) btnPrev.disabled = true;
-        if (btnNext) btnNext.disabled = true;
         return;
     }
 
@@ -4352,48 +4634,29 @@ function renderQaGrsTable(list) {
 
     let html = '';
     paged.forEach((item, idx) => {
-        let badgeStatusHtml = `<span class="badge-status-pending"><i class="fa-solid fa-hourglass-half"></i> Pending</span>`;
-        if (item.status_code === 'terpenuhi') {
-            badgeStatusHtml = `<span class="badge-status-terpenuhi"><i class="fa-solid fa-circle-check"></i> Released</span>`;
-        } else if (item.status_code === 'ditolak') {
-            badgeStatusHtml = `<span class="badge-status-ditolak"><i class="fa-solid fa-circle-xmark"></i> Ditolak</span>`;
-        } else if (item.status_code === 'ditahan') {
-            badgeStatusHtml = `<span class="badge-status-ditahan"><i class="fa-solid fa-triangle-exclamation"></i> Ditahan</span>`;
-        }
-
-        let disposisiHtml = `<span style="color: #94a3b8;">-</span>`;
-        if (item.disposisi_qc === 'DITERIMA') {
-            disposisiHtml = `<span class="badge-satuan" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700;"><i class="fa-solid fa-check"></i> Diterima</span>`;
-        } else if (item.disposisi_qc === 'DITOLAK') {
-            disposisiHtml = `<span class="badge-satuan" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-weight: 700;"><i class="fa-solid fa-xmark"></i> Ditolak</span>`;
-        } else if (item.disposisi_qc === 'DITAHAN') {
-            disposisiHtml = `<span class="badge-satuan" style="background: rgba(245, 158, 11, 0.15); color: #d97706; font-weight: 700;"><i class="fa-solid fa-hand"></i> Ditahan</span>`;
-        } else if (item.disposisi_qc && item.disposisi_qc !== '-') {
-            disposisiHtml = `<span class="badge-satuan">${item.disposisi_qc}</span>`;
+        let badge = '<span class="service-status-pill" style="color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1;">BELUM</span>';
+        if (item.status_code === 'approve') {
+            badge = '<span class="service-status-pill status-live">APPROVE</span>';
+        } else if (item.status_code === 'batal') {
+            badge = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">BATAL</span>';
         }
 
         const poClickHtml = (item.no_po && item.no_po !== '-')
-            ? `<span class="subcon-spk-num" style="cursor: pointer;" onclick="viewQaPoItems('${item.no_po}')" title="Klik untuk memfilter PO ini">
-                 <i class="fa-solid fa-file-invoice" style="color: #0284c7;"></i> ${item.no_po}
+            ? `<span style="cursor: pointer; color: var(--sna-blue); font-weight: 600;" onclick="viewQaPoItems('${item.no_po}')" title="Klik untuk memfilter PO ini">
+                 <i class="fa-solid fa-file-invoice"></i> ${item.no_po}
                </span>`
             : `<span style="color: #94a3b8;">-</span>`;
 
         html += `
             <tr>
                 <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
-                <td>
-                    <span class="subcon-spk-num font-mono" style="font-weight: 600;">
-                        <i class="fa-solid fa-boxes-packing" style="color: #8b5cf6;"></i> ${item.no_grs || '-'}
-                    </span>
-                </td>
-                <td style="white-space: nowrap;">${item.tanggal_label || item.tanggal || '-'}</td>
+                <td><strong style="color: #8b5cf6;">${item.no_grs}</strong></td>
+                <td class="font-mono text-center" style="font-size: 0.8rem;">${item.tanggal_label || item.tanggal}</td>
                 <td>${poClickHtml}</td>
-                <td style="font-weight: 500; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.supplier || '-'}">
-                    ${item.supplier || '-'}
-                </td>
-                <td style="text-align: center;">${disposisiHtml}</td>
-                <td style="text-align: center;">${badgeStatusHtml}</td>
-                <td style="white-space: nowrap; font-size: 0.78rem; color: #64748b;">${item.tgl_approve || '-'}</td>
+                <td style="font-weight: 500; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.supplier || '-'}">${item.supplier || '-'}</td>
+                <td class="text-center"><span class="badge-satuan" style="font-size: 0.72rem;">${item.disposisi_qc || '-'}</span></td>
+                <td class="text-center">${badge}</td>
+                <td class="font-mono text-center" style="font-size: 0.8rem;">${item.tgl_approve_label || item.tgl_approve || '-'}</td>
             </tr>
         `;
     });
@@ -4402,11 +4665,6 @@ function renderQaGrsTable(list) {
     if (footerStats) {
         footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Release GRS Material`;
     }
-    if (pageInfo) {
-        pageInfo.textContent = `Halaman ${state.qaCurrentPage} dari ${totalPages} (${totalItems} GRS)`;
-    }
-    if (btnPrev) btnPrev.disabled = state.qaCurrentPage <= 1;
-    if (btnNext) btnNext.disabled = state.qaCurrentPage >= totalPages;
 }
 
 /**
@@ -4415,9 +4673,6 @@ function renderQaGrsTable(list) {
 function renderQaPoTable(list) {
     const tbody = document.getElementById('qaPoTableBody');
     const footerStats = document.getElementById('qaModalFooterStats');
-    const pageInfo = document.getElementById('qaPageInfo');
-    const btnPrev = document.getElementById('btnQaPrevPage');
-    const btnNext = document.getElementById('btnQaNextPage');
     if (!tbody) return;
 
     if (!list || list.length === 0) {
@@ -4425,14 +4680,11 @@ function renderQaPoTable(list) {
             <tr>
                 <td colspan="9" class="subcon-empty-row">
                     <i class="fa-solid fa-file-invoice"></i>
-                    <div>Tidak ada Purchase Order (PO) yang cocok dengan filter saat ini</div>
+                    <div style="margin-top: 8px;">Tidak ada Purchase Order (PO) yang cocok</div>
                 </td>
             </tr>
         `;
         if (footerStats) footerStats.textContent = 'Menampilkan 0 PO';
-        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
-        if (btnPrev) btnPrev.disabled = true;
-        if (btnNext) btnNext.disabled = true;
         return;
     }
 
@@ -4448,37 +4700,26 @@ function renderQaPoTable(list) {
 
     let html = '';
     paged.forEach((po, idx) => {
-        let badgeStatusHtml = `<span class="badge-status-pending"><i class="fa-solid fa-hourglass-half"></i> Pending</span>`;
-        if (po.status_code === 'terpenuhi') {
-            badgeStatusHtml = `<span class="badge-status-terpenuhi"><i class="fa-solid fa-circle-check"></i> Lengkap</span>`;
-        } else if (po.status_code === 'ditolak') {
-            badgeStatusHtml = `<span class="badge-status-ditolak"><i class="fa-solid fa-circle-xmark"></i> Ditolak</span>`;
-        } else if (po.status_code === 'parsial') {
-            badgeStatusHtml = `<span class="badge-status-pending" style="color: #0284c7; background: rgba(2, 132, 199, 0.12);"><i class="fa-solid fa-circle-half-stroke"></i> Parsial</span>`;
-        }
-
-        const percent = Number(po.persentase || 0);
-        let progressColor = '#ef4444';
-        if (percent >= 100) progressColor = '#16a34a';
-        else if (percent >= 50) progressColor = '#0284c7';
+        const isSelesai = po.status_code === 'selesai';
+        const badge = isSelesai
+            ? '<span class="service-status-pill status-live">SELESAI</span>'
+            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">SEBAGIAN</span>';
 
         html += `
             <tr>
                 <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
                 <td>
-                    <span class="subcon-spk-num font-mono" style="cursor: pointer;" onclick="viewQaPoItems('${po.no_po}')" title="Klik untuk melihat seluruh GRS dari PO ini">
-                        <i class="fa-solid fa-file-invoice" style="color: #0284c7;"></i> ${po.no_po || '-'}
+                    <span style="cursor: pointer; color: var(--sna-blue); font-weight: 600;" onclick="viewQaPoItems('${po.no_po}')" title="Klik untuk memfilter GRS dari PO ini">
+                        <i class="fa-solid fa-file-invoice"></i> ${po.no_po || '-'}
                     </span>
                 </td>
-                <td style="white-space: nowrap;">${po.tanggal_label || po.tanggal || '-'}</td>
-                <td style="font-weight: 500; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${po.supplier || '-'}">
-                    ${po.supplier || '-'}
-                </td>
-                <td style="text-align: center;"><span class="badge-satuan">${po.total_grs || 0} GRS</span></td>
-                <td class="text-center" style="color: #16a34a; font-weight: 600;">${po.grs_approve || 0}</td>
-                <td class="text-center" style="color: #d97706; font-weight: 600;">${po.grs_pending || 0}</td>
-                <td class="text-right font-mono" style="font-weight: 700; color: ${progressColor};">${percent}%</td>
-                <td style="text-align: center;">${badgeStatusHtml}</td>
+                <td class="font-mono text-center" style="font-size: 0.8rem;">${po.tanggal_label || po.tanggal || '-'}</td>
+                <td style="font-weight: 500; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${po.supplier || '-'}">${po.supplier || '-'}</td>
+                <td class="text-center font-mono">${po.total_grs || 0}</td>
+                <td class="text-center font-mono" style="color: var(--kpi-green); font-weight: 600;">${po.grs_approve || 0}</td>
+                <td class="text-center font-mono" style="color: #d97706;">${po.grs_pending || 0}</td>
+                <td class="text-right font-mono" style="font-weight: 700; color: ${isSelesai ? 'var(--kpi-green)' : '#d97706'};">${po.persentase || 0}%</td>
+                <td class="text-center">${badge}</td>
             </tr>
         `;
     });
@@ -4487,11 +4728,133 @@ function renderQaPoTable(list) {
     if (footerStats) {
         footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Purchase Order`;
     }
-    if (pageInfo) {
-        pageInfo.textContent = `Halaman ${state.qaCurrentPage} dari ${totalPages} (${totalItems} PO)`;
+}
+
+/**
+ * Render Tabel SCN Subcon (Release Produk Jadi)
+ */
+function renderQaScnTable(list) {
+    const tbody = document.getElementById('qaScnTableBody');
+    const footerStats = document.getElementById('qaModalFooterStats');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="13" class="subcon-empty-row">
+                    <i class="fa-solid fa-boxes-packing" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px;">Tidak ada data Release Subcon (SCN) yang cocok</div>
+                </td>
+            </tr>
+        `;
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 SCN';
+        return;
     }
-    if (btnPrev) btnPrev.disabled = state.qaCurrentPage <= 1;
-    if (btnNext) btnNext.disabled = state.qaCurrentPage >= totalPages;
+
+    const pageSize = state.qaPageSize;
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (state.qaCurrentPage > totalPages) state.qaCurrentPage = totalPages;
+    if (state.qaCurrentPage < 1) state.qaCurrentPage = 1;
+
+    const startIdx = (state.qaCurrentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const paged = list.slice(startIdx, endIdx);
+
+    let html = '';
+    paged.forEach((item, idx) => {
+        let badge = '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM RELEASE</span>';
+        if (item.status_code === 'sudah_release') {
+            badge = '<span class="service-status-pill status-live">SUDAH RELEASE</span>';
+        } else if (item.status_code === 'ditolak') {
+            badge = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">DITOLAK</span>';
+        }
+
+        html += `
+            <tr>
+                <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
+                <td><strong style="color: #8b5cf6;">${item.no_subcon}</strong></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tanggal_label || item.tanggal}</td>
+                <td style="font-size: 0.82rem;">${item.supplier || '-'}</td>
+                <td><span class="font-mono" style="font-size: 0.8rem;">${item.kode_barang}</span></td>
+                <td>${item.nama_barang}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.batch || '-'}</td>
+                <td class="text-right font-mono">${Number(item.jumlah || 0).toLocaleString('id-ID')}</td>
+                <td class="text-center"><span class="badge-satuan">${item.satuan || '-'}</span></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem; color: #64748b;">${item.no_qc || '-'}</td>
+                <td class="text-center" style="font-size: 0.8rem;">${item.disposisi_qc_1 || '-'}</td>
+                <td class="text-center" style="font-size: 0.8rem;">${item.disposisi_qc_2 || '-'}</td>
+                <td class="text-center">${badge}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Release Subcon (SCN)`;
+    }
+}
+
+/**
+ * Render Tabel Accept Batch Record (Acc BR)
+ */
+function renderQaAcceptBrTable(list) {
+    const tbody = document.getElementById('qaAcceptBrTableBody');
+    const footerStats = document.getElementById('qaModalFooterStats');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="12" class="subcon-empty-row">
+                    <i class="fa-solid fa-file-circle-check" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px;">Semua Transaksi PRH Sudah Memiliki Batch Record!</div>
+                </td>
+            </tr>
+        `;
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 Transaksi PRH';
+        return;
+    }
+
+    const pageSize = state.qaPageSize;
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (state.qaCurrentPage > totalPages) state.qaCurrentPage = totalPages;
+    if (state.qaCurrentPage < 1) state.qaCurrentPage = 1;
+
+    const startIdx = (state.qaCurrentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const paged = list.slice(startIdx, endIdx);
+
+    let html = '';
+    paged.forEach((item, idx) => {
+        const isBelum = item.status_code === 'belum_ada';
+        const badge = isBelum
+            ? '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">BELUM ADA BR</span>'
+            : '<span class="service-status-pill status-live">SUDAH ADA BR</span>';
+
+        html += `
+            <tr>
+                <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
+                <td><strong style="color: #8b5cf6;">${item.no_prh}</strong></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_prh_label || item.tgl_prh}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem; color: #64748b;">${item.tgl_kirim_sample_label || item.tgl_kirim_sample || '-'}</td>
+                <td><span class="font-mono" style="font-size: 0.8rem;">${item.no_trans_prod || '-'}</span></td>
+                <td class="text-center"><span class="badge-satuan" style="font-size: 0.72rem;">${item.divisi || '-'}</span></td>
+                <td><span class="font-mono" style="font-size: 0.8rem;">${item.kode_barang}</span></td>
+                <td>${item.nama_barang}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.batch || '-'}</td>
+                <td class="text-right font-mono">${Number(item.jumlah || 0).toLocaleString('id-ID')}</td>
+                <td style="font-size: 0.8rem; color: #64748b;">${item.user_entry || '-'}</td>
+                <td class="text-center">${badge}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Transaksi PRH`;
+    }
 }
 
 /**
@@ -4502,32 +4865,48 @@ function viewQaPoItems(noPo) {
     const searchInput = document.getElementById('qaSearchInput');
     if (searchInput) searchInput.value = noPo;
     state.qaSearchQuery = noPo.trim().toLowerCase();
-    switchQaView('grs');
+    switchQaGrsSubView('detail');
 }
 
 /**
  * Navigasi ganti halaman QA
  */
 function changeQaPage(delta) {
-    state.qaCurrentPage += delta;
+    const bagian = state.currentQaBagian || 'grsmaterial';
+    let totalItems = 0;
     if (state.qaRawData) {
-        renderQaModalData(state.qaRawData);
+        if (bagian === 'grsmaterial') {
+            totalItems = state.currentQaGrsSubView === 'po'
+                ? (state.qaRawData.ringkasan_po?.length || 0)
+                : (state.qaRawData.items?.length || 0);
+        } else {
+            totalItems = state.qaRawData.items?.length || 0;
+        }
+    }
+
+    const totalPages = Math.ceil(totalItems / state.qaPageSize) || 1;
+    const target = state.qaCurrentPage + delta;
+    if (target >= 1 && target <= totalPages) {
+        state.qaCurrentPage = target;
+        if (state.qaRawData) {
+            renderQaModalData(state.qaRawData);
+        }
     }
 }
 
 /**
  * Sorting Kolom Tabel QA
  */
-function sortQa(viewMode, column) {
-    if (!state.qaSort) state.qaSort = { grs: { column: 'tanggal', dir: 'desc' }, po: { column: 'tanggal', dir: 'desc' } };
-    if (!state.qaSort[viewMode]) state.qaSort[viewMode] = { column: 'tanggal', dir: 'desc' };
+function sortQa(type, column) {
+    if (!state.qaSort) state.qaSort = { grs: { column: 'tanggal', dir: 'desc' }, po: { column: 'tanggal', dir: 'desc' }, scn: { column: 'tanggal', dir: 'desc' }, acceptbr: { column: 'tgl_prh', dir: 'desc' } };
+    if (!state.qaSort[type]) state.qaSort[type] = { column: column, dir: 'desc' };
 
-    const currentSort = state.qaSort[viewMode];
+    const currentSort = state.qaSort[type];
     if (currentSort.column === column) {
         currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
     } else {
         currentSort.column = column;
-        currentSort.dir = ['tanggal', 'total_grs', 'grs_approve', 'grs_pending', 'persentase'].includes(column) ? 'desc' : 'asc';
+        currentSort.dir = ['tanggal', 'tgl_prh', 'total_grs', 'grs_approve', 'grs_pending', 'persentase'].includes(column) ? 'desc' : 'asc';
     }
 
     state.qaCurrentPage = 1;
@@ -4539,13 +4918,20 @@ function sortQa(viewMode, column) {
 /**
  * Update Icon Header Sorting QA
  */
-function updateQaSortHeaders(viewMode) {
-    const panelId = viewMode === 'grs' ? 'tabPanelQaGrs' : 'tabPanelQaPo';
+function updateQaSortHeaders(bagian) {
+    let panelId = 'tabPanelQaGrs';
+    if (bagian === 'scn') panelId = 'tabPanelQaScn';
+    else if (bagian === 'acceptbr') panelId = 'tabPanelQaAcceptBr';
+
     const panel = document.getElementById(panelId);
     if (!panel) return;
 
-    const currentSort = (state.qaSort && state.qaSort[viewMode])
-        ? state.qaSort[viewMode]
+    const sortKey = (bagian === 'grsmaterial')
+        ? (state.currentQaGrsSubView === 'po' ? 'po' : 'grs')
+        : bagian;
+
+    const currentSort = (state.qaSort && state.qaSort[sortKey])
+        ? state.qaSort[sortKey]
         : { column: 'tanggal', dir: 'desc' };
 
     const ths = panel.querySelectorAll('th.sortable-th');
@@ -4569,27 +4955,52 @@ function updateQaSortHeaders(viewMode) {
     });
 }
 
+function renderQaPagination(totalItems, currentPage, pageSize) {
+    const pageInfo = document.getElementById('qaPageInfo');
+    const btnPrev = document.getElementById('btnQaPrevPage');
+    const btnNext = document.getElementById('btnQaNextPage');
+
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+    if (pageInfo) {
+        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+    }
+
+    if (btnPrev) btnPrev.disabled = currentPage <= 1;
+    if (btnNext) btnNext.disabled = currentPage >= totalPages;
+}
+
 function renderQaTablesLoading() {
     const tbodyGrs = document.getElementById('qaGrsTableBody');
     const tbodyPo = document.getElementById('qaPoTableBody');
+    const tbodyScn = document.getElementById('qaScnTableBody');
+    const tbodyBr = document.getElementById('qaAcceptBrTableBody');
+
     const skeleton = `
         <tr>
-            <td colspan="10" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+            <td colspan="13" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
                 <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #8b5cf6;"></i>
-                <div style="margin-top: 8px; font-weight: 500;">Memuat data Release Material GRS dari Atena ERP...</div>
+                <div style="margin-top: 8px; font-weight: 500;">Memuat data QA dari Atena ERP...</div>
             </td>
         </tr>
     `;
     if (tbodyGrs) tbodyGrs.innerHTML = skeleton;
     if (tbodyPo) tbodyPo.innerHTML = skeleton;
+    if (tbodyScn) tbodyScn.innerHTML = skeleton;
+    if (tbodyBr) tbodyBr.innerHTML = skeleton;
 }
 
 function renderQaTablesError(message) {
     const tbodyGrs = document.getElementById('qaGrsTableBody');
     const tbodyPo = document.getElementById('qaPoTableBody');
+    const tbodyScn = document.getElementById('qaScnTableBody');
+    const tbodyBr = document.getElementById('qaAcceptBrTableBody');
+
     const errHtml = `
         <tr>
-            <td colspan="10" class="subcon-empty-row" style="color: #ef4444;">
+            <td colspan="13" class="subcon-empty-row" style="color: #ef4444;">
                 <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; color: #ef4444;"></i>
                 <div style="margin-top: 8px; font-weight: 600;">Gagal Mengambil Data QA</div>
                 <div style="font-size: 0.8rem; color: #64748b;">${message || 'Terjadi kesalahan sistem'}</div>
@@ -4598,5 +5009,1350 @@ function renderQaTablesError(message) {
     `;
     if (tbodyGrs) tbodyGrs.innerHTML = errHtml;
     if (tbodyPo) tbodyPo.innerHTML = errHtml;
+    if (tbodyScn) tbodyScn.innerHTML = errHtml;
+    if (tbodyBr) tbodyBr.innerHTML = errHtml;
 }
+
+// ====================================================================
+// 15. MODAL MONITORING PENYELESAIAN DR (WH FG ATENA ERP)
+// ====================================================================
+
+function formatWhFgDate(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function openWhFgModal(range = 'month') {
+    const modal = document.getElementById('whFgModal');
+    if (!modal) return;
+
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    state.whFgSearchQuery = '';
+    state.whFgCurrentPage = 1;
+
+    const searchInput = document.getElementById('whFgSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectWhFgStatus');
+    if (selectStatus) selectStatus.value = 'all';
+    state.currentWhFgStatus = 'all';
+
+    setWhFgQuickDate(range);
+}
+
+function closeWhFgModal() {
+    const modal = document.getElementById('whFgModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+function setWhFgQuickDate(preset = 'month') {
+    state.currentWhFgRange = preset;
+    state.whFgCurrentPage = 1;
+
+    const now = new Date();
+    const today = formatWhFgDate(now);
+    let startDate = today;
+    let endDate = today;
+
+    if (preset === 'month') {
+        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        endDate = today;
+    } else if (preset === 'week') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        startDate = formatWhFgDate(d);
+        endDate = today;
+    } else if (preset === 'today') {
+        startDate = today;
+        endDate = today;
+    } else if (preset === 'all') {
+        startDate = '2026-01-01';
+        endDate = today;
+    }
+
+    state.whFgDateStart = startDate;
+    state.whFgDateEnd = endDate;
+
+    const startInput = document.getElementById('whFgDateStart');
+    const endInput = document.getElementById('whFgDateEnd');
+    if (startInput) startInput.value = startDate;
+    if (endInput) endInput.value = endDate;
+
+    const pills = document.querySelectorAll('.wh-fg-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    const btnMap = {
+        'month': 'btnQuickWhFgMonth',
+        'week': 'btnQuickWhFgWeek',
+        'today': 'btnQuickWhFgToday',
+        'all': 'btnQuickWhFgAll'
+    };
+    const activeBtn = document.getElementById(btnMap[preset]);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    loadWhFgData();
+}
+
+function handleWhFgDateChange(field) {
+    const startInput = document.getElementById('whFgDateStart');
+    const endInput = document.getElementById('whFgDateEnd');
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (field === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.whFgDateStart = start;
+    state.whFgDateEnd = end;
+    state.currentWhFgRange = 'custom';
+    state.whFgCurrentPage = 1;
+
+    const pills = document.querySelectorAll('.wh-fg-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    loadWhFgData();
+}
+
+function resetWhFgFilter() {
+    state.whFgSearchQuery = '';
+    state.currentWhFgStatus = 'all';
+    state.whFgCurrentPage = 1;
+
+    const searchInput = document.getElementById('whFgSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectWhFgStatus');
+    if (selectStatus) selectStatus.value = 'all';
+
+    setWhFgQuickDate('month');
+}
+
+function switchWhFgStatus(status) {
+    state.currentWhFgStatus = status;
+    state.whFgCurrentPage = 1;
+    if (state.whFgRawData) {
+        renderWhFgModalData(state.whFgRawData);
+    }
+}
+
+function switchWhFgView(viewMode) {
+    state.currentWhFgView = viewMode;
+    state.whFgCurrentPage = 1;
+
+    const btnDr = document.getElementById('btnViewWhFgDr');
+    const btnItems = document.getElementById('btnViewWhFgItems');
+    const panelDr = document.getElementById('tabPanelWhFgDr');
+    const panelItems = document.getElementById('tabPanelWhFgItems');
+
+    if (btnDr) btnDr.classList.toggle('active', viewMode === 'dr');
+    if (btnItems) btnItems.classList.toggle('active', viewMode === 'items');
+    if (panelDr) panelDr.classList.toggle('active', viewMode === 'dr');
+    if (panelItems) panelItems.classList.toggle('active', viewMode === 'items');
+
+    updateWhFgSortHeaders(viewMode);
+
+    if (state.whFgRawData) {
+        renderWhFgModalData(state.whFgRawData);
+    }
+}
+
+let whFgSearchTimeout = null;
+function handleWhFgSearch(query) {
+    clearTimeout(whFgSearchTimeout);
+    whFgSearchTimeout = setTimeout(() => {
+        state.whFgSearchQuery = (query || '').trim().toLowerCase();
+        state.whFgCurrentPage = 1;
+        if (state.whFgRawData) {
+            renderWhFgModalData(state.whFgRawData);
+        }
+    }, 200);
+}
+
+async function syncWhFgData() {
+    const syncBtn = document.getElementById('btnSyncWhFg');
+    const icon = syncBtn ? syncBtn.querySelector('i') : null;
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        renderWhFgTablesLoading();
+        state.whFgCache.clear();
+        await fetch('/api/dashboard/wh-fg/sync', { method: 'POST' });
+        await loadWhFgData(true);
+        await fetchDashboardStats();
+    } catch (err) {
+        console.error('[SYNC WH FG ERROR]:', err);
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+    }
+}
+
+async function loadWhFgData(force = false) {
+    const { whFgDateStart, whFgDateEnd, currentWhFgRange } = state;
+    const cacheKey = `${currentWhFgRange}_${whFgDateStart}_${whFgDateEnd}`;
+
+    if (!force && state.whFgCache.has(cacheKey)) {
+        const cached = state.whFgCache.get(cacheKey);
+        state.whFgRawData = cached;
+        renderWhFgModalData(cached);
+        return;
+    }
+
+    renderWhFgTablesLoading();
+
+    try {
+        const params = new URLSearchParams({
+            range: currentWhFgRange,
+            tglawal: whFgDateStart,
+            tglakhir: whFgDateEnd,
+            force: force ? 'true' : 'false'
+        });
+
+        const res = await fetch(`/api/dashboard/wh-fg?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+
+        if (json.success && json.data) {
+            state.whFgRawData = json.data;
+            state.whFgCache.set(cacheKey, json.data);
+            renderWhFgModalData(json.data);
+        } else {
+            renderWhFgTablesError(json.message || 'Format data WH FG tidak valid');
+        }
+    } catch (err) {
+        renderWhFgTablesError(err.message);
+    }
+}
+
+function renderWhFgModalData(data) {
+    if (!data) return;
+    const kpi = data.kpi || {};
+
+    const elTotalDr = document.getElementById('modalKpiWhFgTotalDr');
+    const elSudahDn = document.getElementById('modalKpiWhFgSudahDn');
+    const elBelumDn = document.getElementById('modalKpiWhFgBelumDn');
+    const elPercent = document.getElementById('modalKpiWhFgPercent');
+    const elTotalQty = document.getElementById('modalKpiWhFgTotalQty');
+    const elTotalQtyDn = document.getElementById('modalKpiWhFgTotalQtyDn');
+
+    if (elTotalDr) elTotalDr.textContent = Number(kpi.total_dr || 0).toLocaleString('id-ID');
+    if (elSudahDn) elSudahDn.textContent = Number(kpi.dr_sudah_dn || 0).toLocaleString('id-ID');
+    if (elBelumDn) elBelumDn.textContent = Number(kpi.dr_belum_dn || 0).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = `${kpi.persentase_selesai || 0}%`;
+    if (elTotalQty) elTotalQty.textContent = Number(Math.round(kpi.total_jumlah || 0)).toLocaleString('id-ID');
+    if (elTotalQtyDn) elTotalQtyDn.textContent = Number(Math.round(kpi.total_jumlah_dn || 0)).toLocaleString('id-ID');
+
+    const lastSyncEl = document.getElementById('whFgLastSyncTime');
+    if (lastSyncEl && data.meta?.sync_time) {
+        lastSyncEl.textContent = `Sinkron: ${new Date(data.meta.sync_time).toLocaleTimeString('id-ID')}`;
+    }
+
+    const rawDrList = data.summary_by_dr || [];
+    const rawItems = data.items || [];
+
+    const countDrEl = document.getElementById('countWhFgDr');
+    const countItemsEl = document.getElementById('countWhFgItems');
+    if (countDrEl) countDrEl.textContent = rawDrList.length;
+    if (countItemsEl) countItemsEl.textContent = rawItems.length;
+
+    // Filter Data
+    const q = state.whFgSearchQuery;
+    const st = state.currentWhFgStatus;
+
+    if (state.currentWhFgView === 'dr') {
+        let filtered = rawDrList.filter(dr => {
+            if (st !== 'all' && dr.status_code !== st) return false;
+            if (!q) return true;
+            return (dr.no_trans || '').toLowerCase().includes(q) ||
+                (dr.customer || '').toLowerCase().includes(q) ||
+                (dr.no_pesanan || '').toLowerCase().includes(q) ||
+                (dr.no_dn || '').toLowerCase().includes(q);
+        });
+
+        // Sorting
+        const sort = state.whFgSort.dr;
+        filtered.sort((a, b) => {
+            const valA = a[sort.column] ?? '';
+            const valB = b[sort.column] ?? '';
+            const cmp = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+            return sort.dir === 'asc' ? cmp : -cmp;
+        });
+
+        renderWhFgDrTable(filtered);
+        renderWhFgPagination(filtered.length, state.whFgCurrentPage, state.whFgPageSize);
+    } else {
+        let filtered = rawItems.filter(item => {
+            if (st !== 'all' && item.status_code !== st) return false;
+            if (!q) return true;
+            return (item.no_trans || '').toLowerCase().includes(q) ||
+                (item.customer || '').toLowerCase().includes(q) ||
+                (item.kode_barang || '').toLowerCase().includes(q) ||
+                (item.nama_barang || '').toLowerCase().includes(q) ||
+                (item.no_dn || '').toLowerCase().includes(q);
+        });
+
+        const sort = state.whFgSort.items;
+        filtered.sort((a, b) => {
+            const valA = a[sort.column] ?? '';
+            const valB = b[sort.column] ?? '';
+            const cmp = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+            return sort.dir === 'asc' ? cmp : -cmp;
+        });
+
+        renderWhFgItemsTable(filtered);
+        renderWhFgPagination(filtered.length, state.whFgCurrentPage, state.whFgPageSize);
+    }
+}
+
+function renderWhFgDrTable(drList) {
+    const tbody = document.getElementById('whFgDrTableBody');
+    if (!tbody) return;
+
+    if (drList.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="12" class="subcon-empty-row">
+                    <i class="fa-solid fa-box-open" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px; font-weight: 500;">Tidak ada data DR yang cocok dengan filter</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const startIdx = (state.whFgCurrentPage - 1) * state.whFgPageSize;
+    const pageItems = drList.slice(startIdx, startIdx + state.whFgPageSize);
+
+    let html = '';
+    pageItems.forEach((dr, idx) => {
+        const no = startIdx + idx + 1;
+        const isSudah = dr.status_code === 'sudah_dn';
+        const badge = isSudah
+            ? '<span class="service-status-pill status-live">SUDAH DN</span>'
+            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM DN</span>';
+
+        const barColor = isSudah ? 'var(--kpi-green)' : 'var(--kpi-yellow)';
+
+        html += `
+            <tr>
+                <td class="text-center font-mono">${no}</td>
+                <td><strong style="color: var(--sna-blue);">${dr.no_trans}</strong></td>
+                <td class="text-center">${dr.tanggal_label || dr.tanggal || '-'}</td>
+                <td><strong>${dr.customer}</strong></td>
+                <td><span style="font-size: 0.8rem; color: var(--text-secondary);">${dr.ekspedisi}</span></td>
+                <td><span class="font-mono" style="font-size: 0.82rem;">${dr.no_pesanan}</span></td>
+                <td class="text-center font-mono">${dr.item_count}</td>
+                <td class="text-right font-mono">${Number(Math.round(dr.total_jumlah || 0)).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: var(--kpi-green); font-weight: 600;">${Number(Math.round(dr.total_jumlah_dn || 0)).toLocaleString('id-ID')}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div class="progress-bar-track" style="flex: 1; height: 6px;">
+                            <div class="progress-bar-fill" style="width: ${dr.progress_percent}%; background: ${barColor};"></div>
+                        </div>
+                        <span style="font-size: 0.75rem; font-weight: 600; font-family: var(--font-mono);">${dr.progress_percent}%</span>
+                    </div>
+                </td>
+                <td><span class="font-mono" style="font-size: 0.8rem; color: #64748b;">${dr.no_dn}</span></td>
+                <td class="text-center">${badge}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+function renderWhFgItemsTable(items) {
+    const tbody = document.getElementById('whFgItemsTableBody');
+    if (!tbody) return;
+
+    if (items.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="13" class="subcon-empty-row">
+                    <i class="fa-solid fa-box-open" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px; font-weight: 500;">Tidak ada rincian item yang cocok</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const startIdx = (state.whFgCurrentPage - 1) * state.whFgPageSize;
+    const pageItems = items.slice(startIdx, startIdx + state.whFgPageSize);
+
+    let html = '';
+    pageItems.forEach((item, idx) => {
+        const no = startIdx + idx + 1;
+        const isSudah = item.status_code === 'sudah_dn';
+        const badge = isSudah
+            ? '<span class="service-status-pill status-live">SUDAH DN</span>'
+            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM DN</span>';
+
+        html += `
+            <tr>
+                <td class="text-center font-mono">${no}</td>
+                <td><strong style="color: var(--sna-blue);">${item.no_trans}</strong></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tanggal_label || item.tanggal}</td>
+                <td><strong>${item.customer}</strong></td>
+                <td><span class="font-mono" style="font-size: 0.82rem;">${item.kode_barang}</span></td>
+                <td>${item.nama_barang}</td>
+                <td class="text-center"><span class="badge-satuan">${item.satuan}</span></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.batch}</td>
+                <td class="text-right font-mono">${Number(item.jumlah || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: var(--kpi-green); font-weight: 600;">${Number(item.jumlah_dn || 0).toLocaleString('id-ID')}</td>
+                <td><span class="font-mono" style="font-size: 0.8rem; color: #64748b;">${item.no_dn}</span></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_dn_label || item.tgl_dn || '-'}</td>
+                <td class="text-center">${badge}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+function renderWhFgPagination(totalItems, currentPage, pageSize) {
+    const pageInfo = document.getElementById('whFgPageInfo');
+    const btnPrev = document.getElementById('btnWhFgPrevPage');
+    const btnNext = document.getElementById('btnWhFgNextPage');
+
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+    if (pageInfo) {
+        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+    }
+
+    if (btnPrev) btnPrev.disabled = currentPage <= 1;
+    if (btnNext) btnNext.disabled = currentPage >= totalPages;
+}
+
+function changeWhFgPage(delta) {
+    const totalItems = state.currentWhFgView === 'dr'
+        ? (state.whFgRawData?.summary_by_dr?.length || 0)
+        : (state.whFgRawData?.items?.length || 0);
+
+    const totalPages = Math.ceil(totalItems / state.whFgPageSize) || 1;
+    const target = state.whFgCurrentPage + delta;
+    if (target >= 1 && target <= totalPages) {
+        state.whFgCurrentPage = target;
+        if (state.whFgRawData) {
+            renderWhFgModalData(state.whFgRawData);
+        }
+    }
+}
+
+function sortWhFg(view, column) {
+    const current = state.whFgSort[view];
+    if (current.column === column) {
+        current.dir = current.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        current.column = column;
+        current.dir = 'asc';
+    }
+
+    updateWhFgSortHeaders(view);
+    if (state.whFgRawData) {
+        renderWhFgModalData(state.whFgRawData);
+    }
+}
+
+function updateWhFgSortHeaders(view) {
+    const panelId = view === 'dr' ? 'tabPanelWhFgDr' : 'tabPanelWhFgItems';
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    const current = state.whFgSort[view];
+    const ths = panel.querySelectorAll('th.sortable-th');
+    ths.forEach(th => {
+        const key = th.getAttribute('onclick')?.match(/'([^']+)'\)$/)?.[1];
+        const icon = th.querySelector('.sort-icon');
+        if (key === current.column) {
+            th.classList.add('active-sort');
+            if (icon) {
+                icon.className = current.dir === 'asc'
+                    ? 'fa-solid fa-arrow-up-wide-short sort-icon'
+                    : 'fa-solid fa-arrow-down-wide-short sort-icon';
+            }
+        } else {
+            th.classList.remove('active-sort');
+            if (icon) icon.className = 'fa-solid fa-sort sort-icon';
+        }
+    });
+}
+
+function renderWhFgTablesLoading() {
+    const tbodyDr = document.getElementById('whFgDrTableBody');
+    const tbodyItems = document.getElementById('whFgItemsTableBody');
+    const skeleton = `
+        <tr>
+            <td colspan="13" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #0284c7;"></i>
+                <div style="margin-top: 8px; font-weight: 500;">Memuat data Penyelesaian DR dari Atena ERP...</div>
+            </td>
+        </tr>
+    `;
+    if (tbodyDr) tbodyDr.innerHTML = skeleton;
+    if (tbodyItems) tbodyItems.innerHTML = skeleton;
+}
+
+function renderWhFgTablesError(message) {
+    const tbodyDr = document.getElementById('whFgDrTableBody');
+    const tbodyItems = document.getElementById('whFgItemsTableBody');
+    const errHtml = `
+        <tr>
+            <td colspan="13" class="subcon-empty-row" style="color: #ef4444;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; color: #ef4444;"></i>
+                <div style="margin-top: 8px; font-weight: 600;">Gagal Mengambil Data WH FG</div>
+                <div style="font-size: 0.8rem; color: #64748b;">${message || 'Terjadi kesalahan sistem'}</div>
+            </td>
+        </tr>
+    `;
+    if (tbodyDr) tbodyDr.innerHTML = errHtml;
+    if (tbodyItems) tbodyItems.innerHTML = errHtml;
+}
+
+
+// ====================================================================
+// 16. MODAL MONITORING PEMENUHAN WH MATERIAL (ATENA ERP)
+// ====================================================================
+
+function formatWhMatDate(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function openWhMatModal(range = 'month', bagian = 'permintaanbahan') {
+    const modal = document.getElementById('whMatModal');
+    if (!modal) return;
+
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    state.currentWhMatBagian = bagian;
+    state.whMatSearchQuery = '';
+    state.whMatCurrentPage = 1;
+
+    const searchInput = document.getElementById('whMatSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectWhMatStatus');
+    if (selectStatus) selectStatus.value = 'all';
+    state.currentWhMatStatus = 'all';
+
+    updateWhMatBagianTabs(bagian);
+    switchWhMatMrSubView(state.whMatMrSubView || 'doc', false);
+    switchWhMatDrSubView(state.whMatDrSubView || 'doc', false);
+
+    const whMatCardData = state.stats?.WH_MAT;
+    if (whMatCardData?.kpi) {
+        const countMr = document.getElementById('countWhMatMr');
+        const countDr = document.getElementById('countWhMatDr');
+        if (countMr && whMatCardData.kpi.total_mr && countMr.textContent.includes('0')) {
+            countMr.textContent = `${whMatCardData.kpi.total_mr} MR`;
+        }
+        if (countDr && whMatCardData.kpi.total_dr && countDr.textContent.includes('0')) {
+            countDr.textContent = `${whMatCardData.kpi.total_dr} DR`;
+        }
+    }
+
+    setWhMatQuickDate(range);
+}
+
+function closeWhMatModal() {
+    const modal = document.getElementById('whMatModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+function switchWhMatBagian(bagian) {
+    if (state.currentWhMatBagian === bagian) return;
+    state.currentWhMatBagian = bagian;
+    state.whMatCurrentPage = 1;
+    updateWhMatBagianTabs(bagian);
+    loadWhMatData();
+}
+
+function updateWhMatBagianTabs(bagian) {
+    const btnMr = document.getElementById('btnWhMatTabMr');
+    const btnDr = document.getElementById('btnWhMatTabDr');
+    const panelMr = document.getElementById('tabPanelWhMatMr');
+    const panelDr = document.getElementById('tabPanelWhMatDr');
+
+    const isMr = bagian === 'permintaanbahan';
+    if (btnMr) btnMr.classList.toggle('active', isMr);
+    if (btnDr) btnDr.classList.toggle('active', !isMr);
+    if (panelMr) panelMr.classList.toggle('active', isMr);
+    if (panelDr) panelDr.classList.toggle('active', !isMr);
+
+    // Update KPI Card Labels
+    const lblTotal = document.getElementById('modalKpiWhMatTotalLbl');
+    const lblSelesai = document.getElementById('modalKpiWhMatSelesaiLbl');
+    const lblBelum = document.getElementById('modalKpiWhMatBelumLbl');
+    const lblQty = document.getElementById('modalKpiWhMatTotalQtyLbl');
+    const lblRealisasi = document.getElementById('modalKpiWhMatTotalQtyRealisasiLbl');
+
+    if (isMr) {
+        if (lblTotal) lblTotal.textContent = 'Total MR';
+        if (lblSelesai) lblSelesai.textContent = 'Terpenuhi';
+        if (lblBelum) lblBelum.textContent = 'Belum Terpenuhi';
+        if (lblQty) lblQty.textContent = 'Total Qty Diminta';
+        if (lblRealisasi) lblRealisasi.textContent = 'Total Qty Realisasi';
+    } else {
+        if (lblTotal) lblTotal.textContent = 'Total DR';
+        if (lblSelesai) lblSelesai.textContent = 'Sudah DN';
+        if (lblBelum) lblBelum.textContent = 'Belum DN';
+        if (lblQty) lblQty.textContent = 'Total Qty DR';
+        if (lblRealisasi) lblRealisasi.textContent = 'Total Qty Realisasi DN';
+    }
+}
+
+function setWhMatQuickDate(preset = 'month') {
+    state.currentWhMatRange = preset;
+    state.whMatCurrentPage = 1;
+
+    const now = new Date();
+    const today = formatWhMatDate(now);
+    let startDate = today;
+    let endDate = today;
+
+    if (preset === 'month') {
+        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        endDate = today;
+    } else if (preset === 'week') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        startDate = formatWhMatDate(d);
+        endDate = today;
+    } else if (preset === 'today') {
+        startDate = today;
+        endDate = today;
+    } else if (preset === 'all') {
+        startDate = '2026-01-01';
+        endDate = today;
+    }
+
+    state.whMatDateStart = startDate;
+    state.whMatDateEnd = endDate;
+
+    const startInput = document.getElementById('whMatDateStart');
+    const endInput = document.getElementById('whMatDateEnd');
+    if (startInput) startInput.value = startDate;
+    if (endInput) endInput.value = endDate;
+
+    const pills = document.querySelectorAll('.wh-mat-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    const btnMap = {
+        'month': 'btnQuickWhMatMonth',
+        'week': 'btnQuickWhMatWeek',
+        'today': 'btnQuickWhMatToday',
+        'all': 'btnQuickWhMatAll'
+    };
+    const activeBtn = document.getElementById(btnMap[preset]);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    loadWhMatData();
+}
+
+function handleWhMatDateChange(field) {
+    const startInput = document.getElementById('whMatDateStart');
+    const endInput = document.getElementById('whMatDateEnd');
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (field === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.whMatDateStart = start;
+    state.whMatDateEnd = end;
+    state.currentWhMatRange = 'custom';
+    state.whMatCurrentPage = 1;
+
+    const pills = document.querySelectorAll('.wh-mat-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    loadWhMatData();
+}
+
+function resetWhMatFilter() {
+    state.whMatSearchQuery = '';
+    state.currentWhMatStatus = 'all';
+    state.whMatCurrentPage = 1;
+
+    const searchInput = document.getElementById('whMatSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectWhMatStatus');
+    if (selectStatus) selectStatus.value = 'all';
+
+    setWhMatQuickDate('month');
+}
+
+function switchWhMatStatus(status) {
+    state.currentWhMatStatus = status;
+    state.whMatCurrentPage = 1;
+    if (state.whMatRawData) {
+        renderWhMatModalData(state.whMatRawData);
+    }
+}
+
+let whMatSearchTimeout = null;
+function handleWhMatSearch(query) {
+    clearTimeout(whMatSearchTimeout);
+    whMatSearchTimeout = setTimeout(() => {
+        state.whMatSearchQuery = (query || '').trim().toLowerCase();
+        state.whMatCurrentPage = 1;
+        if (state.whMatRawData) {
+            renderWhMatModalData(state.whMatRawData);
+        }
+    }, 200);
+}
+
+async function syncWhMatData() {
+    const syncBtn = document.getElementById('btnSyncWhMat');
+    const icon = syncBtn ? syncBtn.querySelector('i') : null;
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        renderWhMatTablesLoading();
+        state.whMatCache.clear();
+        await fetch('/api/dashboard/wh-mat/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bagian: state.currentWhMatBagian })
+        });
+        await loadWhMatData(true);
+        await fetchDashboardStats();
+    } catch (err) {
+        console.error('[SYNC WH MAT ERROR]:', err);
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+    }
+}
+
+async function loadWhMatData(force = false) {
+    const { whMatDateStart, whMatDateEnd, currentWhMatRange, currentWhMatBagian } = state;
+    const cacheKey = `${currentWhMatBagian}_${currentWhMatRange}_${whMatDateStart}_${whMatDateEnd}`;
+
+    if (!force && state.whMatCache.has(cacheKey)) {
+        const cached = state.whMatCache.get(cacheKey);
+        state.whMatRawData = cached;
+        renderWhMatModalData(cached);
+        return;
+    }
+
+    renderWhMatTablesLoading();
+
+    try {
+        const params = new URLSearchParams({
+            bagian: currentWhMatBagian,
+            range: currentWhMatRange,
+            tglawal: whMatDateStart,
+            tglakhir: whMatDateEnd,
+            force: force ? 'true' : 'false'
+        });
+
+        const res = await fetch(`/api/dashboard/wh-mat?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+
+        if (json.success && json.data) {
+            state.whMatRawData = json.data;
+            state.whMatCache.set(cacheKey, json.data);
+            renderWhMatModalData(json.data);
+        } else {
+            renderWhMatTablesError(json.message || 'Format data WH Material tidak valid');
+        }
+    } catch (err) {
+        renderWhMatTablesError(err.message);
+    }
+}
+
+function switchWhMatMrSubView(view, triggerRender = true) {
+    state.whMatMrSubView = view;
+    state.whMatCurrentPage = 1;
+
+    const btnDoc = document.getElementById('btnSubViewWhMatMrDoc');
+    const btnItem = document.getElementById('btnSubViewWhMatMrItem');
+    const panelDoc = document.getElementById('subPanelWhMatMrDoc');
+    const panelItem = document.getElementById('subPanelWhMatMrItem');
+
+    const isDoc = view === 'doc';
+    if (btnDoc) btnDoc.classList.toggle('active', isDoc);
+    if (btnItem) btnItem.classList.toggle('active', !isDoc);
+    if (panelDoc) panelDoc.style.display = isDoc ? 'block' : 'none';
+    if (panelItem) panelItem.style.display = isDoc ? 'none' : 'block';
+
+    if (triggerRender && state.whMatRawData) {
+        renderWhMatModalData(state.whMatRawData);
+    }
+}
+
+function switchWhMatDrSubView(view, triggerRender = true) {
+    state.whMatDrSubView = view;
+    state.whMatCurrentPage = 1;
+
+    const btnDoc = document.getElementById('btnSubViewWhMatDrDoc');
+    const btnItem = document.getElementById('btnSubViewWhMatDrItem');
+    const panelDoc = document.getElementById('subPanelWhMatDrDoc');
+    const panelItem = document.getElementById('subPanelWhMatDrItem');
+
+    const isDoc = view === 'doc';
+    if (btnDoc) btnDoc.classList.toggle('active', isDoc);
+    if (btnItem) btnItem.classList.toggle('active', !isDoc);
+    if (panelDoc) panelDoc.style.display = isDoc ? 'block' : 'none';
+    if (panelItem) panelItem.style.display = isDoc ? 'none' : 'block';
+
+    if (triggerRender && state.whMatRawData) {
+        renderWhMatModalData(state.whMatRawData);
+    }
+}
+
+function viewWhMatMrDocItems(noTrans) {
+    state.whMatSearchQuery = (noTrans || '').trim().toLowerCase();
+    const searchInput = document.getElementById('whMatSearchInput');
+    if (searchInput) searchInput.value = noTrans || '';
+    switchWhMatMrSubView('item', true);
+}
+
+function viewWhMatDrDocItems(noTrans) {
+    state.whMatSearchQuery = (noTrans || '').trim().toLowerCase();
+    const searchInput = document.getElementById('whMatSearchInput');
+    if (searchInput) searchInput.value = noTrans || '';
+    switchWhMatDrSubView('item', true);
+}
+
+function renderWhMatModalData(data) {
+    if (!data) return;
+    const kpi = data.kpi || {};
+    const isMr = state.currentWhMatBagian === 'permintaanbahan';
+
+    const elTotal = document.getElementById('modalKpiWhMatTotal');
+    const elSelesai = document.getElementById('modalKpiWhMatSelesai');
+    const elBelum = document.getElementById('modalKpiWhMatBelum');
+    const elPercent = document.getElementById('modalKpiWhMatPercent');
+    const elTotalQty = document.getElementById('modalKpiWhMatTotalQty');
+    const elTotalRealisasi = document.getElementById('modalKpiWhMatTotalQtyRealisasi');
+
+    const totalCount = isMr ? (kpi.total_mr ?? 0) : (kpi.total_dr ?? 0);
+    const selesaiCount = isMr ? (kpi.mr_terpenuhi ?? 0) : (kpi.dr_sudah_dn ?? 0);
+    const belumCount = isMr ? (kpi.mr_belum_terpenuhi ?? 0) : (kpi.dr_belum_dn ?? 0);
+
+    if (elTotal) elTotal.textContent = Number(totalCount).toLocaleString('id-ID');
+    if (elSelesai) elSelesai.textContent = Number(selesaiCount).toLocaleString('id-ID');
+    if (elBelum) elBelum.textContent = Number(belumCount).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = `${kpi.persentase_selesai || 0}%`;
+    if (elTotalQty) elTotalQty.textContent = Number(Math.round(kpi.total_jml || 0)).toLocaleString('id-ID');
+    if (elTotalRealisasi) elTotalRealisasi.textContent = Number(Math.round(kpi.total_terpenuhi || 0)).toLocaleString('id-ID');
+
+    const lastSyncEl = document.getElementById('whMatLastSyncTime');
+    if (lastSyncEl && data.meta?.sync_time) {
+        lastSyncEl.textContent = `Sinkron: ${new Date(data.meta.sync_time).toLocaleTimeString('id-ID')}`;
+    }
+
+    const rawDocs = data.summary_by_doc || [];
+    const rawItems = data.items || [];
+
+    // Update Badges on Sub-view buttons & Tabs
+    if (isMr) {
+        const countBadge = document.getElementById('countWhMatMr');
+        if (countBadge) countBadge.textContent = `${rawDocs.length} MR (${rawItems.length} Item)`;
+        const cDoc = document.getElementById('countSubViewMrDoc');
+        if (cDoc) cDoc.textContent = rawDocs.length;
+        const cItem = document.getElementById('countSubViewMrItem');
+        if (cItem) cItem.textContent = rawItems.length;
+    } else {
+        const countBadge = document.getElementById('countWhMatDr');
+        if (countBadge) countBadge.textContent = `${rawDocs.length} DR (${rawItems.length} Item)`;
+        const cDoc = document.getElementById('countSubViewDrDoc');
+        if (cDoc) cDoc.textContent = rawDocs.length;
+        const cItem = document.getElementById('countSubViewDrItem');
+        if (cItem) cItem.textContent = rawItems.length;
+    }
+
+    const q = state.whMatSearchQuery;
+    const st = state.currentWhMatStatus;
+
+    if (isMr) {
+        if (state.whMatMrSubView === 'doc') {
+            let filtered = rawDocs.filter(doc => {
+                if (st === 'terpenuhi' && doc.status_code !== 'terpenuhi') return false;
+                if (st === 'belum' && doc.status_code !== 'belum') return false;
+                if (!q) return true;
+                return (doc.no_trans || '').toLowerCase().includes(q) ||
+                    (doc.lokasi_asal || '').toLowerCase().includes(q) ||
+                    (doc.lokasi_tujuan || '').toLowerCase().includes(q) ||
+                    (doc.leadtime || '').toLowerCase().includes(q) ||
+                    (doc.status_mr || '').toLowerCase().includes(q);
+            });
+
+            const sort = state.whMatSort.mr_doc || { column: 'tgl_kirim', dir: 'desc' };
+            filtered.sort((a, b) => {
+                const valA = a[sort.column] ?? '';
+                const valB = b[sort.column] ?? '';
+                const cmp = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+                return sort.dir === 'asc' ? cmp : -cmp;
+            });
+
+            renderWhMatMrDocTable(filtered);
+            renderWhMatPagination(filtered.length, state.whMatCurrentPage, state.whMatPageSize);
+        } else {
+            let filtered = rawItems.filter(item => {
+                if (st === 'terpenuhi' && item.status_code !== 'terpenuhi') return false;
+                if (st === 'belum' && item.status_code !== 'belum') return false;
+                if (!q) return true;
+                return (item.no_trans || '').toLowerCase().includes(q) ||
+                    (item.kode_barang || '').toLowerCase().includes(q) ||
+                    (item.nama_barang || '').toLowerCase().includes(q) ||
+                    (item.rak || '').toLowerCase().includes(q) ||
+                    (item.lokasi_tujuan || '').toLowerCase().includes(q);
+            });
+
+            const sort = state.whMatSort.mr || { column: 'tgl_kirim', dir: 'desc' };
+            filtered.sort((a, b) => {
+                const valA = a[sort.column] ?? '';
+                const valB = b[sort.column] ?? '';
+                const cmp = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+                return sort.dir === 'asc' ? cmp : -cmp;
+            });
+
+            renderWhMatMrTable(filtered);
+            renderWhMatPagination(filtered.length, state.whMatCurrentPage, state.whMatPageSize);
+        }
+    } else {
+        if (state.whMatDrSubView === 'doc') {
+            let filtered = rawDocs.filter(doc => {
+                if (st === 'terpenuhi' && doc.status_code !== 'sudah_dn') return false;
+                if (st === 'belum' && doc.status_code !== 'belum_dn') return false;
+                if (!q) return true;
+                return (doc.no_trans || '').toLowerCase().includes(q) ||
+                    (doc.sumber || '').toLowerCase().includes(q) ||
+                    (doc.catatan || '').toLowerCase().includes(q) ||
+                    (doc.ekspedisi || '').toLowerCase().includes(q) ||
+                    (doc.no_dn || '').toLowerCase().includes(q) ||
+                    (doc.kode_ref || '').toLowerCase().includes(q);
+            });
+
+            const sort = state.whMatSort.dr_doc || { column: 'tgl_kirim', dir: 'desc' };
+            filtered.sort((a, b) => {
+                const valA = a[sort.column] ?? '';
+                const valB = b[sort.column] ?? '';
+                const cmp = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+                return sort.dir === 'asc' ? cmp : -cmp;
+            });
+
+            renderWhMatDrDocTable(filtered);
+            renderWhMatPagination(filtered.length, state.whMatCurrentPage, state.whMatPageSize);
+        } else {
+            let filtered = rawItems.filter(item => {
+                if (st === 'terpenuhi' && item.status_code !== 'sudah_dn') return false;
+                if (st === 'belum' && item.status_code !== 'belum_dn') return false;
+                if (!q) return true;
+                return (item.no_trans || '').toLowerCase().includes(q) ||
+                    (item.sumber || '').toLowerCase().includes(q) ||
+                    (item.catatan || '').toLowerCase().includes(q) ||
+                    (item.kode_barang || '').toLowerCase().includes(q) ||
+                    (item.nama_barang || '').toLowerCase().includes(q) ||
+                    (item.no_dn || '').toLowerCase().includes(q);
+            });
+
+            const sort = state.whMatSort.dr || { column: 'tgl_kirim', dir: 'desc' };
+            filtered.sort((a, b) => {
+                const valA = a[sort.column] ?? '';
+                const valB = b[sort.column] ?? '';
+                const cmp = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+                return sort.dir === 'asc' ? cmp : -cmp;
+            });
+
+            renderWhMatDrTable(filtered);
+            renderWhMatPagination(filtered.length, state.whMatCurrentPage, state.whMatPageSize);
+        }
+    }
+}
+
+function renderWhMatMrDocTable(docs) {
+    const tbody = document.getElementById('whMatMrDocTableBody');
+    if (!tbody) return;
+
+    if (docs.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="12" class="subcon-empty-row">
+                    <i class="fa-solid fa-file-invoice" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px; font-weight: 500;">Tidak ada data Dokumen MR yang cocok</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const startIdx = (state.whMatCurrentPage - 1) * state.whMatPageSize;
+    const pageItems = docs.slice(startIdx, startIdx + state.whMatPageSize);
+
+    let html = '';
+    pageItems.forEach((doc, idx) => {
+        const no = startIdx + idx + 1;
+        const isTerpenuhi = doc.status_code === 'terpenuhi' || doc.status_mr === 'TERPENUHI';
+        const badgeMr = isTerpenuhi
+            ? '<span class="service-status-pill status-live">TERPENUHI</span>'
+            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM TERPENUHI</span>';
+
+        let badgeLeadtime = '<span class="service-status-pill status-live">TEPAT WAKTU</span>';
+        if (doc.leadtime === 'TERLAMBAT' || doc.status === 'TERLAMBAT') {
+            badgeLeadtime = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">TERLAMBAT</span>';
+        } else if (doc.leadtime === 'BELUM DITERIMA' || doc.status === 'BELUM DITERIMA') {
+            badgeLeadtime = '<span class="service-status-pill" style="color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1;">BELUM DITERIMA</span>';
+        }
+
+        html += `
+            <tr>
+                <td class="text-center font-mono">${no}</td>
+                <td>
+                    <strong style="color: var(--sna-blue); cursor: pointer;" onclick="viewWhMatMrDocItems('${doc.no_trans}')" title="Klik untuk lihat rincian item">
+                        ${doc.no_trans} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 3px; opacity: 0.7;"></i>
+                    </strong>
+                </td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${doc.tgl_kirim_label || doc.tgl_kirim}</td>
+                <td style="font-size: 0.82rem;">${doc.lokasi_asal} &rarr; <strong>${doc.lokasi_tujuan}</strong></td>
+                <td class="text-center">
+                    <span class="badge-satuan" style="cursor: pointer; background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;" onclick="viewWhMatMrDocItems('${doc.no_trans}')" title="Klik untuk lihat rincian item">
+                        ${doc.total_item} Item
+                    </span>
+                </td>
+                <td class="text-right font-mono">${Number(doc.jml || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: var(--kpi-green); font-weight: 600;">${Number(doc.terpenuhi || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: ${doc.sisa > 0 ? '#ef4444' : '#64748b'};">${Number(doc.sisa || 0).toLocaleString('id-ID')}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${doc.tgl_transfer_label || doc.tgl_transfer || '-'}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${doc.tgl_terima_label || doc.tgl_terima || '-'}</td>
+                <td class="text-center">${badgeLeadtime}</td>
+                <td class="text-center">${badgeMr}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+function renderWhMatMrTable(items) {
+    const tbody = document.getElementById('whMatMrTableBody');
+    if (!tbody) return;
+
+    if (items.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="15" class="subcon-empty-row">
+                    <i class="fa-solid fa-box-open" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px; font-weight: 500;">Tidak ada data Rincian MR yang cocok</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const startIdx = (state.whMatCurrentPage - 1) * state.whMatPageSize;
+    const pageItems = items.slice(startIdx, startIdx + state.whMatPageSize);
+
+    let html = '';
+    pageItems.forEach((item, idx) => {
+        const no = startIdx + idx + 1;
+        const isTerpenuhi = item.status_code === 'terpenuhi';
+        const badgeMr = isTerpenuhi
+            ? '<span class="service-status-pill status-live">TERPENUHI</span>'
+            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM TERPENUHI</span>';
+
+        let badgeLeadtime = '<span class="service-status-pill status-live">TEPAT WAKTU</span>';
+        if (item.status === 'TERLAMBAT') {
+            badgeLeadtime = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">TERLAMBAT</span>';
+        } else if (item.status !== 'TEPAT WAKTU') {
+            badgeLeadtime = `<span class="service-status-pill" style="color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1;">${item.status}</span>`;
+        }
+
+        html += `
+            <tr>
+                <td class="text-center font-mono">${no}</td>
+                <td><strong style="color: var(--sna-blue);">${item.no_trans}</strong></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_kirim_label || item.tgl_kirim}</td>
+                <td style="font-size: 0.82rem;">${item.lokasi_asal} &rarr; <strong>${item.lokasi_tujuan}</strong></td>
+                <td><span class="font-mono" style="font-size: 0.82rem;">${item.kode_barang}</span></td>
+                <td>${item.nama_barang}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.rak || '-'}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.batch || '-'}</td>
+                <td class="text-right font-mono">${Number(item.jml || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: var(--kpi-green); font-weight: 600;">${Number(item.terpenuhi || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: ${item.sisa > 0 ? '#ef4444' : '#64748b'};">${Number(item.sisa || 0).toLocaleString('id-ID')}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_transfer_label || item.tgl_transfer || '-'}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_terima_label || item.tgl_terima || '-'}</td>
+                <td class="text-center">${badgeLeadtime}</td>
+                <td class="text-center">${badgeMr}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+function renderWhMatDrDocTable(docs) {
+    const tbody = document.getElementById('whMatDrDocTableBody');
+    if (!tbody) return;
+
+    if (docs.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="14" class="subcon-empty-row">
+                    <i class="fa-solid fa-file-invoice" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px; font-weight: 500;">Tidak ada data Dokumen DR yang cocok</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const startIdx = (state.whMatCurrentPage - 1) * state.whMatPageSize;
+    const pageItems = docs.slice(startIdx, startIdx + state.whMatPageSize);
+
+    let html = '';
+    pageItems.forEach((doc, idx) => {
+        const no = startIdx + idx + 1;
+        const isSudah = doc.status_code === 'sudah_dn';
+        const badge = isSudah
+            ? '<span class="service-status-pill status-live">SUDAH DN</span>'
+            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM DN</span>';
+
+        html += `
+            <tr>
+                <td class="text-center font-mono">${no}</td>
+                <td><span class="badge-satuan" style="font-size: 0.72rem;">${doc.sumber || '-'}</span></td>
+                <td>
+                    <strong style="color: var(--sna-blue); cursor: pointer;" onclick="viewWhMatDrDocItems('${doc.no_trans}')" title="Klik untuk lihat rincian item">
+                        ${doc.no_trans} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 3px; opacity: 0.7;"></i>
+                    </strong>
+                </td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${doc.tgl_kirim_label || doc.tgl_kirim}</td>
+                <td style="font-size: 0.8rem; max-width: 180px;" title="${doc.catatan || ''}">${doc.catatan || '-'}</td>
+                <td style="font-size: 0.8rem;">${doc.ekspedisi || '-'}</td>
+                <td class="text-center">
+                    <span class="badge-satuan" style="cursor: pointer; background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;" onclick="viewWhMatDrDocItems('${doc.no_trans}')" title="Klik untuk lihat rincian item">
+                        ${doc.total_item} Item
+                    </span>
+                </td>
+                <td class="text-right font-mono">${Number(doc.jml || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: var(--kpi-green); font-weight: 600;">${Number(doc.terpenuhi || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: ${doc.sisa > 0 ? '#ef4444' : '#64748b'};">${Number(doc.sisa || 0).toLocaleString('id-ID')}</td>
+                <td><span class="font-mono" style="font-size: 0.8rem; color: #64748b;">${doc.no_dn || '-'}</span></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${doc.tgl_dn_label || doc.tgl_dn || '-'}</td>
+                <td><span class="font-mono" style="font-size: 0.8rem; color: #64748b;">${doc.kode_ref || '-'}</span></td>
+                <td class="text-center">${badge}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+function renderWhMatDrTable(items) {
+    const tbody = document.getElementById('whMatDrTableBody');
+    if (!tbody) return;
+
+    if (items.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="17" class="subcon-empty-row">
+                    <i class="fa-solid fa-box-open" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px; font-weight: 500;">Tidak ada data Rincian DR yang cocok</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const startIdx = (state.whMatCurrentPage - 1) * state.whMatPageSize;
+    const pageItems = items.slice(startIdx, startIdx + state.whMatPageSize);
+
+    let html = '';
+    pageItems.forEach((item, idx) => {
+        const no = startIdx + idx + 1;
+        const isSudah = item.status_code === 'sudah_dn';
+        const badge = isSudah
+            ? '<span class="service-status-pill status-live">SUDAH DN</span>'
+            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM DN</span>';
+
+        html += `
+            <tr>
+                <td class="text-center font-mono">${no}</td>
+                <td><span class="badge-satuan" style="font-size: 0.72rem;">${item.sumber || '-'}</span></td>
+                <td><strong style="color: var(--sna-blue);">${item.no_trans}</strong></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_kirim_label || item.tgl_kirim}</td>
+                <td style="font-size: 0.8rem; max-width: 180px;" title="${item.catatan || ''}">${item.catatan || '-'}</td>
+                <td style="font-size: 0.8rem;">${item.ekspedisi || '-'}</td>
+                <td><span class="font-mono" style="font-size: 0.82rem;">${item.kode_barang}</span></td>
+                <td>${item.nama_barang}</td>
+                <td class="text-center"><span class="badge-satuan">${item.satuan || '-'}</span></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.batch || '-'}</td>
+                <td class="text-right font-mono">${Number(item.jml || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: var(--kpi-green); font-weight: 600;">${Number(item.terpenuhi || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: ${item.sisa > 0 ? '#ef4444' : '#64748b'};">${Number(item.sisa || 0).toLocaleString('id-ID')}</td>
+                <td><span class="font-mono" style="font-size: 0.8rem; color: #64748b;">${item.no_dn || '-'}</span></td>
+                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_dn_label || item.tgl_dn || '-'}</td>
+                <td><span class="font-mono" style="font-size: 0.8rem; color: #64748b;">${item.kode_ref || '-'}</span></td>
+                <td class="text-center">${badge}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+function renderWhMatPagination(totalItems, currentPage, pageSize) {
+    const pageInfo = document.getElementById('whMatPageInfo');
+    const btnPrev = document.getElementById('btnWhMatPrevPage');
+    const btnNext = document.getElementById('btnWhMatNextPage');
+
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+    if (pageInfo) {
+        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+    }
+
+    if (btnPrev) btnPrev.disabled = currentPage <= 1;
+    if (btnNext) btnNext.disabled = currentPage >= totalPages;
+}
+
+function changeWhMatPage(delta) {
+    const isMr = state.currentWhMatBagian === 'permintaanbahan';
+    let activeList = [];
+    if (isMr) {
+        activeList = state.whMatMrSubView === 'doc' ? (state.whMatRawData?.summary_by_doc || []) : (state.whMatRawData?.items || []);
+    } else {
+        activeList = state.whMatDrSubView === 'doc' ? (state.whMatRawData?.summary_by_doc || []) : (state.whMatRawData?.items || []);
+    }
+    const totalItems = activeList.length;
+    const totalPages = Math.ceil(totalItems / state.whMatPageSize) || 1;
+    const target = state.whMatCurrentPage + delta;
+    if (target >= 1 && target <= totalPages) {
+        state.whMatCurrentPage = target;
+        if (state.whMatRawData) {
+            renderWhMatModalData(state.whMatRawData);
+        }
+    }
+}
+
+function sortWhMat(tab, column) {
+    if (!state.whMatSort[tab]) {
+        state.whMatSort[tab] = { column, dir: 'asc' };
+    }
+    const current = state.whMatSort[tab];
+    if (current.column === column) {
+        current.dir = current.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        current.column = column;
+        current.dir = 'asc';
+    }
+
+    updateWhMatSortHeaders(tab);
+    if (state.whMatRawData) {
+        renderWhMatModalData(state.whMatRawData);
+    }
+}
+
+function updateWhMatSortHeaders(tab) {
+    let container = null;
+    if (tab === 'mr_doc') container = document.getElementById('subPanelWhMatMrDoc');
+    else if (tab === 'mr') container = document.getElementById('subPanelWhMatMrItem');
+    else if (tab === 'dr_doc') container = document.getElementById('subPanelWhMatDrDoc');
+    else if (tab === 'dr') container = document.getElementById('subPanelWhMatDrItem');
+    if (!container) return;
+
+    const current = state.whMatSort[tab];
+    if (!current) return;
+
+    const ths = container.querySelectorAll('th.sortable-th');
+    ths.forEach(th => {
+        const key = th.getAttribute('onclick')?.match(/'([^']+)'\)$/)?.[1];
+        const icon = th.querySelector('.sort-icon');
+        if (key === current.column) {
+            th.classList.add('active-sort');
+            if (icon) {
+                icon.className = current.dir === 'asc'
+                    ? 'fa-solid fa-arrow-up-wide-short sort-icon'
+                    : 'fa-solid fa-arrow-down-wide-short sort-icon';
+            }
+        } else {
+            th.classList.remove('active-sort');
+            if (icon) icon.className = 'fa-solid fa-sort sort-icon';
+        }
+    });
+}
+
+function renderWhMatTablesLoading() {
+    const tbodyMrDoc = document.getElementById('whMatMrDocTableBody');
+    const tbodyMrItem = document.getElementById('whMatMrTableBody');
+    const tbodyDrDoc = document.getElementById('whMatDrDocTableBody');
+    const tbodyDrItem = document.getElementById('whMatDrTableBody');
+    const skeleton = `
+        <tr>
+            <td colspan="15" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #0284c7;"></i>
+                <div style="margin-top: 8px; font-weight: 500;">Memuat data Pemenuhan WH Material dari Atena ERP...</div>
+            </td>
+        </tr>
+    `;
+    if (tbodyMrDoc) tbodyMrDoc.innerHTML = skeleton;
+    if (tbodyMrItem) tbodyMrItem.innerHTML = skeleton;
+    if (tbodyDrDoc) tbodyDrDoc.innerHTML = skeleton;
+    if (tbodyDrItem) tbodyDrItem.innerHTML = skeleton;
+}
+
+function renderWhMatTablesError(message) {
+    const tbodyMrDoc = document.getElementById('whMatMrDocTableBody');
+    const tbodyMrItem = document.getElementById('whMatMrTableBody');
+    const tbodyDrDoc = document.getElementById('whMatDrDocTableBody');
+    const tbodyDrItem = document.getElementById('whMatDrTableBody');
+    const errHtml = `
+        <tr>
+            <td colspan="15" class="subcon-empty-row" style="color: #ef4444;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; color: #ef4444;"></i>
+                <div style="margin-top: 8px; font-weight: 600;">Gagal Mengambil Data WH Material</div>
+                <div style="font-size: 0.8rem; color: #64748b;">${message || 'Terjadi kesalahan sistem'}</div>
+            </td>
+        </tr>
+    `;
+    if (tbodyMrDoc) tbodyMrDoc.innerHTML = errHtml;
+    if (tbodyMrItem) tbodyMrItem.innerHTML = errHtml;
+    if (tbodyDrDoc) tbodyDrDoc.innerHTML = errHtml;
+    if (tbodyDrItem) tbodyDrItem.innerHTML = errHtml;
+}
+
 

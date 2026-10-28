@@ -519,21 +519,21 @@
                     </div>
                 </section>
 
-                <!-- CARD: PRODUKSI SURGICAL MESIN (STANDBY) -->
+                <!-- CARD: PRODUKSI SURGICAL MESIN (LIVE ATENA) -->
                 <section class="service-card" id="card-PROD_SURGICAL_MESIN">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-gears"></i></div>
+                            <div class="service-icon-box produksi-theme"><i class="fa-solid fa-gears"></i></div>
                             <h2>Produksi Surgical Mesin</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
                     <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_SURGICAL_MESIN">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SURGICAL_MESIN"
@@ -543,11 +543,11 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total PP</span>
                                 <span class="m-val" id="totalPROD_SURGICAL_MESIN">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Memenuhi</span>
                                 <span class="m-val text-success" id="selesaiPROD_SURGICAL_MESIN">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -558,8 +558,8 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail produksi-btn"
+                            onclick="openProduksiModal('surgicalmesin')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -753,24 +753,24 @@
                     </div>
                 </section>
 
-                <!-- CARD: QA (LIVE ATENA ERP - RELEASE MATERIAL GRS) -->
+                <!-- CARD: QA (LIVE ATENA ERP - RELEASE MATERIAL GRS & PRODUK JADI) -->
                 <section class="service-card" id="card-QA">
                     <div class="card-header">
                         <div class="card-title-group">
                             <div class="service-icon-box qa-theme"><i class="fa-solid fa-clipboard-check"></i></div>
                             <div>
                                 <h2>QA</h2>
-                                <span class="card-sub-title">Release Material (GRS)</span>
+                                <span class="card-sub-title">Release Material & Produk Jadi</span>
                             </div>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
                     <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentQA">0%</span>
-                                <span class="percent-lbl">Release Material</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillQA" style="width: 0%"></div>
@@ -779,7 +779,7 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total GRS</span>
+                                <span class="m-lbl">Total Dokumen</span>
                                 <span class="m-val" id="totalQA">0</span>
                             </div>
                             <div class="metric-box m-success">
@@ -790,6 +790,13 @@
                                 <span class="m-lbl">Pending</span>
                                 <span class="m-val text-warning" id="belumQA">0</span>
                             </div>
+                        </div>
+
+                        <!-- Sub-indikator mini 3 bagian QA -->
+                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-color); color: var(--text-secondary);">
+                            <span>GRS: <b id="qaMiniGrsPercent" style="color: #2563eb;">-</b></span>
+                            <span>SCN: <b id="qaMiniScnPercent" style="color: #8b5cf6;">-</b></span>
+                            <span>Acc BR: <b id="qaMiniBrPercent" style="color: #10b981;">-</b></span>
                         </div>
                     </div>
 
@@ -852,21 +859,21 @@
                     </div>
                 </section>
 
-                <!-- CARD: WH FG (STANDBY) -->
+                <!-- CARD: WH FG (LIVE ATENA) -->
                 <section class="service-card" id="card-WH_FG">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-warehouse"></i></div>
+                            <div class="service-icon-box logistik-theme"><i class="fa-solid fa-warehouse"></i></div>
                             <h2>WH FG</h2>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
                     <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentWH_FG">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillWH_FG" style="width: 0%"></div>
@@ -875,44 +882,47 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total DR</span>
                                 <span class="m-val" id="totalWH_FG">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Sudah DN</span>
                                 <span class="m-val text-success" id="selesaiWH_FG">0</span>
                             </div>
                             <div class="metric-box m-warning">
-                                <span class="m-lbl">Belum</span>
+                                <span class="m-lbl">Belum DN</span>
                                 <span class="m-val text-warning" id="belumWH_FG">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail logistik-btn"
+                            onclick="openWhFgModal()">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
                 </section>
 
-                <!-- CARD: WH MAT (STANDBY) -->
+                <!-- CARD: WH MAT (LIVE ATENA) -->
                 <section class="service-card" id="card-WH_MAT">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-dolly"></i></div>
-                            <h2>WH Mat</h2>
+                            <div class="service-icon-box logistik-theme"><i class="fa-solid fa-dolly"></i></div>
+                            <div>
+                                <h2>WH Mat</h2>
+                                <span class="card-sub-title">Pemenuhan DR & Permintaan Bahan</span>
+                            </div>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
                     <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentWH_MAT">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillWH_MAT" style="width: 0%"></div>
@@ -921,11 +931,11 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total MR</span>
                                 <span class="m-val" id="totalWH_MAT">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Terpenuhi</span>
                                 <span class="m-val text-success" id="selesaiWH_MAT">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -933,11 +943,17 @@
                                 <span class="m-val text-warning" id="belumWH_MAT">0</span>
                             </div>
                         </div>
+
+                        <!-- Sub-indikator mini 2 bagian WH Mat (MR & DR Lain/Paskot) -->
+                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-color); color: var(--text-secondary);">
+                            <span>MR: <b id="whMatMiniMrPercent" style="color: #2563eb;">-</b></span>
+                            <span>DR Lain & Paskot: <b id="whMatMiniDrPercent" style="color: #10b981;">-</b></span>
+                        </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail logistik-btn"
+                            onclick="openWhMatModal()">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -1838,6 +1854,9 @@
     <!-- ============================================================ -->
     <!-- 6B. MODAL MONITORING QA (RELEASE MATERIAL GRS ATENA ERP) -->
     <!-- ============================================================ -->
+    <!-- ============================================================ -->
+    <!-- 6B. MODAL MONITORING QA (RELEASE MATERIAL GRS & PRODUK JADI ATENA ERP) -->
+    <!-- ============================================================ -->
     <div class="modal-overlay" id="qaModal" aria-hidden="true">
         <div class="modal-card modal-card-xl">
 
@@ -1847,11 +1866,11 @@
                         <div class="modal-icon qa-theme"><i class="fa-solid fa-clipboard-check"></i></div>
                         <div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <h3 style="margin: 0; font-size: 1.15rem;">Monitoring QA - Release Material (GRS)</h3>
+                                <h3 style="margin: 0; font-size: 1.15rem;" id="qaModalTitle">Monitoring QA - Release Material & Produk Jadi</h3>
                                 <span class="service-status-pill status-live" style="font-size: 0.72rem;">Live Atena</span>
                             </div>
                             <p id="qaModalSubtitle" style="margin: 2px 0 0; font-size: 0.78rem; color: var(--text-secondary);">
-                                Data Hasil Inspeksi & Release Penerimaan Material (Goods Receipt Slip) dari Atena ERP
+                                Release Material (GRS), Release Produk Jadi Subcon (SCN), dan Accept Batch Record (BR)
                             </p>
                         </div>
                     </div>
@@ -1903,7 +1922,7 @@
                         <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
                             <div class="search-box" style="flex: 1; margin: 0;">
                                 <i class="fa-solid fa-magnifying-glass"></i>
-                                <input type="text" id="qaSearchInput" placeholder="Cari No GRS / No PO / Supplier..."
+                                <input type="text" id="qaSearchInput" placeholder="Cari No GRS / Subcon / PRH / Barang..."
                                     oninput="handleQaSearch(this.value)">
                             </div>
 
@@ -1918,58 +1937,62 @@
 
             <!-- Body Modal QA -->
             <div class="modal-body subcon-modal-body">
-                <!-- 5 KPI Ringkasan Release Material QA di Modal -->
+                <!-- 5 KPI Ringkasan QA di Modal (Dinamis Sesuai Tab Bagian) -->
                 <div class="subcon-kpi-grid qa-kpi-grid">
                     <div class="subcon-kpi-card">
-                        <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-boxes-packing"></i></div>
+                        <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-clipboard-check"></i></div>
                         <div>
-                            <div class="kpi-num" id="modalKpiQaTotalGrs">0</div>
-                            <div class="kpi-label">Total GRS</div>
+                            <div class="kpi-num" id="modalKpiQaTotal">0</div>
+                            <div class="kpi-label" id="modalKpiQaTotalLbl">Total GRS</div>
                         </div>
                     </div>
                     <div class="subcon-kpi-card">
                         <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
                         <div>
                             <div class="kpi-num text-success" id="modalKpiQaReleased">0</div>
-                            <div class="kpi-label">Released / Diterima (<span id="modalKpiQaPercent">0%</span>)</div>
-                        </div>
-                    </div>
-                    <div class="subcon-kpi-card">
-                        <div class="kpi-icon-mini text-danger" style="color: #ef4444;"><i class="fa-solid fa-circle-xmark"></i></div>
-                        <div>
-                            <div class="kpi-num" style="color: #ef4444;" id="modalKpiQaReject">0</div>
-                            <div class="kpi-label">Ditolak / Ditahan</div>
+                            <div class="kpi-label"><span id="modalKpiQaReleasedLbl">Released</span> (<span id="modalKpiQaPercent">0%</span>)</div>
                         </div>
                     </div>
                     <div class="subcon-kpi-card">
                         <div class="kpi-icon-mini text-warning"><i class="fa-solid fa-hourglass-half"></i></div>
                         <div>
                             <div class="kpi-num text-warning" id="modalKpiQaPending">0</div>
-                            <div class="kpi-label">Pending Release</div>
+                            <div class="kpi-label" id="modalKpiQaPendingLbl">Pending</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-danger" style="color: #ef4444;"><i class="fa-solid fa-circle-xmark"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #ef4444;" id="modalKpiQaReject">0</div>
+                            <div class="kpi-label" id="modalKpiQaRejectLbl">Ditolak / Ditahan</div>
                         </div>
                     </div>
                     <div class="subcon-kpi-card">
                         <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-file-invoice-dollar"></i></div>
                         <div>
-                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiQaTotalPo">0</div>
-                            <div class="kpi-label">Total PO Terkait</div>
+                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiQaExtra">0</div>
+                            <div class="kpi-label" id="modalKpiQaExtraLbl">Total PO Terkait</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Navigasi Tampilan & Status Filter -->
+                <!-- Navigasi Tab Bagian QA & Status Filter -->
                 <div class="subcon-detail-section" style="margin-top: 1rem;">
-                    <!-- Sub-Navbar: Tab View (Daftar Release GRS vs Ringkasan Per PO) & Filter Status -->
+                    <!-- Sub-Navbar: Tab Bagian (GRS Material, Subcon SCN, Accept BR) & Filter Status -->
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0;">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: -2px;">
-                            <button class="logistik-tab-btn active" id="btnViewQaGrs"
-                                onclick="switchQaView('grs')">
-                                <i class="fa-solid fa-clipboard-check"></i> Daftar Release GRS
-                                <span class="subcon-tab-badge" id="countQaGrs">0</span>
+                            <button class="logistik-tab-btn active" id="btnTabQaGrs"
+                                onclick="switchQaBagian('grsmaterial')">
+                                <i class="fa-solid fa-truck-ramp-box"></i> Release Material (GRS)
+                                <span class="subcon-tab-badge" id="countQaTabGrs">0</span>
                             </button>
-                            <button class="logistik-tab-btn" id="btnViewQaPo" onclick="switchQaView('po')">
-                                <i class="fa-solid fa-file-invoice"></i> Ringkasan Per No. PO
-                                <span class="subcon-tab-badge" id="countQaPo">0</span>
+                            <button class="logistik-tab-btn" id="btnTabQaScn" onclick="switchQaBagian('scn')">
+                                <i class="fa-solid fa-boxes-packing"></i> Release Subcon (SCN)
+                                <span class="subcon-tab-badge" id="countQaTabScn">0</span>
+                            </button>
+                            <button class="logistik-tab-btn" id="btnTabQaAcceptBr" onclick="switchQaBagian('acceptbr')">
+                                <i class="fa-solid fa-file-circle-check"></i> Accept Batch Record (BR)
+                                <span class="subcon-tab-badge" id="countQaTabBr">0</span>
                             </button>
                         </div>
 
@@ -1978,17 +2001,27 @@
                             <select id="selectQaStatus" class="purchasing-select"
                                 onchange="switchQaStatus(this.value)">
                                 <option value="all">Semua Status</option>
-                                <option value="terpenuhi">Status: Released (Diterima)</option>
-                                <option value="ditolak">Status: Ditolak (Reject)</option>
-                                <option value="ditahan">Status: Ditahan (Hold)</option>
-                                <option value="pending">Status: Pending (Belum Approve)</option>
+                                <option value="terpenuhi">Approved / Released Saja</option>
+                                <option value="pending">Pending / Belum Saja</option>
+                                <option value="ditolak">Ditolak Saja</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- Panel 1: Tampilan Rincian Release GRS (Material) -->
+                    <!-- PANEL 1: RELEASE MATERIAL GRS -->
                     <div class="subcon-tab-panel active" id="tabPanelQaGrs">
-                        <div class="table-responsive">
+                        <!-- Sub-View switcher for GRS (Rincian GRS vs Ringkasan PO) -->
+                        <div style="display: flex; align-items: center; gap: 8px; margin: 0.6rem 0 0.4rem;">
+                            <button class="filter-pill active" id="btnSubViewQaGrs" onclick="switchQaGrsSubView('grs')">
+                                <i class="fa-solid fa-list-check"></i> Rincian GRS
+                            </button>
+                            <button class="filter-pill" id="btnSubViewQaPo" onclick="switchQaGrsSubView('po')">
+                                <i class="fa-solid fa-file-invoice"></i> Ringkasan Per PO
+                            </button>
+                        </div>
+
+                        <!-- Sub-Panel 1A: Rincian GRS -->
+                        <div id="subPanelQaGrsRows" class="table-responsive">
                             <table class="tickets-table subcon-table">
                                 <thead>
                                     <tr>
@@ -2017,47 +2050,130 @@
                                     </tr>
                                 </thead>
                                 <tbody id="qaGrsTableBody">
-                                    <!-- Diisi oleh app.js -->
+                                    <tr class="skeleton-row">
+                                        <td colspan="8" class="text-center">Memuat data...</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
-                    </div>
 
-                    <!-- Panel 2: Tampilan Ringkasan Per No. PO -->
-                    <div class="subcon-tab-panel" id="tabPanelQaPo">
-                        <div class="table-responsive">
+                        <!-- Sub-Panel 1B: Ringkasan Per PO -->
+                        <div id="subPanelQaPoRows" class="table-responsive" style="display: none;">
                             <table class="tickets-table subcon-table">
                                 <thead>
                                     <tr>
                                         <th style="width: 45px; text-align: center;">No</th>
-                                        <th class="sortable-th" onclick="sortQa('po', 'no_po')" data-sort-key="no_po" title="Klik untuk mengurutkan No PO">
+                                        <th class="sortable-th" onclick="sortQa('po', 'no_po')" data-sort-key="no_po">
                                             No. PO <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('po', 'tanggal')" data-sort-key="tanggal" title="Klik untuk mengurutkan Tanggal">
+                                        <th class="sortable-th" onclick="sortQa('po', 'tanggal')" data-sort-key="tanggal">
                                             Tanggal <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('po', 'supplier')" data-sort-key="supplier" title="Klik untuk mengurutkan Supplier">
+                                        <th class="sortable-th" onclick="sortQa('po', 'supplier')" data-sort-key="supplier">
                                             Supplier <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th text-center" onclick="sortQa('po', 'total_grs')" data-sort-key="total_grs" title="Klik untuk mengurutkan Total GRS">
+                                        <th class="sortable-th text-center" onclick="sortQa('po', 'total_grs')" data-sort-key="total_grs">
                                             Total GRS <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th text-center" onclick="sortQa('po', 'grs_approve')" data-sort-key="grs_approve" title="Klik untuk mengurutkan GRS Approve">
-                                            GRS Approve <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th class="sortable-th text-center" onclick="sortQa('po', 'grs_approve')" data-sort-key="grs_approve">
+                                            Approved <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th text-center" onclick="sortQa('po', 'grs_pending')" data-sort-key="grs_pending" title="Klik untuk mengurutkan GRS Pending">
+                                        <th class="sortable-th text-center" onclick="sortQa('po', 'grs_pending')" data-sort-key="grs_pending">
                                             Pending <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('po', 'persentase')" data-sort-key="persentase" title="Klik untuk mengurutkan Capaian Release">
+                                        <th class="sortable-th text-right" onclick="sortQa('po', 'persentase')" data-sort-key="persentase">
                                             Capaian % <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('po', 'status_code')" data-sort-key="status_code" style="text-align: center;" title="Klik untuk mengurutkan Status Release">
+                                        <th class="sortable-th text-center" onclick="sortQa('po', 'status_code')" data-sort-key="status_code">
                                             Status Release <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody id="qaPoTableBody">
-                                    <!-- Diisi oleh app.js -->
+                                    <tr class="skeleton-row">
+                                        <td colspan="9" class="text-center">Memuat data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 2: RELEASE SUBCON (SCN) -->
+                    <div class="subcon-tab-panel" id="tabPanelQaScn" style="display: none;">
+                        <div class="table-responsive" style="margin-top: 0.5rem;">
+                            <table class="tickets-table subcon-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 36px;" class="text-center">No</th>
+                                        <th style="width: 140px;" class="sortable-th" onclick="sortQa('scn', 'no_subcon')">
+                                            No. Subcon <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th style="width: 95px;" class="text-center sortable-th" onclick="sortQa('scn', 'tanggal')">
+                                            Tanggal <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('scn', 'supplier')">
+                                            Mitra / Supplier <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th style="width: 85px;">Kode</th>
+                                        <th class="sortable-th" onclick="sortQa('scn', 'nama_barang')">
+                                            Nama Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th style="width: 85px;" class="text-center">Batch</th>
+                                        <th style="width: 70px;" class="text-right sortable-th" onclick="sortQa('scn', 'jumlah')">
+                                            Qty <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th style="width: 55px;" class="text-center">Sat</th>
+                                        <th style="width: 95px;" class="text-center">No. QC</th>
+                                        <th style="width: 110px;" class="text-center">Disposisi 1</th>
+                                        <th style="width: 110px;" class="text-center">Disposisi 2</th>
+                                        <th style="width: 110px;" class="text-center sortable-th" onclick="sortQa('scn', 'status')">
+                                            Status Release <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qaScnTableBody">
+                                    <tr class="skeleton-row">
+                                        <td colspan="13" class="text-center">Memuat data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 3: ACCEPT BATCH RECORD (BR) -->
+                    <div class="subcon-tab-panel" id="tabPanelQaAcceptBr" style="display: none;">
+                        <div class="table-responsive" style="margin-top: 0.5rem;">
+                            <table class="tickets-table subcon-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 36px;" class="text-center">No</th>
+                                        <th style="width: 140px;" class="sortable-th" onclick="sortQa('acceptbr', 'no_prh')">
+                                            No. PRH <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th style="width: 95px;" class="text-center sortable-th" onclick="sortQa('acceptbr', 'tgl_prh')">
+                                            Tgl PRH <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th style="width: 105px;" class="text-center sortable-th" onclick="sortQa('acceptbr', 'tgl_kirim_sample')">
+                                            Tgl Sample <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th style="width: 140px;">No. Hasil Produksi</th>
+                                        <th style="width: 90px;" class="text-center">Divisi</th>
+                                        <th style="width: 85px;">Kode</th>
+                                        <th class="sortable-th" onclick="sortQa('acceptbr', 'nama_barang')">
+                                            Nama Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th style="width: 85px;" class="text-center">Batch</th>
+                                        <th style="width: 80px;" class="text-right sortable-th" onclick="sortQa('acceptbr', 'jumlah')">
+                                            Jumlah <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th style="width: 80px;">User Entry</th>
+                                        <th style="width: 120px;" class="text-center">Status BR</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qaAcceptBrTableBody">
+                                    <tr class="skeleton-row">
+                                        <td colspan="12" class="text-center">Memuat data...</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -2085,7 +2201,7 @@
             <div class="modal-footer">
                 <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <div class="modal-stats" id="qaModalFooterStats">
-                        Menampilkan data monitoring QA Release Material (GRS) Atena ERP
+                        Menampilkan data monitoring QA Release Material & Release Produk Jadi Atena ERP
                     </div>
                     <span id="qaLastSyncTime" style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
                 </div>
@@ -2646,11 +2762,658 @@
         </div>
     </div>
 
+    <!-- 9. MODAL MONITORING PENYELESAIAN DR (WH FG ATENA ERP) -->
+    <div class="modal-overlay" id="whFgModal" aria-hidden="true">
+        <div class="modal-card modal-card-xl">
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon logistik-theme"><i class="fa-solid fa-warehouse"></i></div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h1 style="font-size: 1.15rem; margin: 0;">Monitoring Penyelesaian DR (WH Finished Goods)</h1>
+                                <span class="service-status-pill status-live" style="font-size: 0.72rem;">Live Atena</span>
+                            </div>
+                            <p id="whFgModalSubtitle" style="margin: 2px 0 0; font-size: 0.78rem; color: var(--text-secondary);">
+                                Data Realisasi Delivery Receipt (DR) ke Delivery Note (DN) Gudang Jadi dari Atena ERP
+                            </p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="modal-close-btn" onclick="closeWhFgModal()" title="Tutup">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bar Filter: Date Range Picker, Presets, Reset, Search & Sync -->
+                <div class="subcon-filter-bar" style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="date" id="whFgDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleWhFgDateChange('start')">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="date" id="whFgDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleWhFgDateChange('end')">
+                                </div>
+                            </div>
+
+                            <!-- Shortcut Presets Cepat -->
+                            <div class="filter-pills wh-fg-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnQuickWhFgMonth" onclick="setWhFgQuickDate('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickWhFgWeek" onclick="setWhFgQuickDate('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnQuickWhFgToday" onclick="setWhFgQuickDate('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickWhFgAll" onclick="setWhFgQuickDate('all')">
+                                    <i class="fa-solid fa-layer-group"></i> Semua
+                                </button>
+                            </div>
+
+                            <!-- Tombol Reset Filter -->
+                            <button class="filter-reset-btn" id="btnResetWhFgFilter" onclick="resetWhFgFilter()" title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Right Group: Search Box + Sync Atena -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="whFgSearchInput" placeholder="Cari No. DR, DN, Customer, Barang..."
+                                    oninput="handleWhFgSearch(this.value)">
+                            </div>
+
+                            <button class="modal-refresh-btn" id="btnSyncWhFg" onclick="syncWhFgData()"
+                                title="Sinkronisasi data langsung dari Atena ERP">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Modal WH FG -->
+            <div class="modal-body subcon-modal-body" style="padding-top: 0.85rem;">
+                <!-- 5 Kotak KPI Utama WH FG -->
+                <div class="subcon-kpi-grid logistik-kpi-grid">
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #0284c7;"><i class="fa-solid fa-file-lines"></i></div>
+                        <div>
+                            <div class="kpi-num" id="modalKpiWhFgTotalDr">0</div>
+                            <div class="kpi-label">Total No. DR</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
+                        <div>
+                            <div class="kpi-num text-success" id="modalKpiWhFgSudahDn">0</div>
+                            <div class="kpi-label">Sudah DN (<span id="modalKpiWhFgPercent">0%</span>)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-warning"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        <div>
+                            <div class="kpi-num text-warning" id="modalKpiWhFgBelumDn">0</div>
+                            <div class="kpi-label">Belum DN</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-boxes-stacked"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiWhFgTotalQty">0</div>
+                            <div class="kpi-label">Total Qty Barang</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #10b981;"><i class="fa-solid fa-dolly"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #10b981;" id="modalKpiWhFgTotalQtyDn">0</div>
+                            <div class="kpi-label">Total Qty DN</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sub-Navbar: Tab View (Ringkasan Per DR vs Rincian Item) & Filter Status -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: -2px;">
+                        <button class="logistik-tab-btn active" id="btnViewWhFgDr"
+                            onclick="switchWhFgView('dr')">
+                            <i class="fa-solid fa-file-invoice"></i> Ringkasan Per DR
+                            <span class="subcon-tab-badge" id="countWhFgDr">0</span>
+                        </button>
+                        <button class="logistik-tab-btn" id="btnViewWhFgItems"
+                            onclick="switchWhFgView('items')">
+                            <i class="fa-solid fa-boxes-stacked"></i> Rincian Item Barang
+                            <span class="subcon-tab-badge" id="countWhFgItems">0</span>
+                        </button>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-shrink: 0;">
+                        <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Status:</span>
+                        <select id="selectWhFgStatus" class="purchasing-select"
+                            onchange="switchWhFgStatus(this.value)">
+                            <option value="all">Semua Status</option>
+                            <option value="sudah_dn">Sudah DN Saja</option>
+                            <option value="belum_dn">Belum DN Saja</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- PANEL 1: TABEL RINGKASAN PER DR -->
+                <div class="subcon-tab-panel active" id="tabPanelWhFgDr" style="margin-top: 0.75rem;">
+                    <div class="table-responsive">
+                        <table class="tickets-table subcon-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;" class="text-center">No</th>
+                                    <th style="width: 140px;" class="sortable-th" onclick="sortWhFg('dr', 'no_trans')">
+                                        No. DR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 100px;" class="text-center sortable-th" onclick="sortWhFg('dr', 'tanggal')">
+                                        Tanggal <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="sortable-th" onclick="sortWhFg('dr', 'customer')">
+                                        Customer <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 120px;">Ekspedisi</th>
+                                    <th style="width: 120px;">No. Pesanan (SO)</th>
+                                    <th style="width: 60px;" class="text-center sortable-th" onclick="sortWhFg('dr', 'item_count')">
+                                        Item <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 85px;" class="text-right sortable-th" onclick="sortWhFg('dr', 'total_jumlah')">
+                                        Qty DR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 85px;" class="text-right sortable-th" onclick="sortWhFg('dr', 'total_jumlah_dn')">
+                                        Qty DN <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 90px;" class="sortable-th" onclick="sortWhFg('dr', 'progress_percent')">
+                                        Progress <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 130px;">No. DN</th>
+                                    <th style="width: 105px;" class="text-center sortable-th" onclick="sortWhFg('dr', 'status_code')">
+                                        Status <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="whFgDrTableBody">
+                                <tr class="skeleton-row">
+                                    <td colspan="12" class="text-center">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PANEL 2: TABEL RINCIAN ITEM BARANG -->
+                <div class="subcon-tab-panel" id="tabPanelWhFgItems" style="margin-top: 0.75rem;">
+                    <div class="table-responsive">
+                        <table class="tickets-table subcon-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;" class="text-center">No</th>
+                                    <th style="width: 135px;" class="sortable-th" onclick="sortWhFg('items', 'no_trans')">
+                                        No. DR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 95px;" class="text-center sortable-th" onclick="sortWhFg('items', 'tanggal')">
+                                        Tanggal <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="sortable-th" onclick="sortWhFg('items', 'customer')">
+                                        Customer <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 80px;">Kode</th>
+                                    <th class="sortable-th" onclick="sortWhFg('items', 'nama_barang')">
+                                        Nama Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 60px;" class="text-center">Satuan</th>
+                                    <th style="width: 75px;" class="text-center">Batch</th>
+                                    <th style="width: 75px;" class="text-right sortable-th" onclick="sortWhFg('items', 'jumlah')">
+                                        Qty DR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 75px;" class="text-right sortable-th" onclick="sortWhFg('items', 'jumlah_dn')">
+                                        Qty DN <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 130px;">No. DN</th>
+                                    <th style="width: 95px;" class="text-center">Tgl DN</th>
+                                    <th style="width: 100px;" class="text-center sortable-th" onclick="sortWhFg('items', 'status_code')">
+                                        Status <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="whFgItemsTableBody">
+                                <tr class="skeleton-row">
+                                    <td colspan="13" class="text-center">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Baris Navigasi Pagination -->
+                <div class="purchasing-pagination-bar" id="whFgPaginationBar"
+                    style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.25rem;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="whFgPageInfo">
+                        Menampilkan 0 baris
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="filter-pill" id="btnWhFgPrevPage" onclick="changeWhFgPage(-1)">
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button class="filter-pill" id="btnWhFgNextPage" onclick="changeWhFgPage(1)">
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Modal WH FG -->
+            <div class="modal-footer">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div class="modal-stats" id="whFgModalFooterStats">
+                        Menampilkan data monitoring Penyelesaian DR WH Finished Goods Atena ERP
+                    </div>
+                    <span id="whFgLastSyncTime" style="font-size: 0.75rem; color: var(--text-muted); margin-left: 8px;"></span>
+                </div>
+                <button class="btn-secondary" onclick="closeWhFgModal()">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 10. MODAL MONITORING PEMENUHAN WH MATERIAL (ATENA ERP) -->
+    <div class="modal-overlay" id="whMatModal" aria-hidden="true">
+        <div class="modal-card modal-card-xl">
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon logistik-theme"><i class="fa-solid fa-dolly"></i></div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h1 style="font-size: 1.15rem; margin: 0;">Monitoring Pemenuhan WH Material (Gudang Bahan)</h1>
+                                <span class="service-status-pill status-live" style="font-size: 0.72rem;">Live Atena</span>
+                            </div>
+                            <p id="whMatModalSubtitle" style="margin: 2px 0 0; font-size: 0.78rem; color: var(--text-secondary);">
+                                Data Realisasi Permintaan Bahan (MR) & Pemenuhan DR Gudang Bahan dari Atena ERP
+                            </p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="modal-close-btn" onclick="closeWhMatModal()" title="Tutup">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bar Filter: Date Range Picker, Presets, Reset, Search & Sync -->
+                <div class="subcon-filter-bar" style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="date" id="whMatDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleWhMatDateChange('start')">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="date" id="whMatDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleWhMatDateChange('end')">
+                                </div>
+                            </div>
+
+                            <!-- Shortcut Presets Cepat -->
+                            <div class="filter-pills wh-mat-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnQuickWhMatMonth" onclick="setWhMatQuickDate('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickWhMatWeek" onclick="setWhMatQuickDate('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnQuickWhMatToday" onclick="setWhMatQuickDate('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickWhMatAll" onclick="setWhMatQuickDate('all')">
+                                    <i class="fa-solid fa-layer-group"></i> Semua
+                                </button>
+                            </div>
+
+                            <!-- Tombol Reset Filter -->
+                            <button class="filter-reset-btn" id="btnResetWhMatFilter" onclick="resetWhMatFilter()" title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Right Group: Search Box + Sync Atena -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="whMatSearchInput" placeholder="Cari No. Trans / Barang / Lokasi / Rak..."
+                                    oninput="handleWhMatSearch(this.value)">
+                            </div>
+
+                            <button class="modal-refresh-btn" id="btnSyncWhMat" onclick="syncWhMatData()"
+                                title="Sinkronisasi data langsung dari Atena ERP">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Modal WH Mat -->
+            <div class="modal-body subcon-modal-body" style="padding-top: 0.85rem;">
+                <!-- 5 Kotak KPI Utama WH Mat -->
+                <div class="subcon-kpi-grid logistik-kpi-grid">
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #0284c7;"><i class="fa-solid fa-clipboard-check"></i></div>
+                        <div>
+                            <div class="kpi-num" id="modalKpiWhMatTotal">0</div>
+                            <div class="kpi-label" id="modalKpiWhMatTotalLbl">Total MR</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
+                        <div>
+                            <div class="kpi-num text-success" id="modalKpiWhMatSelesai">0</div>
+                            <div class="kpi-label"><span id="modalKpiWhMatSelesaiLbl">Terpenuhi</span> (<span id="modalKpiWhMatPercent">0%</span>)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-warning"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        <div>
+                            <div class="kpi-num text-warning" id="modalKpiWhMatBelum">0</div>
+                            <div class="kpi-label" id="modalKpiWhMatBelumLbl">Belum Terpenuhi</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-boxes-stacked"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiWhMatTotalQty">0</div>
+                            <div class="kpi-label" id="modalKpiWhMatTotalQtyLbl">Total Qty Diminta</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #10b981;"><i class="fa-solid fa-dolly"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #10b981;" id="modalKpiWhMatTotalQtyRealisasi">0</div>
+                            <div class="kpi-label" id="modalKpiWhMatTotalQtyRealisasiLbl">Total Qty Realisasi</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sub-Navbar: Tab Bagian (Permintaan Bahan MR vs Pemenuhan DR) & Filter Status -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: -2px;">
+                        <button class="logistik-tab-btn active" id="btnWhMatTabMr"
+                            onclick="switchWhMatBagian('permintaanbahan')">
+                            <i class="fa-solid fa-dolly"></i> Permintaan Bahan (MR)
+                            <span class="subcon-tab-badge" id="countWhMatMr">0 MR</span>
+                        </button>
+                        <button class="logistik-tab-btn" id="btnWhMatTabDr"
+                            onclick="switchWhMatBagian('dr')">
+                            <i class="fa-solid fa-truck-ramp-box"></i> Pemenuhan DR (DR Lain & Paskot)
+                            <span class="subcon-tab-badge" id="countWhMatDr">0 DR</span>
+                        </button>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-shrink: 0;">
+                        <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Status:</span>
+                        <select id="selectWhMatStatus" class="purchasing-select"
+                            onchange="switchWhMatStatus(this.value)">
+                            <option value="all">Semua Status</option>
+                            <option value="terpenuhi">Terpenuhi / Sudah DN Saja</option>
+                            <option value="belum">Belum Terpenuhi / Pending Saja</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- PANEL 1: PERMINTAAN BAHAN (MR) -->
+                <div class="subcon-tab-panel active" id="tabPanelWhMatMr" style="margin-top: 0.75rem;">
+                    <!-- Sub-view switcher for MR (Dokumen MR vs Rincian MR) -->
+                    <div style="display: flex; align-items: center; gap: 8px; margin: 0.4rem 0 0.6rem;">
+                        <button class="filter-pill active" id="btnSubViewWhMatMrDoc" onclick="switchWhMatMrSubView('doc')">
+                            <i class="fa-solid fa-file-invoice"></i> Dokumen MR (<span id="countSubViewMrDoc">0</span> MR)
+                        </button>
+                        <button class="filter-pill" id="btnSubViewWhMatMrItem" onclick="switchWhMatMrSubView('item')">
+                            <i class="fa-solid fa-list-check"></i> Rincian MR (<span id="countSubViewMrItem">0</span> Item)
+                        </button>
+                    </div>
+
+                    <!-- SUB-PANEL 1A: DOKUMEN MR -->
+                    <div id="subPanelWhMatMrDoc" class="table-responsive">
+                        <table class="tickets-table subcon-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;" class="text-center">No</th>
+                                    <th style="width: 140px;" class="sortable-th" onclick="sortWhMat('mr_doc', 'no_trans')">
+                                        No. MR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 95px;" class="text-center sortable-th" onclick="sortWhMat('mr_doc', 'tgl_kirim')">
+                                        Tgl Kirim <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 150px;">Asal &rarr; Tujuan</th>
+                                    <th style="width: 90px;" class="text-center sortable-th" onclick="sortWhMat('mr_doc', 'total_item')">
+                                        Total Item <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 90px;" class="text-right sortable-th" onclick="sortWhMat('mr_doc', 'jml')">
+                                        Diminta <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 90px;" class="text-right sortable-th" onclick="sortWhMat('mr_doc', 'terpenuhi')">
+                                        Terpenuhi <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 80px;" class="text-right sortable-th" onclick="sortWhMat('mr_doc', 'sisa')">
+                                        Sisa <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 95px;" class="text-center sortable-th" onclick="sortWhMat('mr_doc', 'tgl_transfer')">
+                                        Tgl Transfer <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 95px;" class="text-center sortable-th" onclick="sortWhMat('mr_doc', 'tgl_terima')">
+                                        Tgl Terima <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 105px;" class="text-center sortable-th" onclick="sortWhMat('mr_doc', 'leadtime')">
+                                        Leadtime <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 110px;" class="text-center sortable-th" onclick="sortWhMat('mr_doc', 'status_mr')">
+                                        Status MR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="whMatMrDocTableBody">
+                                <tr class="skeleton-row">
+                                    <td colspan="12" class="text-center">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- SUB-PANEL 1B: RINCIAN MR (PER ITEM) -->
+                    <div id="subPanelWhMatMrItem" class="table-responsive" style="display: none;">
+                        <table class="tickets-table subcon-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;" class="text-center">No</th>
+                                    <th style="width: 135px;" class="sortable-th" onclick="sortWhMat('mr', 'no_trans')">
+                                        No. MR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 90px;" class="text-center sortable-th" onclick="sortWhMat('mr', 'tgl_kirim')">
+                                        Tgl Kirim <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 125px;">Asal &rarr; Tujuan</th>
+                                    <th style="width: 75px;">Kode</th>
+                                    <th class="sortable-th" onclick="sortWhMat('mr', 'nama_barang')">
+                                        Nama Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 65px;" class="text-center">Rak</th>
+                                    <th style="width: 75px;" class="text-center">Batch</th>
+                                    <th style="width: 70px;" class="text-right sortable-th" onclick="sortWhMat('mr', 'jml')">
+                                        Diminta <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 70px;" class="text-right sortable-th" onclick="sortWhMat('mr', 'terpenuhi')">
+                                        Terpenuhi <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 60px;" class="text-right">Sisa</th>
+                                    <th style="width: 85px;" class="text-center">Tgl Transfer</th>
+                                    <th style="width: 85px;" class="text-center">Tgl Terima</th>
+                                    <th style="width: 95px;" class="text-center sortable-th" onclick="sortWhMat('mr', 'status')">
+                                        Leadtime <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 100px;" class="text-center sortable-th" onclick="sortWhMat('mr', 'status_mr')">
+                                        Status MR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="whMatMrTableBody">
+                                <tr class="skeleton-row">
+                                    <td colspan="15" class="text-center">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- PANEL 2: PEMENUHAN DR (DR LAIN & PASKOT) -->
+                <div class="subcon-tab-panel" id="tabPanelWhMatDr" style="margin-top: 0.75rem;">
+                    <!-- Sub-view switcher for DR (Dokumen DR vs Rincian DR) -->
+                    <div style="display: flex; align-items: center; gap: 8px; margin: 0.4rem 0 0.6rem;">
+                        <button class="filter-pill active" id="btnSubViewWhMatDrDoc" onclick="switchWhMatDrSubView('doc')">
+                            <i class="fa-solid fa-file-invoice"></i> Dokumen DR (<span id="countSubViewDrDoc">0</span> DR)
+                        </button>
+                        <button class="filter-pill" id="btnSubViewWhMatDrItem" onclick="switchWhMatDrSubView('item')">
+                            <i class="fa-solid fa-list-check"></i> Rincian DR (<span id="countSubViewDrItem">0</span> Item)
+                        </button>
+                    </div>
+
+                    <!-- SUB-PANEL 2A: DOKUMEN DR -->
+                    <div id="subPanelWhMatDrDoc" class="table-responsive">
+                        <table class="tickets-table subcon-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;" class="text-center">No</th>
+                                    <th style="width: 90px;" class="sortable-th" onclick="sortWhMat('dr_doc', 'sumber')">
+                                        Sumber <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 140px;" class="sortable-th" onclick="sortWhMat('dr_doc', 'no_trans')">
+                                        No. DR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 95px;" class="text-center sortable-th" onclick="sortWhMat('dr_doc', 'tgl_kirim')">
+                                        Tgl Kirim <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 140px;">Catatan / PO</th>
+                                    <th style="width: 110px;">Ekspedisi</th>
+                                    <th style="width: 90px;" class="text-center sortable-th" onclick="sortWhMat('dr_doc', 'total_item')">
+                                        Total Item <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 90px;" class="text-right sortable-th" onclick="sortWhMat('dr_doc', 'jml')">
+                                        Qty DR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 90px;" class="text-right sortable-th" onclick="sortWhMat('dr_doc', 'terpenuhi')">
+                                        Terpenuhi <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 80px;" class="text-right sortable-th" onclick="sortWhMat('dr_doc', 'sisa')">
+                                        Sisa <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 120px;">No. DN</th>
+                                    <th style="width: 95px;" class="text-center">Tgl DN</th>
+                                    <th style="width: 100px;">Kode Ref</th>
+                                    <th style="width: 100px;" class="text-center sortable-th" onclick="sortWhMat('dr_doc', 'status_dr')">
+                                        Status <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="whMatDrDocTableBody">
+                                <tr class="skeleton-row">
+                                    <td colspan="14" class="text-center">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- SUB-PANEL 2B: RINCIAN DR (PER ITEM) -->
+                    <div id="subPanelWhMatDrItem" class="table-responsive" style="display: none;">
+                        <table class="tickets-table subcon-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;" class="text-center">No</th>
+                                    <th style="width: 80px;">Sumber</th>
+                                    <th style="width: 135px;" class="sortable-th" onclick="sortWhMat('dr', 'no_trans')">
+                                        No. DR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 90px;" class="text-center sortable-th" onclick="sortWhMat('dr', 'tgl_kirim')">
+                                        Tgl Kirim <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 140px;">Catatan / PO</th>
+                                    <th style="width: 110px;">Ekspedisi</th>
+                                    <th style="width: 75px;">Kode</th>
+                                    <th class="sortable-th" onclick="sortWhMat('dr', 'nama_barang')">
+                                        Nama Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 55px;" class="text-center">Sat</th>
+                                    <th style="width: 75px;" class="text-center">Batch</th>
+                                    <th style="width: 70px;" class="text-right sortable-th" onclick="sortWhMat('dr', 'jml')">
+                                        Qty DR <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 70px;" class="text-right sortable-th" onclick="sortWhMat('dr', 'terpenuhi')">
+                                        Terpenuhi <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 60px;" class="text-right">Sisa</th>
+                                    <th style="width: 115px;">No. DN</th>
+                                    <th style="width: 85px;" class="text-center">Tgl DN</th>
+                                    <th style="width: 95px;">Kode Ref</th>
+                                    <th style="width: 95px;" class="text-center sortable-th" onclick="sortWhMat('dr', 'status_dr')">
+                                        Status <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="whMatDrTableBody">
+                                <tr class="skeleton-row">
+                                    <td colspan="17" class="text-center">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Baris Navigasi Pagination -->
+                <div class="purchasing-pagination-bar" id="whMatPaginationBar"
+                    style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.25rem;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="whMatPageInfo">
+                        Menampilkan 0 baris
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="filter-pill" id="btnWhMatPrevPage" onclick="changeWhMatPage(-1)">
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button class="filter-pill" id="btnWhMatNextPage" onclick="changeWhMatPage(1)">
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Modal WH Mat -->
+            <div class="modal-footer">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div class="modal-stats" id="whMatModalFooterStats">
+                        Menampilkan data monitoring Pemenuhan WH Material Atena ERP
+                    </div>
+                    <span id="whMatLastSyncTime" style="font-size: 0.75rem; color: var(--text-muted); margin-left: 8px;"></span>
+                </div>
+                <button class="btn-secondary" onclick="closeWhMatModal()">Tutup</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Chart.js Library untuk Visualisasi Grafik Tren -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=2.5.0"></script>
+    <script src="/js/app.js?v=2.6.0"></script>
 </body>
 
 </html>

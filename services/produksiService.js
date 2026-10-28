@@ -29,7 +29,7 @@ if (!fs.existsSync(CACHE_DIR)) {
     }
 }
 
-// Daftar 7 Lini Produksi resmi dari Atena ERP
+// Daftar 8 Lini Produksi resmi dari Atena ERP
 const BAGIAN_CONFIG = [
     { key: 'stentor', code: 'PROD_FINISHING', name: 'Produksi Finishing', unit: 'Meter / PCS', icon: 'industry' },
     { key: 'antiseptik', code: 'PROD_ANTISEPTIK', name: 'Produksi Antiseptik', unit: 'Botol / PCS', icon: 'pump-medical' },
@@ -37,6 +37,7 @@ const BAGIAN_CONFIG = [
     { key: 'sizing', code: 'PROD_SIZING', name: 'Produksi Sizing', unit: 'Meter / Beam', icon: 'ruler-combined' },
     { key: 'poligyp', code: 'PROD_POLIGYP', name: 'Produksi Poligyp', unit: 'Roll / PCS', icon: 'bandage' },
     { key: 'ironing', code: 'PROD_IRONING', name: 'Produksi Ironing', unit: 'PCS / Meter', icon: 'shirt' },
+    { key: 'surgicalmesin', code: 'PROD_SURGICAL_MESIN', name: 'Produksi Surgical Mesin', unit: 'PCS / Box', icon: 'gears' },
     { key: 'surgicalpacking', code: 'PROD_SURGICAL_PACKING', name: 'Produksi Surgical Packing', unit: 'Box / Karton', icon: 'box-tissue' }
 ];
 
