@@ -4490,9 +4490,9 @@ function renderQaModalData(data) {
 
         if (isDetail) {
             let grsList = items.filter(item => {
-                if (status === 'terpenuhi' && item.status_code !== 'approve') return false;
-                if (status === 'pending' && item.status_code !== 'belum') return false;
-                if (status === 'ditolak' && item.status_code !== 'batal') return false;
+                if (status === 'terpenuhi' && item.status_code !== 'terpenuhi' && item.status_code !== 'approve' && !item.is_released && item.disposisi_qc !== 'DITERIMA' && item.disposisi_qc !== 'DISETUJUI') return false;
+                if (status === 'pending' && item.status_code !== 'pending' && item.status_code !== 'belum') return false;
+                if (status === 'ditolak' && item.status_code !== 'ditolak' && item.status_code !== 'ditahan') return false;
                 if (q) {
                     const matchGrs = item.no_grs && item.no_grs.toLowerCase().includes(q);
                     const matchPo = item.no_po && item.no_po.toLowerCase().includes(q);
@@ -4519,8 +4519,8 @@ function renderQaModalData(data) {
         } else {
             const poSummary = Array.isArray(data.ringkasan_po) ? data.ringkasan_po : [];
             let poList = poSummary.filter(po => {
-                if (status === 'terpenuhi' && po.status_code !== 'selesai') return false;
-                if (status === 'pending' && po.status_code !== 'belum') return false;
+                if (status === 'terpenuhi' && po.status_code !== 'selesai' && po.status_code !== 'terpenuhi') return false;
+                if (status === 'pending' && po.status_code !== 'belum' && po.status_code !== 'pending') return false;
                 if (q) {
                     const matchPo = po.no_po && po.no_po.toLowerCase().includes(q);
                     const matchSupp = po.supplier && po.supplier.toLowerCase().includes(q);
@@ -4545,9 +4545,9 @@ function renderQaModalData(data) {
         }
     } else if (bagian === 'scn') {
         let scnList = items.filter(item => {
-            if (status === 'terpenuhi' && item.status_code !== 'sudah_release') return false;
-            if (status === 'pending' && item.status_code !== 'belum_release') return false;
-            if (status === 'ditolak' && item.status_code !== 'ditolak') return false;
+            if (status === 'terpenuhi' && item.status_code !== 'terpenuhi' && item.status_code !== 'sudah_release' && item.status !== 'Sudah Release') return false;
+            if (status === 'pending' && item.status_code !== 'belum' && item.status_code !== 'belum_release' && item.status !== 'Belum Release') return false;
+            if (status === 'ditolak' && item.status_code !== 'ditolak' && item.status !== 'Ditolak') return false;
             if (q) {
                 const matchScn = item.no_subcon && item.no_subcon.toLowerCase().includes(q);
                 const matchSupp = item.supplier && item.supplier.toLowerCase().includes(q);
@@ -4572,11 +4572,12 @@ function renderQaModalData(data) {
         renderQaPagination(scnList.length, state.qaCurrentPage, state.qaPageSize);
     } else if (bagian === 'acceptbr') {
         let brList = items.filter(item => {
-            if (status === 'terpenuhi' && item.status_code !== 'sudah_ada') return false;
-            if (status === 'pending' && item.status_code !== 'belum_ada') return false;
+            if (status === 'terpenuhi' && item.status_code !== 'terpenuhi' && item.status_code !== 'sudah_ada') return false;
+            if (status === 'pending' && item.status_code !== 'belum' && item.status_code !== 'belum_ada' && item.status !== 'Belum Ada BR') return false;
+            if (status === 'ditolak') return false;
             if (q) {
                 const matchPrh = item.no_prh && item.no_prh.toLowerCase().includes(q);
-                const matchProd = item.no_trans_prod && item.no_trans_prod.toLowerCase().includes(q);
+                const matchProd = (item.no_hasil_produksi || item.no_trans_prod || '').toLowerCase().includes(q);
                 const matchKode = item.kode_barang && item.kode_barang.toLowerCase().includes(q);
                 const matchNama = item.nama_barang && item.nama_barang.toLowerCase().includes(q);
                 const matchBatch = item.batch && item.batch.toLowerCase().includes(q);
@@ -4599,6 +4600,26 @@ function renderQaModalData(data) {
     }
 
     updateQaSortHeaders(bagian);
+}
+
+/**
+ * Helper format disposisi QA (Disetujui / Ditolak / Ditahan / -)
+ */
+function formatQaDisposisi(val) {
+    if (!val || val === '-' || val === 'null' || val === 'undefined') {
+        return '<span style="color: #94a3b8;">-</span>';
+    }
+    const s = String(val).trim().toUpperCase();
+    if (s === 'A' || s === 'DISETUJUI' || s === 'DITERIMA' || s === 'APPROVE') {
+        return '<span style="color: var(--kpi-green); font-weight: 700;">Disetujui</span>';
+    }
+    if (s === 'D' || s === 'DITOLAK' || s === 'TOLAK' || s === 'REJECT') {
+        return '<span style="color: #ef4444; font-weight: 700;">Ditolak</span>';
+    }
+    if (s === 'H' || s === 'DITAHAN' || s === 'HOLD') {
+        return '<span style="color: #d97706; font-weight: 700;">Ditahan</span>';
+    }
+    return `<span style="color: #64748b;">${val}</span>`;
 }
 
 /**
@@ -4634,11 +4655,13 @@ function renderQaGrsTable(list) {
 
     let html = '';
     paged.forEach((item, idx) => {
-        let badge = '<span class="service-status-pill" style="color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1;">BELUM</span>';
-        if (item.status_code === 'approve') {
-            badge = '<span class="service-status-pill status-live">APPROVE</span>';
-        } else if (item.status_code === 'batal') {
-            badge = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">BATAL</span>';
+        let badge = '<span class="service-status-pill" style="color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1;"><i class="fa-solid fa-clock"></i> BELUM APPROVE</span>';
+        if (item.is_released || item.disposisi_qc === 'DITERIMA' || item.disposisi_qc === 'DISETUJUI' || item.status_code === 'terpenuhi') {
+            badge = '<span class="service-status-pill status-live"><i class="fa-solid fa-check"></i> DISETUJUI</span>';
+        } else if (item.disposisi_qc === 'DITOLAK' || item.status_code === 'ditolak') {
+            badge = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;"><i class="fa-solid fa-xmark"></i> DITOLAK</span>';
+        } else if (item.disposisi_qc === 'DITAHAN' || item.status_code === 'ditahan') {
+            badge = '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;"><i class="fa-solid fa-pause"></i> DITAHAN</span>';
         }
 
         const poClickHtml = (item.no_po && item.no_po !== '-')
@@ -4654,7 +4677,7 @@ function renderQaGrsTable(list) {
                 <td class="font-mono text-center" style="font-size: 0.8rem;">${item.tanggal_label || item.tanggal}</td>
                 <td>${poClickHtml}</td>
                 <td style="font-weight: 500; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.supplier || '-'}">${item.supplier || '-'}</td>
-                <td class="text-center"><span class="badge-satuan" style="font-size: 0.72rem;">${item.disposisi_qc || '-'}</span></td>
+                <td class="text-center" style="font-size: 0.8rem;">${formatQaDisposisi(item.disposisi_qc)}</td>
                 <td class="text-center">${badge}</td>
                 <td class="font-mono text-center" style="font-size: 0.8rem;">${item.tgl_approve_label || item.tgl_approve || '-'}</td>
             </tr>
@@ -4700,7 +4723,7 @@ function renderQaPoTable(list) {
 
     let html = '';
     paged.forEach((po, idx) => {
-        const isSelesai = po.status_code === 'selesai';
+        const isSelesai = po.status_code === 'selesai' || po.status_code === 'terpenuhi';
         const badge = isSelesai
             ? '<span class="service-status-pill status-live">SELESAI</span>'
             : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">SEBAGIAN</span>';
@@ -4763,12 +4786,17 @@ function renderQaScnTable(list) {
 
     let html = '';
     paged.forEach((item, idx) => {
-        let badge = '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM RELEASE</span>';
-        if (item.status_code === 'sudah_release') {
-            badge = '<span class="service-status-pill status-live">SUDAH RELEASE</span>';
-        } else if (item.status_code === 'ditolak') {
-            badge = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">DITOLAK</span>';
+        let badge = '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;"><i class="fa-solid fa-clock"></i> BELUM RELEASE</span>';
+        if (item.status_code === 'terpenuhi' || item.status_code === 'sudah_release' || item.status === 'Sudah Release') {
+            badge = '<span class="service-status-pill status-live"><i class="fa-solid fa-check"></i> SUDAH RELEASE</span>';
+        } else if (item.status_code === 'ditolak' || item.status === 'Ditolak') {
+            badge = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;"><i class="fa-solid fa-xmark"></i> DITOLAK</span>';
         }
+
+        const disp1 = item.disposisi_1 || item.disposisi_qc_1 || '-';
+        const disp2 = item.disposisi_2 || item.disposisi_qc_2 || '-';
+        const disp1Html = formatQaDisposisi(disp1);
+        const disp2Html = formatQaDisposisi(disp2);
 
         html += `
             <tr>
@@ -4782,8 +4810,8 @@ function renderQaScnTable(list) {
                 <td class="text-right font-mono">${Number(item.jumlah || 0).toLocaleString('id-ID')}</td>
                 <td class="text-center"><span class="badge-satuan">${item.satuan || '-'}</span></td>
                 <td class="text-center font-mono" style="font-size: 0.8rem; color: #64748b;">${item.no_qc || '-'}</td>
-                <td class="text-center" style="font-size: 0.8rem;">${item.disposisi_qc_1 || '-'}</td>
-                <td class="text-center" style="font-size: 0.8rem;">${item.disposisi_qc_2 || '-'}</td>
+                <td class="text-center" style="font-size: 0.8rem;">${disp1Html}</td>
+                <td class="text-center" style="font-size: 0.8rem;">${disp2Html}</td>
                 <td class="text-center">${badge}</td>
             </tr>
         `;
@@ -4828,10 +4856,10 @@ function renderQaAcceptBrTable(list) {
 
     let html = '';
     paged.forEach((item, idx) => {
-        const isBelum = item.status_code === 'belum_ada';
+        const isBelum = item.status_code === 'belum' || item.status_code === 'belum_ada' || item.status === 'Belum Ada BR';
         const badge = isBelum
-            ? '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">BELUM ADA BR</span>'
-            : '<span class="service-status-pill status-live">SUDAH ADA BR</span>';
+            ? '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;"><i class="fa-solid fa-triangle-exclamation"></i> BELUM ADA BR</span>'
+            : '<span class="service-status-pill status-live"><i class="fa-solid fa-check"></i> SUDAH ADA BR</span>';
 
         html += `
             <tr>
@@ -4839,7 +4867,7 @@ function renderQaAcceptBrTable(list) {
                 <td><strong style="color: #8b5cf6;">${item.no_prh}</strong></td>
                 <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_prh_label || item.tgl_prh}</td>
                 <td class="text-center font-mono" style="font-size: 0.8rem; color: #64748b;">${item.tgl_kirim_sample_label || item.tgl_kirim_sample || '-'}</td>
-                <td><span class="font-mono" style="font-size: 0.8rem;">${item.no_trans_prod || '-'}</span></td>
+                <td><span class="font-mono" style="font-size: 0.8rem;">${item.no_hasil_produksi || item.no_trans_prod || '-'}</span></td>
                 <td class="text-center"><span class="badge-satuan" style="font-size: 0.72rem;">${item.divisi || '-'}</span></td>
                 <td><span class="font-mono" style="font-size: 0.8rem;">${item.kode_barang}</span></td>
                 <td>${item.nama_barang}</td>

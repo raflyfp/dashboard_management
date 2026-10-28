@@ -261,17 +261,17 @@ class QaService {
                     const statusStr = String(r.status || '').trim();
                     const isApprovedDoc = statusStr.toUpperCase().includes('SUDAH');
                     const disposisi = String(r.disposisi_qc || '').trim().toUpperCase();
-
-                    const isReleased = isApprovedDoc && disposisi === 'DITERIMA';
+                    // Sesuai kriteria QA: Release = Disposisi QC DISETUJUI / DITERIMA
+                    const isReleased = isApprovedDoc && (disposisi === 'DITERIMA' || disposisi === 'DISETUJUI');
                     const isRejected = disposisi === 'DITOLAK';
                     const isHold = disposisi === 'DITAHAN';
 
                     let statusCode = 'pending';
-                    let statusLabel = 'Pending';
+                    let statusLabel = 'Belum Approve';
 
                     if (isReleased) {
                         statusCode = 'terpenuhi';
-                        statusLabel = 'Approved / Released';
+                        statusLabel = 'Disetujui (Release)';
                     } else if (isRejected) {
                         statusCode = 'ditolak';
                         statusLabel = 'Ditolak';
@@ -436,10 +436,13 @@ class QaService {
                 };
             });
 
-            const totalGrs = ringkasanKpi.total_grs || items.length;
-            const released = ringkasanKpi.grs_approve ?? totalReleased;
-            const pending = ringkasanKpi.grs_belum_approve ?? (totalPending + totalDitolak + totalDitahan);
-            const persentase = ringkasanKpi.persentase ?? (totalGrs > 0 ? Number(((released / totalGrs) * 100).toFixed(1)) : 0);
+            const totalGrs = items.length || ringkasanKpi.total_grs || 0;
+            // Real Released dihitung dari GRS yang disposisinya DITERIMA / DISETUJUI
+            const released = totalReleased;
+            const pending = totalPending;
+            const ditolak = totalDitolak;
+            const ditahan = totalDitahan;
+            const persentase = totalGrs > 0 ? Number(((released / totalGrs) * 100).toFixed(2)) : 0;
 
             return {
                 success: true,
@@ -448,15 +451,23 @@ class QaService {
                     total_grs: totalGrs,
                     grs_released: released,
                     grs_approve: released,
-                    grs_ditolak: totalDitolak,
-                    grs_ditahan: totalDitahan,
+                    grs_ditolak: ditolak,
+                    grs_ditahan: ditahan,
                     grs_pending: pending,
+                    grs_belum: pending,
                     grs_belum_approve: pending,
                     persentase: persentase,
                     persentase_selesai: persentase,
                     total_po: Array.from(poMap.keys()).filter(k => k !== 'TANPA_PO').length,
                     total_supplier: suppliersSet.size,
                     total_item: items.length,
+                },
+                ringkasan: {
+                    total_grs: totalGrs,
+                    grs_approve: released,
+                    grs_belum: pending,
+                    grs_batal: ditolak + ditahan,
+                    persentase_selesai: persentase,
                 },
                 summary_by_po: summaryByPo,
                 items: items,
@@ -579,15 +590,17 @@ class QaService {
         const dateParams = { tglawal: monthStart, tglakhir: today };
 
         try {
-            const [grsSummary, scnSummary, brSummary] = await Promise.all([
-                this.fetchRingkasan('grsmaterial', dateParams),
+            const [grsData, scnSummary, brSummary] = await Promise.all([
+                this.fetchData('grsmaterial', force, dateParams),
                 this.fetchRingkasan('scn', dateParams),
                 this.fetchRingkasan('acceptbr', dateParams)
             ]);
 
-            const totalGrs = Number(grsSummary.total_grs || 0);
-            const grsApprove = Number(grsSummary.grs_approve || 0);
-            const grsBelum = Number(grsSummary.grs_belum_approve || 0);
+            const totalGrs = Number(grsData.kpi?.total_grs || 0);
+            const grsApprove = Number(grsData.kpi?.grs_released ?? grsData.kpi?.grs_approve ?? 0);
+            const grsBelum = Number(grsData.kpi?.grs_belum ?? grsData.kpi?.grs_pending ?? 0);
+            const grsDitolak = Number((grsData.kpi?.grs_ditolak || 0) + (grsData.kpi?.grs_ditahan || 0));
+            const grsPersen = Number(grsData.kpi?.persentase_selesai || 0);
 
             const totalScn = Number(scnSummary.total_scn || 0);
             const scnSudah = Number(scnSummary.scn_sudah_release || 0);
@@ -611,16 +624,26 @@ class QaService {
                     total_dokumen: combinedTotal,
                     total_selesai: combinedSelesai,
                     total_belum: combinedBelum,
-                    total_ditolak: scnDitolak,
+                    total_ditolak: scnDitolak + grsDitolak,
                     persentase_selesai: combinedPersen,
 
-                    // Sub-KPI GRS Material
-                    grs: grsSummary,
+                    // Sub-KPI GRS Material (Disposisi QC Disetujui/Diterima)
+                    grs: {
+                        bagian: 'grsmaterial',
+                        judul: 'Release Material (GRS)',
+                        tglawal: monthStart,
+                        tglakhir: today,
+                        total_grs: totalGrs,
+                        grs_approve: grsApprove,
+                        grs_belum_approve: grsBelum,
+                        grs_ditolak: grsDitolak,
+                        persentase: grsPersen,
+                    },
                     total_grs: totalGrs,
                     grs_approve: grsApprove,
                     grs_released: grsApprove,
                     grs_belum_approve: grsBelum,
-                    persentase_grs: grsSummary.persentase || 0,
+                    persentase_grs: grsPersen,
 
                     // Sub-KPI SCN Subcon
                     scn: scnSummary,

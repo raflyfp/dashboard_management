@@ -1979,8 +1979,8 @@
                 <!-- Navigasi Tab Bagian QA & Status Filter -->
                 <div class="subcon-detail-section" style="margin-top: 1rem;">
                     <!-- Sub-Navbar: Tab Bagian (GRS Material, Subcon SCN, Accept BR) & Filter Status -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0;">
-                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: -2px;">
+                    <div class="modal-tab-nav-row">
+                        <div class="tab-group-left">
                             <button class="logistik-tab-btn active" id="btnTabQaGrs"
                                 onclick="switchQaBagian('grsmaterial')">
                                 <i class="fa-solid fa-truck-ramp-box"></i> Release Material (GRS)
@@ -1996,7 +1996,7 @@
                             </button>
                         </div>
 
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-shrink: 0;">
+                        <div class="tab-group-right">
                             <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Status:</span>
                             <select id="selectQaStatus" class="purchasing-select"
                                 onchange="switchQaStatus(this.value)">
@@ -2142,6 +2142,12 @@
 
                     <!-- PANEL 3: ACCEPT BATCH RECORD (BR) -->
                     <div class="subcon-tab-panel" id="tabPanelQaAcceptBr" style="display: none;">
+                        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 0.4rem; display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: #1e40af;">
+                            <i class="fa-solid fa-circle-info" style="font-size: 1.1rem; color: #3b82f6; flex-shrink: 0;"></i>
+                            <div>
+                                <strong>Catatan Rincian Accept BR:</strong> API Atena ERP menyediakan rincian untuk transaksi PRH yang <strong>belum di-accept Batch Record</strong> (outstanding). Transaksi yang sudah di-accept BR tercatat dalam total agregat KPI sistem.
+                            </div>
+                        </div>
                         <div class="table-responsive" style="margin-top: 0.5rem;">
                             <table class="tickets-table subcon-table" style="width: 100%;">
                                 <thead>
@@ -3148,8 +3154,8 @@
                 </div>
 
                 <!-- Sub-Navbar: Tab Bagian (Permintaan Bahan MR vs Pemenuhan DR) & Filter Status -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0;">
-                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: -2px;">
+                <div class="modal-tab-nav-row">
+                    <div class="tab-group-left">
                         <button class="logistik-tab-btn active" id="btnWhMatTabMr"
                             onclick="switchWhMatBagian('permintaanbahan')">
                             <i class="fa-solid fa-dolly"></i> Permintaan Bahan (MR)
@@ -3162,7 +3168,7 @@
                         </button>
                     </div>
 
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-shrink: 0;">
+                    <div class="tab-group-right">
                         <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Status:</span>
                         <select id="selectWhMatStatus" class="purchasing-select"
                             onchange="switchWhMatStatus(this.value)">
