@@ -779,7 +779,7 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total PR Mat</span>
+                                <span class="m-lbl">Total GRS</span>
                                 <span class="m-val" id="totalQA">0</span>
                             </div>
                             <div class="metric-box m-success">
@@ -1903,7 +1903,7 @@
                         <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
                             <div class="search-box" style="flex: 1; margin: 0;">
                                 <i class="fa-solid fa-magnifying-glass"></i>
-                                <input type="text" id="qaSearchInput" placeholder="Cari No PR / GRS / Kode / Nama Barang..."
+                                <input type="text" id="qaSearchInput" placeholder="Cari No GRS / No PO / Supplier..."
                                     oninput="handleQaSearch(this.value)">
                             </div>
 
@@ -1923,15 +1923,22 @@
                     <div class="subcon-kpi-card">
                         <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-boxes-packing"></i></div>
                         <div>
-                            <div class="kpi-num" id="modalKpiQaTotalPr">0</div>
-                            <div class="kpi-label">Total PR Material</div>
+                            <div class="kpi-num" id="modalKpiQaTotalGrs">0</div>
+                            <div class="kpi-label">Total GRS</div>
                         </div>
                     </div>
                     <div class="subcon-kpi-card">
                         <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
                         <div>
                             <div class="kpi-num text-success" id="modalKpiQaReleased">0</div>
-                            <div class="kpi-label">Released / GRS (<span id="modalKpiQaPercent">0%</span>)</div>
+                            <div class="kpi-label">Released / Diterima (<span id="modalKpiQaPercent">0%</span>)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-danger" style="color: #ef4444;"><i class="fa-solid fa-circle-xmark"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #ef4444;" id="modalKpiQaReject">0</div>
+                            <div class="kpi-label">Ditolak / Ditahan</div>
                         </div>
                     </div>
                     <div class="subcon-kpi-card">
@@ -1942,34 +1949,27 @@
                         </div>
                     </div>
                     <div class="subcon-kpi-card">
-                        <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-list-ol"></i></div>
+                        <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-file-invoice-dollar"></i></div>
                         <div>
-                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiQaTotalItem">0</div>
-                            <div class="kpi-label">Total Item Material</div>
-                        </div>
-                    </div>
-                    <div class="subcon-kpi-card">
-                        <div class="kpi-icon-mini" style="color: #10b981;"><i class="fa-solid fa-truck-ramp-box"></i></div>
-                        <div>
-                            <div class="kpi-num" style="color: #10b981;" id="modalKpiQaQtyGrs">0</div>
-                            <div class="kpi-label">Total Qty GRS (Masuk)</div>
+                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiQaTotalPo">0</div>
+                            <div class="kpi-label">Total PO Terkait</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Navigasi Tampilan & Status Filter -->
                 <div class="subcon-detail-section" style="margin-top: 1rem;">
-                    <!-- Sub-Navbar: Tab View (Per No. PR vs Rincian Item) & Filter Status (Persis Logistik) -->
+                    <!-- Sub-Navbar: Tab View (Daftar Release GRS vs Ringkasan Per PO) & Filter Status -->
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0;">
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: -2px;">
-                            <button class="logistik-tab-btn active" id="btnViewQaPr"
-                                onclick="switchQaView('pr')">
-                                <i class="fa-solid fa-list-check"></i> Per No. PR Material
-                                <span class="subcon-tab-badge" id="countQaPr">0</span>
+                            <button class="logistik-tab-btn active" id="btnViewQaGrs"
+                                onclick="switchQaView('grs')">
+                                <i class="fa-solid fa-clipboard-check"></i> Daftar Release GRS
+                                <span class="subcon-tab-badge" id="countQaGrs">0</span>
                             </button>
-                            <button class="logistik-tab-btn" id="btnViewQaItems" onclick="switchQaView('items')">
-                                <i class="fa-solid fa-table-list"></i> Rincian Item GRS
-                                <span class="subcon-tab-badge" id="countQaItems">0</span>
+                            <button class="logistik-tab-btn" id="btnViewQaPo" onclick="switchQaView('po')">
+                                <i class="fa-solid fa-file-invoice"></i> Ringkasan Per No. PO
+                                <span class="subcon-tab-badge" id="countQaPo">0</span>
                             </button>
                         </div>
 
@@ -1978,95 +1978,85 @@
                             <select id="selectQaStatus" class="purchasing-select"
                                 onchange="switchQaStatus(this.value)">
                                 <option value="all">Semua Status</option>
-                                <option value="terpenuhi">Status: Released (Selesai GRS)</option>
-                                <option value="pending">Status: Pending (Belum GRS)</option>
+                                <option value="terpenuhi">Status: Released (Diterima)</option>
+                                <option value="ditolak">Status: Ditolak (Reject)</option>
+                                <option value="ditahan">Status: Ditahan (Hold)</option>
+                                <option value="pending">Status: Pending (Belum Approve)</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- Panel 1: Tampilan Ringkasan Per No. PR Material -->
-                    <div class="subcon-tab-panel active" id="tabPanelQaPr">
+                    <!-- Panel 1: Tampilan Rincian Release GRS (Material) -->
+                    <div class="subcon-tab-panel active" id="tabPanelQaGrs">
                         <div class="table-responsive">
                             <table class="tickets-table subcon-table">
                                 <thead>
                                     <tr>
                                         <th style="width: 45px; text-align: center;">No</th>
-                                        <th class="sortable-th" onclick="sortQa('pr', 'no_pr')" data-sort-key="no_pr" title="Klik untuk mengurutkan No PR">
-                                            No. PR <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th class="sortable-th" onclick="sortQa('grs', 'no_grs')" data-sort-key="no_grs" title="Klik untuk mengurutkan No GRS">
+                                            No. GRS <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('pr', 'tanggal')" data-sort-key="tanggal" title="Klik untuk mengurutkan Tanggal">
+                                        <th class="sortable-th" onclick="sortQa('grs', 'tanggal')" data-sort-key="tanggal" title="Klik untuk mengurutkan Tanggal">
                                             Tanggal <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('pr', 'item_count')" data-sort-key="item_count" title="Klik untuk mengurutkan Jumlah Item">
-                                            Jumlah Item <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th class="sortable-th" onclick="sortQa('grs', 'no_po')" data-sort-key="no_po" title="Klik untuk mengurutkan No PO">
+                                            No. PO <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('pr', 'total_request')" data-sort-key="total_request" title="Klik untuk mengurutkan Total Qty Request">
-                                            Total Request <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th class="sortable-th" onclick="sortQa('grs', 'supplier')" data-sort-key="supplier" title="Klik untuk mengurutkan Supplier">
+                                            Supplier <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('pr', 'total_po')" data-sort-key="total_po" title="Klik untuk mengurutkan Total Qty PO">
-                                            Total PO <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th class="sortable-th" onclick="sortQa('grs', 'disposisi_qc')" data-sort-key="disposisi_qc" style="text-align: center;" title="Klik untuk mengurutkan Disposisi QC">
+                                            Disposisi QC <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('pr', 'total_grs')" data-sort-key="total_grs" title="Klik untuk mengurutkan Realisasi GRS">
-                                            Realisasi GRS <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('pr', 'total_os')" data-sort-key="total_os" title="Klik untuk mengurutkan Sisa OS">
-                                            Sisa OS <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th" onclick="sortQa('pr', 'status_code')" data-sort-key="status_code" style="text-align: center;" title="Klik untuk mengurutkan Status Release">
+                                        <th class="sortable-th" onclick="sortQa('grs', 'status_code')" data-sort-key="status_code" style="text-align: center;" title="Klik untuk mengurutkan Status Approve">
                                             Status Release <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="sortable-th" onclick="sortQa('grs', 'tgl_approve')" data-sort-key="tgl_approve" title="Klik untuk mengurutkan Tanggal Approve">
+                                            Tgl Approve <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody id="qaPrTableBody">
+                                <tbody id="qaGrsTableBody">
                                     <!-- Diisi oleh app.js -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                    <!-- Panel 2: Tampilan Rincian Item GRS Material -->
-                    <div class="subcon-tab-panel" id="tabPanelQaItems">
+                    <!-- Panel 2: Tampilan Ringkasan Per No. PO -->
+                    <div class="subcon-tab-panel" id="tabPanelQaPo">
                         <div class="table-responsive">
                             <table class="tickets-table subcon-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 40px; text-align: center;">No</th>
-                                        <th class="sortable-th" onclick="sortQa('items', 'no_pr')" data-sort-key="no_pr" title="Klik untuk mengurutkan No PR">
-                                            No. PR <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th style="width: 45px; text-align: center;">No</th>
+                                        <th class="sortable-th" onclick="sortQa('po', 'no_po')" data-sort-key="no_po" title="Klik untuk mengurutkan No PO">
+                                            No. PO <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('items', 'tanggal')" data-sort-key="tanggal" title="Klik untuk mengurutkan Tanggal">
+                                        <th class="sortable-th" onclick="sortQa('po', 'tanggal')" data-sort-key="tanggal" title="Klik untuk mengurutkan Tanggal">
                                             Tanggal <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('items', 'kode_barang')" data-sort-key="kode_barang" title="Klik untuk mengurutkan Kode Barang">
-                                            Kode Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th class="sortable-th" onclick="sortQa('po', 'supplier')" data-sort-key="supplier" title="Klik untuk mengurutkan Supplier">
+                                            Supplier <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('items', 'nama_barang')" data-sort-key="nama_barang" title="Klik untuk mengurutkan Nama Barang">
-                                            Nama Barang Material <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th class="sortable-th text-center" onclick="sortQa('po', 'total_grs')" data-sort-key="total_grs" title="Klik untuk mengurutkan Total GRS">
+                                            Total GRS <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('items', 'satuan')" data-sort-key="satuan" style="text-align: center;" title="Klik untuk mengurutkan Satuan">
-                                            Satuan <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th class="sortable-th text-center" onclick="sortQa('po', 'grs_approve')" data-sort-key="grs_approve" title="Klik untuk mengurutkan GRS Approve">
+                                            GRS Approve <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('items', 'qty_request')" data-sort-key="qty_request" title="Klik untuk mengurutkan Qty Request">
-                                            Qty Request <i class="fa-solid fa-sort sort-icon"></i>
+                                        <th class="sortable-th text-center" onclick="sortQa('po', 'grs_pending')" data-sort-key="grs_pending" title="Klik untuk mengurutkan GRS Pending">
+                                            Pending <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('items', 'qty_po')" data-sort-key="qty_po" title="Klik untuk mengurutkan Qty PO">
-                                            Qty PO <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('items', 'qty_grs')" data-sort-key="qty_grs" title="Klik untuk mengurutkan Qty GRS">
-                                            Qty GRS <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('items', 'qty_os')" data-sort-key="qty_os" title="Klik untuk mengurutkan Sisa OS">
-                                            Sisa OS <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('items', 'progress_percent')" data-sort-key="progress_percent" title="Klik untuk mengurutkan Capaian Release">
+                                        <th class="sortable-th text-right" onclick="sortQa('po', 'persentase')" data-sort-key="persentase" title="Klik untuk mengurutkan Capaian Release">
                                             Capaian % <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('items', 'status_code')" data-sort-key="status_code" style="text-align: center;" title="Klik untuk mengurutkan Status Release">
+                                        <th class="sortable-th" onclick="sortQa('po', 'status_code')" data-sort-key="status_code" style="text-align: center;" title="Klik untuk mengurutkan Status Release">
                                             Status Release <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody id="qaItemsTableBody">
+                                <tbody id="qaPoTableBody">
                                     <!-- Diisi oleh app.js -->
                                 </tbody>
                             </table>

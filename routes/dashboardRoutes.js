@@ -17,6 +17,7 @@ const subconService = require('../services/subconService');
 const purchasingService = require('../services/purchasingService');
 const produksiService = require('../services/produksiService');
 const logistikService = require('../services/logistikService');
+const qaService = require('../services/qaService');
 
 // In-memory cache sederhana untuk efisiensi beban server
 const cache = {
@@ -82,13 +83,14 @@ router.get('/stats', async (req, res) => {
     }
 
     try {
-        // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi & Logistik secara paralel
-        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled] = await Promise.allSettled([
+        // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi, Logistik & QA secara paralel
+        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled] = await Promise.allSettled([
             ticketingService.getSummary(forceRefresh),
             subconService.getMonitoringToday(forceRefresh),
             purchasingService.getSummary(forceRefresh),
             produksiService.getRingkasanAll(forceRefresh),
-            logistikService.getSummary(forceRefresh)
+            logistikService.getSummary(forceRefresh),
+            qaService.getSummary(forceRefresh)
         ]);
 
         let apiData = null;
@@ -134,6 +136,14 @@ router.get('/stats', async (req, res) => {
             console.error(`❌ [API LOGISTIK ERROR]: ${logistikSettled.reason?.message}`);
         }
         const logistikKpi = logistikData?.kpi || {};
+
+        let qaData = null;
+        if (qaSettled.status === 'fulfilled') {
+            qaData = qaSettled.value;
+        } else {
+            console.error(`❌ [API QA ERROR]: ${qaSettled.reason?.message}`);
+        }
+        const qaKpi = qaData?.kpi || {};
 
         const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
@@ -557,23 +567,24 @@ router.get('/stats', async (req, res) => {
                 nama: 'QA (Quality Assurance)',
                 kategori: 'support_qa',
                 kategori_label: 'HR, Dokumen & Mutu',
-                data_ditampilkan: 'Release Material & Produk Jadi',
+                data_ditampilkan: 'Release Material (GRS) & QC Approval',
                 sub_nama: 'Release Material (GRS)',
-                sumber_data: 'GRS (Goods Receipt Slip) Atena ERP & SCN',
-                sumber: 'Atena ERP (GRS) & SCN',
-                catatan: 'Release material (GRS) & Release produk jadi (SCN dan Accept BR)',
+                sumber_data: 'Atena ERP REST API (ReleaseQA)',
+                sumber: 'Atena ERP (GRS)',
+                catatan: 'Release material GRS berbasis PO & QC Approval',
                 icon: 'clipboard-check',
-                is_active: Boolean((purchasingKpi.material?.total_pr ?? 0) > 0 || (purchasingKpi.total_qty_grs ?? 0) > 0),
-                metric_labels: { total: 'Total PR Mat', selesai: 'Released', belum: 'Pending' },
-                unit: 'PR',
-                total_tiket: purchasingKpi.material?.total_pr ?? 0,
-                selesai: purchasingKpi.material?.pr_terpenuhi ?? 0,
-                belum_selesai: purchasingKpi.material?.pr_belum ?? 0,
-                ditolak: 0,
-                total_efektif: purchasingKpi.material?.total_pr ?? 0,
-                persentase_selesai: purchasingKpi.material?.persentase ?? 0,
-                total_qty_grs: purchasingKpi.total_qty_grs ?? 0,
-                material: purchasingKpi.material || {},
+                is_active: Boolean((qaKpi.total_grs ?? 0) > 0),
+                metric_labels: { total: 'Total GRS', selesai: 'Released', belum: 'Pending' },
+                unit: 'GRS',
+                total_tiket: qaKpi.total_grs ?? 0,
+                selesai: qaKpi.grs_released ?? qaKpi.grs_approve ?? 0,
+                belum_selesai: ((qaKpi.total_grs ?? 0) - (qaKpi.grs_released ?? qaKpi.grs_approve ?? 0)),
+                ditolak: qaKpi.grs_ditolak ?? 0,
+                total_efektif: qaKpi.total_grs ?? 0,
+                persentase_selesai: qaKpi.persentase ?? 0,
+                total_po: qaKpi.total_po ?? 0,
+                total_supplier: qaKpi.total_supplier ?? 0,
+                kpi: qaKpi,
             },
 
             // ==============================================================
@@ -935,16 +946,15 @@ router.post('/purchasing/sync', async (req, res) => {
  * Mengambil data Release Material (GRS) QA Atena ERP dalam format JSON
  * Query params:
  * - range: 'all' | 'today' | 'week' | 'month' (default: 'month')
- * - status: 'all' | 'terpenuhi' | 'pending'
- * - search: pencarian No PR, kode barang, atau nama barang
+ * - status: 'all' | 'terpenuhi' (approved) | 'pending' (belum approve)
+ * - search: pencarian No GRS, No PO, Supplier, Surat Jalan, Disposisi QC
  * - tglawal, tglakhir
  */
 router.get('/qa', async (req, res) => {
     try {
         const { range = 'month', status = 'all', search = '', force = false, tglawal, tglakhir } = req.query;
-        const rawData = await purchasingService.getMonitoringData({
+        const data = await qaService.getMonitoringData({
             range,
-            jenis: 'material',
             status,
             search,
             force: force === 'true',
@@ -952,54 +962,9 @@ router.get('/qa', async (req, res) => {
             tglakhir,
         });
 
-        // Filter khusus Material untuk QA Release Material GRS
-        const matItems = (rawData.items || []).filter(i => i.jenis_code === 'material');
-        const matPrList = (rawData.summary_by_pr || []).filter(pr => pr.jenis_code === 'material');
-
-        let totalQtyRequest = 0;
-        let totalQtyPo = 0;
-        let totalQtyGrs = 0;
-        let totalQtyOs = 0;
-
-        matItems.forEach(i => {
-            totalQtyRequest += Number(i.qty_request || 0);
-            totalQtyPo += Number(i.qty_po || 0);
-            totalQtyGrs += Number(i.qty_grs || 0);
-            totalQtyOs += Number(i.qty_os || 0);
-        });
-
-        const matKpi = rawData.kpi?.material || {};
-        const totalPr = matKpi.total_pr ?? matPrList.length;
-        const prReleased = matKpi.pr_terpenuhi ?? matPrList.filter(p => p.status_code === 'terpenuhi').length;
-        const prPending = matKpi.pr_belum ?? matPrList.filter(p => p.status_code === 'pending').length;
-        const persentase = matKpi.persentase ?? (totalPr > 0 ? Number(((prReleased / totalPr) * 100).toFixed(1)) : 0);
-
-        const qaData = {
-            meta: {
-                ...rawData.meta,
-                total_pr_material: totalPr,
-                total_item_material: matItems.length,
-                tglawal: rawData.meta?.tglawal || tglawal,
-                tglakhir: rawData.meta?.tglakhir || tglakhir,
-            },
-            kpi: {
-                total_pr: totalPr,
-                pr_released: prReleased,
-                pr_pending: prPending,
-                persentase_selesai: persentase,
-                total_qty_request: totalQtyRequest,
-                total_qty_po: totalQtyPo,
-                total_qty_grs: totalQtyGrs,
-                total_qty_os: totalQtyOs,
-                total_item: matItems.length,
-            },
-            summary_by_pr: matPrList,
-            items: matItems,
-        };
-
         return res.json({
             success: true,
-            data: qaData
+            data: data
         });
     } catch (error) {
         console.error('[API ERROR /qa]:', error.message);
@@ -1017,7 +982,7 @@ router.get('/qa', async (req, res) => {
  */
 router.post('/qa/sync', async (req, res) => {
     try {
-        const rawData = await purchasingService.fetchData(true);
+        const rawData = await qaService.fetchData(true);
         return res.json({
             success: true,
             message: 'Sinkronisasi data QA Release Material dari Atena ERP berhasil',

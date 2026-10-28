@@ -84,6 +84,7 @@ const ticketingService = {
                         selesai: item.selesai ?? 0,
                         belum_selesai: item.belum_selesai ?? 0,
                         ditolak: item.ditolak ?? 0,
+
                         persentase_selesai: item.persentase_selesai ?? 0,
                     };
                 }
@@ -107,7 +108,7 @@ const ticketingService = {
         // Otomatis pre-warm data tiket di background agar saat tombol "Lihat Detail" ditekan,
         // responnya langsung instan (0 ms) tanpa menunggu pemanggilan API ke WAN!
         setTimeout(() => {
-            ticketingService.prewarmTickets().catch(() => {});
+            ticketingService.prewarmTickets().catch(() => { });
         }, 200);
 
         return resultPayload;

@@ -91,20 +91,20 @@ const state = {
         items: { column: 'tgl_jatuh_tempo', dir: 'desc' }
     },
 
-    // State Khusus Modul QA (Release Material GRS)
+    // State Khusus Modul QA (Release Material GRS Atena ERP)
     currentQaRange: 'month',
     qaDateStart: '',
     qaDateEnd: '',
     currentQaStatus: 'all',
-    currentQaView: 'pr', // 'pr' | 'items'
+    currentQaView: 'grs', // 'grs' (Daftar GRS) | 'po' (Ringkasan Per PO)
     qaSearchQuery: '',
     qaCurrentPage: 1,
     qaPageSize: 30,
     qaRawData: null,
     qaCache: new Map(),
     qaSort: {
-        pr: { column: 'tanggal', dir: 'desc' },
-        items: { column: 'tanggal', dir: 'desc' },
+        grs: { column: 'tanggal', dir: 'desc' },
+        po: { column: 'tanggal', dir: 'desc' },
     },
 };
 
@@ -623,7 +623,7 @@ function renderKpiTrackerTicker(data) {
             <span class="ticker-item">
                 <i class="fa-solid fa-clipboard-check" style="color: #8b5cf6;"></i>
                 <span>Release Material QA (GRS):</span>
-                <b style="color: #8b5cf6;">${qa.selesai}/${qa.total_tiket} PR Mat</b>
+                <b style="color: #8b5cf6;">${qa.selesai}/${qa.total_tiket} GRS</b>
                 <span class="ticker-kpi-sub">(${qa.persentase_selesai}% • Live GRS)</span>
             </span>
         `);
@@ -4101,22 +4101,22 @@ function switchQaStatus(status) {
 }
 
 /**
- * Ganti Mode Tampilan Tab QA: 'pr' vs 'items'
+ * Ganti Mode Tampilan Tab QA: 'grs' vs 'po'
  */
 function switchQaView(viewMode) {
     state.currentQaView = viewMode;
     state.qaCurrentPage = 1;
 
-    const btnPr = document.getElementById('btnViewQaPr');
-    const btnItems = document.getElementById('btnViewQaItems');
-    const panelPr = document.getElementById('tabPanelQaPr');
-    const panelItems = document.getElementById('tabPanelQaItems');
+    const btnGrs = document.getElementById('btnViewQaGrs');
+    const btnPo = document.getElementById('btnViewQaPo');
+    const panelGrs = document.getElementById('tabPanelQaGrs');
+    const panelPo = document.getElementById('tabPanelQaPo');
 
-    if (btnPr) btnPr.classList.toggle('active', viewMode === 'pr');
-    if (btnItems) btnItems.classList.toggle('active', viewMode === 'items');
+    if (btnGrs) btnGrs.classList.toggle('active', viewMode === 'grs');
+    if (btnPo) btnPo.classList.toggle('active', viewMode === 'po');
 
-    if (panelPr) panelPr.classList.toggle('active', viewMode === 'pr');
-    if (panelItems) panelItems.classList.toggle('active', viewMode === 'items');
+    if (panelGrs) panelGrs.classList.toggle('active', viewMode === 'grs');
+    if (panelPo) panelPo.classList.toggle('active', viewMode === 'po');
 
     updateQaSortHeaders(viewMode);
 
@@ -4218,32 +4218,32 @@ function renderQaModalData(data) {
     const kpi = data.kpi || {};
     const meta = data.meta || {};
 
-    const elTotalPr = document.getElementById('modalKpiQaTotalPr');
+    const elTotalGrs = document.getElementById('modalKpiQaTotalGrs');
     const elReleased = document.getElementById('modalKpiQaReleased');
     const elPercent = document.getElementById('modalKpiQaPercent');
+    const elReject = document.getElementById('modalKpiQaReject');
     const elPending = document.getElementById('modalKpiQaPending');
-    const elTotalItem = document.getElementById('modalKpiQaTotalItem');
-    const elQtyGrs = document.getElementById('modalKpiQaQtyGrs');
+    const elTotalPo = document.getElementById('modalKpiQaTotalPo');
 
-    if (elTotalPr) elTotalPr.textContent = Number(kpi.total_pr || 0).toLocaleString('id-ID');
-    if (elReleased) elReleased.textContent = Number(kpi.pr_released || 0).toLocaleString('id-ID');
-    if (elPercent) elPercent.textContent = `${kpi.persentase_selesai || 0}%`;
-    if (elPending) elPending.textContent = Number(kpi.pr_pending || 0).toLocaleString('id-ID');
-    if (elTotalItem) elTotalItem.textContent = Number(kpi.total_item || 0).toLocaleString('id-ID');
-    if (elQtyGrs) elQtyGrs.textContent = Number(kpi.total_qty_grs || 0).toLocaleString('id-ID');
+    if (elTotalGrs) elTotalGrs.textContent = Number(kpi.total_grs || 0).toLocaleString('id-ID');
+    if (elReleased) elReleased.textContent = Number(kpi.grs_released || kpi.grs_approve || 0).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = `${kpi.persentase || kpi.persentase_selesai || 0}%`;
+    if (elReject) elReject.textContent = Number((kpi.grs_ditolak || 0) + (kpi.grs_ditahan || 0)).toLocaleString('id-ID');
+    if (elPending) elPending.textContent = Number(kpi.grs_pending || 0).toLocaleString('id-ID');
+    if (elTotalPo) elTotalPo.textContent = Number(kpi.total_po || 0).toLocaleString('id-ID');
 
-    const countPrEl = document.getElementById('countQaPr');
-    const countItemsEl = document.getElementById('countQaItems');
-    if (countPrEl) countPrEl.textContent = `${(data.summary_by_pr || []).length}`;
-    if (countItemsEl) countItemsEl.textContent = `${(data.items || []).length}`;
+    const countGrsEl = document.getElementById('countQaGrs');
+    const countPoEl = document.getElementById('countQaPo');
+    if (countGrsEl) countGrsEl.textContent = `${(data.items || []).length}`;
+    if (countPoEl) countPoEl.textContent = `${(data.summary_by_po || []).length}`;
 
     const syncTimeEl = document.getElementById('qaLastSyncTime');
     if (syncTimeEl) {
         if (meta.sync_time) {
             const d = new Date(meta.sync_time);
             syncTimeEl.textContent = `• Sinkronisasi: ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
-        } else if (meta.generated_at) {
-            const d = new Date(meta.generated_at);
+        } else if (meta.last_updated) {
+            const d = new Date(meta.last_updated);
             syncTimeEl.textContent = `• Diperbarui: ${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
         }
     }
@@ -4251,70 +4251,73 @@ function renderQaModalData(data) {
     const q = state.qaSearchQuery;
     const status = state.currentQaStatus;
 
-    // Filter daftar PR
-    let prList = (data.summary_by_pr || []).filter(pr => {
-        if (status !== 'all' && pr.status_code !== status) return false;
+    // Filter daftar Release GRS
+    let grsList = (data.items || []).filter(item => {
+        if (status !== 'all' && item.status_code !== status) return false;
         if (q) {
-            const matchPr = pr.no_pr && pr.no_pr.toLowerCase().includes(q);
-            const matchItem = (pr.items || []).some(i =>
-                (i.kode_barang && i.kode_barang.toLowerCase().includes(q)) ||
-                (i.nama_barang && i.nama_barang.toLowerCase().includes(q))
-            );
-            if (!matchPr && !matchItem) return false;
+            const matchGrs = item.no_grs && item.no_grs.toLowerCase().includes(q);
+            const matchPo = item.no_po && item.no_po.toLowerCase().includes(q);
+            const matchSupp = item.supplier && item.supplier.toLowerCase().includes(q);
+            const matchSj = item.surat_jalan && item.surat_jalan.toLowerCase().includes(q);
+            const matchDisp = item.disposisi_qc && item.disposisi_qc.toLowerCase().includes(q);
+            if (!matchGrs && !matchPo && !matchSupp && !matchSj && !matchDisp) return false;
         }
         return true;
     });
 
-    // Filter daftar Item
-    let itemList = (data.items || []).filter(item => {
-        if (status !== 'all' && item.status_code !== status) return false;
+    // Filter daftar Ringkasan Per PO
+    let poList = (data.summary_by_po || []).filter(po => {
+        if (status !== 'all') {
+            if (status === 'terpenuhi' && po.status_code !== 'terpenuhi') return false;
+            if (status === 'pending' && po.status_code === 'terpenuhi') return false;
+        }
         if (q) {
-            const matchPr = item.no_pr && item.no_pr.toLowerCase().includes(q);
-            const matchCode = item.kode_barang && item.kode_barang.toLowerCase().includes(q);
-            const matchName = item.nama_barang && item.nama_barang.toLowerCase().includes(q);
-            if (!matchPr && !matchCode && !matchName) return false;
+            const matchPo = po.no_po && po.no_po.toLowerCase().includes(q);
+            const matchSupp = po.supplier && po.supplier.toLowerCase().includes(q);
+            const matchGrs = (po.grs_list || []).some(g => g.no_grs && g.no_grs.toLowerCase().includes(q));
+            if (!matchPo && !matchSupp && !matchGrs) return false;
         }
         return true;
     });
 
     // Sorting
-    const sortPr = (state.qaSort && state.qaSort.pr) || { column: 'tanggal', dir: 'desc' };
-    prList.sort((a, b) => {
-        let valA = a[sortPr.column];
-        let valB = b[sortPr.column];
+    const sortGrs = (state.qaSort && state.qaSort.grs) || { column: 'tanggal', dir: 'desc' };
+    grsList.sort((a, b) => {
+        let valA = a[sortGrs.column];
+        let valB = b[sortGrs.column];
         if (typeof valA === 'string') valA = valA.toLowerCase();
         if (typeof valB === 'string') valB = valB.toLowerCase();
-        if (valA < valB) return sortPr.dir === 'asc' ? -1 : 1;
-        if (valA > valB) return sortPr.dir === 'asc' ? 1 : -1;
+        if (valA < valB) return sortGrs.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return sortGrs.dir === 'asc' ? 1 : -1;
         return 0;
     });
 
-    const sortItem = (state.qaSort && state.qaSort.items) || { column: 'tanggal', dir: 'desc' };
-    itemList.sort((a, b) => {
-        let valA = a[sortItem.column];
-        let valB = b[sortItem.column];
+    const sortPo = (state.qaSort && state.qaSort.po) || { column: 'tanggal', dir: 'desc' };
+    poList.sort((a, b) => {
+        let valA = a[sortPo.column];
+        let valB = b[sortPo.column];
         if (typeof valA === 'string') valA = valA.toLowerCase();
         if (typeof valB === 'string') valB = valB.toLowerCase();
-        if (valA < valB) return sortItem.dir === 'asc' ? -1 : 1;
-        if (valA > valB) return sortItem.dir === 'asc' ? 1 : -1;
+        if (valA < valB) return sortPo.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return sortPo.dir === 'asc' ? 1 : -1;
         return 0;
     });
 
     // Render Tabel sesuai mode tampilan
-    if (state.currentQaView === 'pr') {
-        renderQaPrTable(prList);
+    if (state.currentQaView === 'grs') {
+        renderQaGrsTable(grsList);
     } else {
-        renderQaItemsTable(itemList);
+        renderQaPoTable(poList);
     }
 
     updateQaSortHeaders(state.currentQaView);
 }
 
 /**
- * Render Tabel Ringkasan Per No. PR Material QA
+ * Render Tabel Rincian Release GRS (Material)
  */
-function renderQaPrTable(list) {
-    const tbody = document.getElementById('qaPrTableBody');
+function renderQaGrsTable(list) {
+    const tbody = document.getElementById('qaGrsTableBody');
     const footerStats = document.getElementById('qaModalFooterStats');
     const pageInfo = document.getElementById('qaPageInfo');
     const btnPrev = document.getElementById('btnQaPrevPage');
@@ -4324,87 +4327,13 @@ function renderQaPrTable(list) {
     if (!list || list.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="subcon-empty-row">
-                    <i class="fa-solid fa-box-open"></i>
-                    <div>Tidak ada data PR Material QA yang cocok dengan filter saat ini</div>
+                <td colspan="8" class="subcon-empty-row">
+                    <i class="fa-solid fa-boxes-packing"></i>
+                    <div>Tidak ada data Release Material GRS yang cocok dengan filter saat ini</div>
                 </td>
             </tr>
         `;
-        if (footerStats) footerStats.textContent = 'Menampilkan 0 No. PR';
-        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
-        if (btnPrev) btnPrev.disabled = true;
-        if (btnNext) btnNext.disabled = true;
-        return;
-    }
-
-    const pageSize = state.qaPageSize;
-    const totalItems = list.length;
-    const totalPages = Math.ceil(totalItems / pageSize) || 1;
-    if (state.qaCurrentPage > totalPages) state.qaCurrentPage = totalPages;
-    if (state.qaCurrentPage < 1) state.qaCurrentPage = 1;
-
-    const startIdx = (state.qaCurrentPage - 1) * pageSize;
-    const endIdx = Math.min(startIdx + pageSize, totalItems);
-    const paged = list.slice(startIdx, endIdx);
-
-    let html = '';
-    paged.forEach((pr, idx) => {
-        const isMemenuhi = pr.status_code === 'terpenuhi';
-        const badgeStatusHtml = isMemenuhi
-            ? `<span class="badge-status-terpenuhi"><i class="fa-solid fa-circle-check"></i> Released (GRS)</span>`
-            : `<span class="badge-status-pending"><i class="fa-solid fa-hourglass-half"></i> Pending</span>`;
-
-        html += `
-            <tr>
-                <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
-                <td>
-                    <span class="subcon-spk-num" style="cursor: pointer;" onclick="viewQaPrItems('${pr.no_pr}')" title="Klik untuk melihat rincian item PR ini">
-                        <i class="fa-solid fa-file-lines" style="color: #8b5cf6;"></i> ${pr.no_pr || '-'}
-                    </span>
-                </td>
-                <td style="white-space: nowrap;">${pr.tanggal_label || pr.tanggal || '-'}</td>
-                <td style="text-align: center;"><span class="badge-satuan">${pr.item_count || 1} item</span></td>
-                <td class="text-right" style="font-weight: 600;">${Number(pr.total_request || 0).toLocaleString('id-ID')}</td>
-                <td class="text-right" style="color: #0284c7; font-weight: 600;">${Number(pr.total_po || 0).toLocaleString('id-ID')}</td>
-                <td class="text-right" style="color: #16a34a; font-weight: 600; white-space: nowrap;">${Number(pr.total_grs || 0).toLocaleString('id-ID')}</td>
-                <td class="text-right" style="color: #d97706; font-weight: 600;">${Number(pr.total_os || 0).toLocaleString('id-ID')}</td>
-                <td style="text-align: center;">${badgeStatusHtml}</td>
-            </tr>
-        `;
-    });
-
-    tbody.innerHTML = html;
-    if (footerStats) {
-        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} PR Material`;
-    }
-    if (pageInfo) {
-        pageInfo.textContent = `Halaman ${state.qaCurrentPage} dari ${totalPages} (${totalItems} PR)`;
-    }
-    if (btnPrev) btnPrev.disabled = state.qaCurrentPage <= 1;
-    if (btnNext) btnNext.disabled = state.qaCurrentPage >= totalPages;
-}
-
-/**
- * Render Tabel Rincian Item Barang Material QA
- */
-function renderQaItemsTable(list) {
-    const tbody = document.getElementById('qaItemsTableBody');
-    const footerStats = document.getElementById('qaModalFooterStats');
-    const pageInfo = document.getElementById('qaPageInfo');
-    const btnPrev = document.getElementById('btnQaPrevPage');
-    const btnNext = document.getElementById('btnQaNextPage');
-    if (!tbody) return;
-
-    if (!list || list.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="12" class="subcon-empty-row">
-                    <i class="fa-solid fa-box-open"></i>
-                    <div>Tidak ada item material GRS yang cocok dengan filter saat ini</div>
-                </td>
-            </tr>
-        `;
-        if (footerStats) footerStats.textContent = 'Menampilkan 0 Item';
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 GRS';
         if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
         if (btnPrev) btnPrev.disabled = true;
         if (btnNext) btnNext.disabled = true;
@@ -4423,28 +4352,131 @@ function renderQaItemsTable(list) {
 
     let html = '';
     paged.forEach((item, idx) => {
-        const isMemenuhi = item.status_code === 'terpenuhi';
-        const badgeStatusHtml = isMemenuhi
-            ? `<span class="badge-status-terpenuhi"><i class="fa-solid fa-check"></i> Released</span>`
-            : `<span class="badge-status-pending"><i class="fa-solid fa-hourglass-half"></i> Belum</span>`;
+        let badgeStatusHtml = `<span class="badge-status-pending"><i class="fa-solid fa-hourglass-half"></i> Pending</span>`;
+        if (item.status_code === 'terpenuhi') {
+            badgeStatusHtml = `<span class="badge-status-terpenuhi"><i class="fa-solid fa-circle-check"></i> Released</span>`;
+        } else if (item.status_code === 'ditolak') {
+            badgeStatusHtml = `<span class="badge-status-ditolak"><i class="fa-solid fa-circle-xmark"></i> Ditolak</span>`;
+        } else if (item.status_code === 'ditahan') {
+            badgeStatusHtml = `<span class="badge-status-ditahan"><i class="fa-solid fa-triangle-exclamation"></i> Ditahan</span>`;
+        }
 
-        const percent = Number(item.progress_percent || 0);
-        let progressColor = '#ef4444';
-        if (percent >= 100) progressColor = '#16a34a';
-        else if (percent >= 75) progressColor = '#eab308';
+        let disposisiHtml = `<span style="color: #94a3b8;">-</span>`;
+        if (item.disposisi_qc === 'DITERIMA') {
+            disposisiHtml = `<span class="badge-satuan" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700;"><i class="fa-solid fa-check"></i> Diterima</span>`;
+        } else if (item.disposisi_qc === 'DITOLAK') {
+            disposisiHtml = `<span class="badge-satuan" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-weight: 700;"><i class="fa-solid fa-xmark"></i> Ditolak</span>`;
+        } else if (item.disposisi_qc === 'DITAHAN') {
+            disposisiHtml = `<span class="badge-satuan" style="background: rgba(245, 158, 11, 0.15); color: #d97706; font-weight: 700;"><i class="fa-solid fa-hand"></i> Ditahan</span>`;
+        } else if (item.disposisi_qc && item.disposisi_qc !== '-') {
+            disposisiHtml = `<span class="badge-satuan">${item.disposisi_qc}</span>`;
+        }
+
+        const poClickHtml = (item.no_po && item.no_po !== '-')
+            ? `<span class="subcon-spk-num" style="cursor: pointer;" onclick="viewQaPoItems('${item.no_po}')" title="Klik untuk memfilter PO ini">
+                 <i class="fa-solid fa-file-invoice" style="color: #0284c7;"></i> ${item.no_po}
+               </span>`
+            : `<span style="color: #94a3b8;">-</span>`;
 
         html += `
             <tr>
                 <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
-                <td><span class="subcon-spk-num font-mono">${item.no_pr || '-'}</span></td>
+                <td>
+                    <span class="subcon-spk-num font-mono" style="font-weight: 600;">
+                        <i class="fa-solid fa-boxes-packing" style="color: #8b5cf6;"></i> ${item.no_grs || '-'}
+                    </span>
+                </td>
                 <td style="white-space: nowrap;">${item.tanggal_label || item.tanggal || '-'}</td>
-                <td class="font-mono" style="font-size: 0.75rem; color: #475569;">${item.kode_barang || '-'}</td>
-                <td style="font-weight: 500;">${item.nama_barang || '-'}</td>
-                <td style="text-align: center;"><span class="badge-satuan">${item.satuan || 'PCS'}</span></td>
-                <td class="text-right" style="font-weight: 600;">${Number(item.qty_request || 0).toLocaleString('id-ID')}</td>
-                <td class="text-right" style="color: #0284c7; font-weight: 600;">${Number(item.qty_po || 0).toLocaleString('id-ID')}</td>
-                <td class="text-right" style="color: #16a34a; font-weight: 600; white-space: nowrap;">${Number(item.qty_grs || 0).toLocaleString('id-ID')}</td>
-                <td class="text-right" style="color: #d97706; font-weight: 600;">${Number(item.qty_os || 0).toLocaleString('id-ID')}</td>
+                <td>${poClickHtml}</td>
+                <td style="font-weight: 500; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.supplier || '-'}">
+                    ${item.supplier || '-'}
+                </td>
+                <td style="text-align: center;">${disposisiHtml}</td>
+                <td style="text-align: center;">${badgeStatusHtml}</td>
+                <td style="white-space: nowrap; font-size: 0.78rem; color: #64748b;">${item.tgl_approve || '-'}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Release GRS Material`;
+    }
+    if (pageInfo) {
+        pageInfo.textContent = `Halaman ${state.qaCurrentPage} dari ${totalPages} (${totalItems} GRS)`;
+    }
+    if (btnPrev) btnPrev.disabled = state.qaCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = state.qaCurrentPage >= totalPages;
+}
+
+/**
+ * Render Tabel Ringkasan Per No. PO QA
+ */
+function renderQaPoTable(list) {
+    const tbody = document.getElementById('qaPoTableBody');
+    const footerStats = document.getElementById('qaModalFooterStats');
+    const pageInfo = document.getElementById('qaPageInfo');
+    const btnPrev = document.getElementById('btnQaPrevPage');
+    const btnNext = document.getElementById('btnQaNextPage');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="subcon-empty-row">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    <div>Tidak ada Purchase Order (PO) yang cocok dengan filter saat ini</div>
+                </td>
+            </tr>
+        `;
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 PO';
+        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
+        if (btnPrev) btnPrev.disabled = true;
+        if (btnNext) btnNext.disabled = true;
+        return;
+    }
+
+    const pageSize = state.qaPageSize;
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (state.qaCurrentPage > totalPages) state.qaCurrentPage = totalPages;
+    if (state.qaCurrentPage < 1) state.qaCurrentPage = 1;
+
+    const startIdx = (state.qaCurrentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const paged = list.slice(startIdx, endIdx);
+
+    let html = '';
+    paged.forEach((po, idx) => {
+        let badgeStatusHtml = `<span class="badge-status-pending"><i class="fa-solid fa-hourglass-half"></i> Pending</span>`;
+        if (po.status_code === 'terpenuhi') {
+            badgeStatusHtml = `<span class="badge-status-terpenuhi"><i class="fa-solid fa-circle-check"></i> Lengkap</span>`;
+        } else if (po.status_code === 'ditolak') {
+            badgeStatusHtml = `<span class="badge-status-ditolak"><i class="fa-solid fa-circle-xmark"></i> Ditolak</span>`;
+        } else if (po.status_code === 'parsial') {
+            badgeStatusHtml = `<span class="badge-status-pending" style="color: #0284c7; background: rgba(2, 132, 199, 0.12);"><i class="fa-solid fa-circle-half-stroke"></i> Parsial</span>`;
+        }
+
+        const percent = Number(po.persentase || 0);
+        let progressColor = '#ef4444';
+        if (percent >= 100) progressColor = '#16a34a';
+        else if (percent >= 50) progressColor = '#0284c7';
+
+        html += `
+            <tr>
+                <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
+                <td>
+                    <span class="subcon-spk-num font-mono" style="cursor: pointer;" onclick="viewQaPoItems('${po.no_po}')" title="Klik untuk melihat seluruh GRS dari PO ini">
+                        <i class="fa-solid fa-file-invoice" style="color: #0284c7;"></i> ${po.no_po || '-'}
+                    </span>
+                </td>
+                <td style="white-space: nowrap;">${po.tanggal_label || po.tanggal || '-'}</td>
+                <td style="font-weight: 500; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${po.supplier || '-'}">
+                    ${po.supplier || '-'}
+                </td>
+                <td style="text-align: center;"><span class="badge-satuan">${po.total_grs || 0} GRS</span></td>
+                <td class="text-center" style="color: #16a34a; font-weight: 600;">${po.grs_approve || 0}</td>
+                <td class="text-center" style="color: #d97706; font-weight: 600;">${po.grs_pending || 0}</td>
                 <td class="text-right font-mono" style="font-weight: 700; color: ${progressColor};">${percent}%</td>
                 <td style="text-align: center;">${badgeStatusHtml}</td>
             </tr>
@@ -4453,24 +4485,24 @@ function renderQaItemsTable(list) {
 
     tbody.innerHTML = html;
     if (footerStats) {
-        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Item Material`;
+        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Purchase Order`;
     }
     if (pageInfo) {
-        pageInfo.textContent = `Halaman ${state.qaCurrentPage} dari ${totalPages} (${totalItems} Item)`;
+        pageInfo.textContent = `Halaman ${state.qaCurrentPage} dari ${totalPages} (${totalItems} PO)`;
     }
     if (btnPrev) btnPrev.disabled = state.qaCurrentPage <= 1;
     if (btnNext) btnNext.disabled = state.qaCurrentPage >= totalPages;
 }
 
 /**
- * Drill-down melihat item PR di QA Modal
+ * Drill-down melihat GRS dari suatu PO di QA Modal
  */
-function viewQaPrItems(noPr) {
-    if (!noPr) return;
+function viewQaPoItems(noPo) {
+    if (!noPo || noPo === '-') return;
     const searchInput = document.getElementById('qaSearchInput');
-    if (searchInput) searchInput.value = noPr;
-    state.qaSearchQuery = noPr.trim().toLowerCase();
-    switchQaView('items');
+    if (searchInput) searchInput.value = noPo;
+    state.qaSearchQuery = noPo.trim().toLowerCase();
+    switchQaView('grs');
 }
 
 /**
@@ -4487,7 +4519,7 @@ function changeQaPage(delta) {
  * Sorting Kolom Tabel QA
  */
 function sortQa(viewMode, column) {
-    if (!state.qaSort) state.qaSort = { pr: { column: 'tanggal', dir: 'desc' }, items: { column: 'tanggal', dir: 'desc' } };
+    if (!state.qaSort) state.qaSort = { grs: { column: 'tanggal', dir: 'desc' }, po: { column: 'tanggal', dir: 'desc' } };
     if (!state.qaSort[viewMode]) state.qaSort[viewMode] = { column: 'tanggal', dir: 'desc' };
 
     const currentSort = state.qaSort[viewMode];
@@ -4495,7 +4527,7 @@ function sortQa(viewMode, column) {
         currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
     } else {
         currentSort.column = column;
-        currentSort.dir = ['tanggal', 'total_request', 'total_po', 'total_grs', 'total_os', 'qty_request', 'qty_po', 'qty_grs', 'qty_os', 'progress_percent'].includes(column) ? 'desc' : 'asc';
+        currentSort.dir = ['tanggal', 'total_grs', 'grs_approve', 'grs_pending', 'persentase'].includes(column) ? 'desc' : 'asc';
     }
 
     state.qaCurrentPage = 1;
@@ -4508,7 +4540,7 @@ function sortQa(viewMode, column) {
  * Update Icon Header Sorting QA
  */
 function updateQaSortHeaders(viewMode) {
-    const panelId = viewMode === 'pr' ? 'tabPanelQaPr' : 'tabPanelQaItems';
+    const panelId = viewMode === 'grs' ? 'tabPanelQaGrs' : 'tabPanelQaPo';
     const panel = document.getElementById(panelId);
     if (!panel) return;
 
@@ -4538,33 +4570,33 @@ function updateQaSortHeaders(viewMode) {
 }
 
 function renderQaTablesLoading() {
-    const tbodyPr = document.getElementById('qaPrTableBody');
-    const tbodyItems = document.getElementById('qaItemsTableBody');
+    const tbodyGrs = document.getElementById('qaGrsTableBody');
+    const tbodyPo = document.getElementById('qaPoTableBody');
     const skeleton = `
         <tr>
-            <td colspan="12" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+            <td colspan="10" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
                 <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #8b5cf6;"></i>
-                <div style="margin-top: 8px; font-weight: 500;">Memuat data Release Material QA dari Atena ERP...</div>
+                <div style="margin-top: 8px; font-weight: 500;">Memuat data Release Material GRS dari Atena ERP...</div>
             </td>
         </tr>
     `;
-    if (tbodyPr) tbodyPr.innerHTML = skeleton;
-    if (tbodyItems) tbodyItems.innerHTML = skeleton;
+    if (tbodyGrs) tbodyGrs.innerHTML = skeleton;
+    if (tbodyPo) tbodyPo.innerHTML = skeleton;
 }
 
 function renderQaTablesError(message) {
-    const tbodyPr = document.getElementById('qaPrTableBody');
-    const tbodyItems = document.getElementById('qaItemsTableBody');
+    const tbodyGrs = document.getElementById('qaGrsTableBody');
+    const tbodyPo = document.getElementById('qaPoTableBody');
     const errHtml = `
         <tr>
-            <td colspan="12" class="subcon-empty-row" style="color: #ef4444;">
+            <td colspan="10" class="subcon-empty-row" style="color: #ef4444;">
                 <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; color: #ef4444;"></i>
                 <div style="margin-top: 8px; font-weight: 600;">Gagal Mengambil Data QA</div>
                 <div style="font-size: 0.8rem; color: #64748b;">${message || 'Terjadi kesalahan sistem'}</div>
             </td>
         </tr>
     `;
-    if (tbodyPr) tbodyPr.innerHTML = errHtml;
-    if (tbodyItems) tbodyItems.innerHTML = errHtml;
+    if (tbodyGrs) tbodyGrs.innerHTML = errHtml;
+    if (tbodyPo) tbodyPo.innerHTML = errHtml;
 }
 
