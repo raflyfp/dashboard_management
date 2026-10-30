@@ -529,7 +529,7 @@ function renderServiceCards(layanan) {
 
         // Update lebar dan warna progress bar di bawah angka persentase
         if (barFill) {
-            barFill.style.width = `${percent}%`;
+            barFill.style.width = `${Math.min(Math.max(percent, 0), 100)}%`;
             barFill.className = `progress-bar-fill ${kpiFillClass}`;
         }
 
@@ -3098,7 +3098,20 @@ function renderProduksiUI(payload) {
     const totalPpVal = ringkasan.total_pp ?? payload.total_data ?? 0;
     const memenuhiVal = ringkasan.pp_memenuhi ?? 0;
     const belumVal = ringkasan.pp_belum_memenuhi ?? 0;
-    const persentaseVal = ringkasan.persentase ?? (totalPpVal > 0 ? Number(((memenuhiVal / totalPpVal) * 100).toFixed(1)) : 0);
+    // Metode 2: Simple average dari kolom capaian (persentase) seluruh PP tanpa batasan maksimal 100%
+    const allRows = Array.isArray(payload.rows) ? payload.rows : [];
+    let avgCapaian = 0;
+    if (allRows.length > 0) {
+        const totalCapaian = allRows.reduce((sum, r) => sum + (Number(r.persentase) || 0), 0);
+        avgCapaian = Number((totalCapaian / allRows.length).toFixed(2));
+    } else if (payload.avg_capaian !== undefined) {
+        avgCapaian = Number(payload.avg_capaian) || 0;
+    } else if (ringkasan.avg_capaian !== undefined) {
+        avgCapaian = Number(ringkasan.avg_capaian) || 0;
+    } else {
+        avgCapaian = Number(ringkasan.persentase) || 0;
+    }
+    const persentaseVal = avgCapaian;
 
     if (totalPpEl) totalPpEl.textContent = totalPpVal;
     if (ppMemenuhiEl) ppMemenuhiEl.textContent = memenuhiVal;

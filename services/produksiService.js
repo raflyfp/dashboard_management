@@ -41,6 +41,55 @@ const BAGIAN_CONFIG = [
     { key: 'surgicalpacking', code: 'PROD_SURGICAL_PACKING', name: 'Produksi Surgical Packing', unit: 'Box / Karton', icon: 'box-tissue' }
 ];
 
+/**
+ * Helper untuk menghitung statistik dan average capaian dari response PenyelesaianPP
+ * Menggunakan METODE 2: Simple Average dari kolom persentase/capaian tiap PP tanpa batasan maksimal 100%.
+ */
+function parseProduksiStats(apiResponseData) {
+    if (!apiResponseData) {
+        return { total_pp: 0, pp_memenuhi: 0, pp_belum_memenuhi: 0, persentase: 0, avg_capaian: 0, rows: [] };
+    }
+
+    const rows = Array.isArray(apiResponseData.rows) ? apiResponseData.rows : [];
+
+    if (rows.length > 0) {
+        const total_pp = rows.length;
+        const pp_memenuhi = rows.filter(r => (r.status || '').toUpperCase().includes('MEMENUHI') && !(r.status || '').toUpperCase().includes('BELUM')).length;
+        const pp_belum_memenuhi = rows.filter(r => (r.status || '').toUpperCase().includes('BELUM')).length;
+
+        // Metode 2: Simple average capaian tanpa batasan maksimal 100%
+        const totalCapaian = rows.reduce((sum, r) => sum + (Number(r.persentase) || 0), 0);
+        const avg_capaian = Number((totalCapaian / total_pp).toFixed(2));
+
+        return {
+            total_pp,
+            pp_memenuhi,
+            pp_belum_memenuhi,
+            persentase: avg_capaian, // Menggunakan average capaian sebagai persentase utama
+            avg_capaian,
+            judul: apiResponseData.judul,
+            nama_bagian: apiResponseData.nama_bagian,
+            rows
+        };
+    }
+
+    const total_pp = Number(apiResponseData.total_pp) || 0;
+    const pp_memenuhi = Number(apiResponseData.pp_memenuhi) || 0;
+    const pp_belum_memenuhi = Number(apiResponseData.pp_belum_memenuhi) || 0;
+    const persentase = Number(apiResponseData.persentase) || 0;
+
+    return {
+        total_pp,
+        pp_memenuhi,
+        pp_belum_memenuhi,
+        persentase,
+        avg_capaian: persentase,
+        judul: apiResponseData.judul,
+        nama_bagian: apiResponseData.nama_bagian,
+        rows: []
+    };
+}
+
 // In-memory cache & state
 const cache = {
     summary: { data: null, timestamp: 0 },
@@ -190,16 +239,16 @@ class ProduksiService {
         const { today, monthStart } = getDateParams();
 
         try {
-            // Ambil ringkasan Hari Ini & Bulan Ini untuk 7 lini secara paralel
+            // Ambil data detail/ringkasan Hari Ini & Bulan Ini untuk 8 lini secara paralel agar mendapatkan row capaian
             const fetchPromises = BAGIAN_CONFIG.map(async (bagian) => {
                 try {
                     const [resToday, resMonth] = await Promise.allSettled([
-                        this.requestWithAuth('PenyelesaianPP/ringkasan', {
+                        this.requestWithAuth('PenyelesaianPP/detail', {
                             bagian: bagian.key,
                             tglawal: today,
                             tglakhir: today
                         }),
-                        this.requestWithAuth('PenyelesaianPP/ringkasan', {
+                        this.requestWithAuth('PenyelesaianPP/detail', {
                             bagian: bagian.key,
                             tglawal: monthStart,
                             tglakhir: today
@@ -207,12 +256,12 @@ class ProduksiService {
                     ]);
 
                     const todayData = resToday.status === 'fulfilled' && resToday.value?.success
-                        ? resToday.value.data
-                        : { total_pp: 0, pp_memenuhi: 0, pp_belum_memenuhi: 0, persentase: 0 };
+                        ? parseProduksiStats(resToday.value.data)
+                        : { total_pp: 0, pp_memenuhi: 0, pp_belum_memenuhi: 0, persentase: 0, avg_capaian: 0, rows: [] };
 
                     const monthData = resMonth.status === 'fulfilled' && resMonth.value?.success
-                        ? resMonth.value.data
-                        : { total_pp: 0, pp_memenuhi: 0, pp_belum_memenuhi: 0, persentase: 0 };
+                        ? parseProduksiStats(resMonth.value.data)
+                        : { total_pp: 0, pp_memenuhi: 0, pp_belum_memenuhi: 0, persentase: 0, avg_capaian: 0, rows: [] };
 
                     return {
                         bagianKey: bagian.key,
@@ -233,8 +282,8 @@ class ProduksiService {
                     name: bagian.name,
                     unit: bagian.unit,
                     icon: bagian.icon,
-                    today: { total_pp: 0, pp_memenuhi: 0, pp_belum_memenuhi: 0, persentase: 0 },
-                    month: { total_pp: 0, pp_memenuhi: 0, pp_belum_memenuhi: 0, persentase: 0 }
+                    today: { total_pp: 0, pp_memenuhi: 0, pp_belum_memenuhi: 0, persentase: 0, avg_capaian: 0, rows: [] },
+                    month: { total_pp: 0, pp_memenuhi: 0, pp_belum_memenuhi: 0, persentase: 0, avg_capaian: 0, rows: [] }
                 };
             });
 
@@ -244,6 +293,8 @@ class ProduksiService {
             // Global KPI akumulasi
             let totalPpToday = 0, memenuhiToday = 0, belumToday = 0;
             let totalPpMonth = 0, memenuhiMonth = 0, belumMonth = 0;
+            let sumCapaianToday = 0, countPpToday = 0;
+            let sumCapaianMonth = 0, countPpMonth = 0;
 
             results.forEach((res) => {
                 if (res.status === 'fulfilled' && res.value) {
@@ -265,6 +316,7 @@ class ProduksiService {
                             pp_memenuhi: td.pp_memenuhi || 0,
                             pp_belum_memenuhi: td.pp_belum_memenuhi || 0,
                             persentase: td.persentase || 0,
+                            avg_capaian: td.avg_capaian || 0,
                             tglawal: today,
                             tglakhir: today
                         },
@@ -275,6 +327,7 @@ class ProduksiService {
                             pp_memenuhi: mo.pp_memenuhi || 0,
                             pp_belum_memenuhi: mo.pp_belum_memenuhi || 0,
                             persentase: mo.persentase || 0,
+                            avg_capaian: mo.avg_capaian || 0,
                             tglawal: monthStart,
                             tglakhir: today
                         },
@@ -284,6 +337,7 @@ class ProduksiService {
                         selesai: mo.pp_memenuhi || 0,
                         belum_selesai: mo.pp_belum_memenuhi || 0,
                         persentase_selesai: mo.persentase || 0,
+                        avg_capaian: mo.avg_capaian || 0,
 
                         // Direct fields Hari Ini & Bulan Ini untuk kemudahan binding frontend
                         today_total: td.total_pp || 0,
@@ -304,14 +358,31 @@ class ProduksiService {
                     totalPpMonth += (mo.total_pp || 0);
                     memenuhiMonth += (mo.pp_memenuhi || 0);
                     belumMonth += (mo.pp_belum_memenuhi || 0);
+
+                    if (Array.isArray(td.rows) && td.rows.length > 0) {
+                        sumCapaianToday += td.rows.reduce((sum, r) => sum + (Number(r.persentase) || 0), 0);
+                        countPpToday += td.rows.length;
+                    } else if (td.total_pp > 0) {
+                        sumCapaianToday += ((Number(td.persentase) || 0) * td.total_pp);
+                        countPpToday += td.total_pp;
+                    }
+
+                    if (Array.isArray(mo.rows) && mo.rows.length > 0) {
+                        sumCapaianMonth += mo.rows.reduce((sum, r) => sum + (Number(r.persentase) || 0), 0);
+                        countPpMonth += mo.rows.length;
+                    } else if (mo.total_pp > 0) {
+                        sumCapaianMonth += ((Number(mo.persentase) || 0) * mo.total_pp);
+                        countPpMonth += mo.total_pp;
+                    }
                 }
             });
 
-            const persentaseToday = totalPpToday > 0
-                ? Number(((memenuhiToday / totalPpToday) * 100).toFixed(1))
+            // Persentase KPI akumulasi menggunakan rata-rata capaian seluruh PP
+            const persentaseToday = countPpToday > 0
+                ? Number((sumCapaianToday / countPpToday).toFixed(2))
                 : 0;
-            const persentaseMonth = totalPpMonth > 0
-                ? Number(((memenuhiMonth / totalPpMonth) * 100).toFixed(1))
+            const persentaseMonth = countPpMonth > 0
+                ? Number((sumCapaianMonth / countPpMonth).toFixed(2))
                 : 0;
 
             const finalPayload = {
@@ -448,6 +519,20 @@ class ProduksiService {
 
             const currentSummary = summaryRange || (period === 'today' ? summaryToday : summaryMonth);
 
+            // Hitung statistik & Average Capaian (Metode 2: simple average capaian tiap PP tanpa batasan maksimal 100%)
+            const totalCapaian = rows.reduce((sum, r) => sum + (Number(r.persentase) || 0), 0);
+            const avgCapaian = rows.length > 0 ? Number((totalCapaian / rows.length).toFixed(2)) : 0;
+            const ppMemenuhi = rows.filter(r => (r.status || '').toUpperCase().includes('MEMENUHI') && !(r.status || '').toUpperCase().includes('BELUM')).length;
+            const ppBelum = rows.filter(r => (r.status || '').toUpperCase().includes('BELUM')).length;
+
+            if (currentSummary) {
+                currentSummary.avg_capaian = avgCapaian;
+                currentSummary.persentase = avgCapaian;
+                currentSummary.pp_memenuhi = ppMemenuhi;
+                currentSummary.pp_belum_memenuhi = ppBelum;
+                currentSummary.total_pp = rows.length;
+            }
+
             detailData = {
                 bagian: normalizedBagian,
                 config: foundByCode || { key: normalizedBagian, name: currentSummary?.nama_bagian || normalizedBagian },
@@ -457,6 +542,7 @@ class ProduksiService {
                 summary_today: summaryToday,
                 summary_month: summaryMonth,
                 ringkasan: currentSummary,
+                avg_capaian: avgCapaian,
                 rows
             };
 
@@ -502,6 +588,7 @@ class ProduksiService {
             total_data: totalRows,
             total_plan: totalPlan,
             total_actual: totalActual,
+            avg_capaian: detailData.avg_capaian !== undefined ? detailData.avg_capaian : (detailData.rows?.length > 0 ? Number((detailData.rows.reduce((sum, r) => sum + (Number(r.persentase) || 0), 0) / detailData.rows.length).toFixed(2)) : 0),
             rows: filteredRows
         };
     }
