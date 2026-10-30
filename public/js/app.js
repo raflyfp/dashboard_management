@@ -552,6 +552,20 @@ function renderServiceCards(layanan) {
             if (miniDr) miniDr.textContent = `${pctDr}%`;
         }
 
+
+        if (code === 'PBF') {
+            const miniTepat = document.getElementById('pbfMiniTepatPercent');
+            if (miniTepat) {
+                const tepatCount = item.kpi?.tepat_waktu ?? item.tepat_waktu;
+                miniTepat.textContent = tepatCount !== undefined ? `${tepatCount} Item` : '-';
+            }
+            const miniQty = document.getElementById('pbfMiniQtyPercent');
+            if (miniQty) {
+                const qtyPct = item.kpi?.persentase_qty ?? item.persentase_qty;
+                miniQty.textContent = qtyPct !== undefined ? `${qtyPct}%` : '-';
+            }
+        }
+
         const cardEl = document.getElementById(`card-${code}`);
         if (cardEl) {
             const statusPill = cardEl.querySelector('.service-status-pill');
@@ -4646,7 +4660,7 @@ function renderQaGrsTable(list) {
     if (!list || list.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="subcon-empty-row">
+                <td colspan="11" class="subcon-empty-row">
                     <i class="fa-solid fa-boxes-packing"></i>
                     <div style="margin-top: 8px;">Tidak ada data Release Material GRS yang cocok</div>
                 </td>
@@ -4683,16 +4697,31 @@ function renderQaGrsTable(list) {
                </span>`
             : `<span style="color: #94a3b8;">-</span>`;
 
+        const barangHtml = (item.kode_barang && item.kode_barang !== '-')
+            ? `<div><span class="font-mono" style="font-size: 0.72rem; color: #64748b;">[${item.kode_barang}]</span> <span style="font-weight: 600; font-size: 0.8rem;">${item.nama_barang || '-'}</span></div>`
+            : `<span style="font-size: 0.8rem;">${item.nama_barang || '-'}</span>`;
+
+        const qtyHtml = (item.jumlah || item.jumlah_rilis)
+            ? `<div class="font-mono" style="font-size: 0.78rem;">${Number(item.jumlah || 0).toLocaleString('id-ID')} / <strong style="color: #16a34a;">${Number(item.jumlah_rilis || 0).toLocaleString('id-ID')}</strong></div>`
+            : `<span style="color: #94a3b8;">-</span>`;
+
+        const lotEdHtml = (item.no_lot && item.no_lot !== '-') || (item.tgl_expired && item.tgl_expired !== '-')
+            ? `<div style="font-size: 0.75rem;"><span class="font-mono">${item.no_lot || '-'}</span><br><span style="color: #64748b;">ED: ${item.tgl_expired_label || item.tgl_expired || '-'}</span></div>`
+            : `<span style="color: #94a3b8;">-</span>`;
+
         html += `
             <tr>
                 <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
                 <td><strong style="color: #8b5cf6;">${item.no_grs}</strong></td>
                 <td class="font-mono text-center" style="font-size: 0.8rem;">${item.tanggal_label || item.tanggal}</td>
                 <td>${poClickHtml}</td>
-                <td style="font-weight: 500; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.supplier || '-'}">${item.supplier || '-'}</td>
+                <td style="font-weight: 500; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.supplier || '-'}">${item.supplier || '-'}</td>
+                <td style="max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.nama_barang || '-'}">${barangHtml}</td>
+                <td class="text-right">${qtyHtml}</td>
+                <td class="text-center">${lotEdHtml}</td>
                 <td class="text-center" style="font-size: 0.8rem;">${formatQaDisposisi(item.disposisi_qc)}</td>
                 <td class="text-center">${badge}</td>
-                <td class="font-mono text-center" style="font-size: 0.8rem;">${item.tgl_approve_label || item.tgl_approve || '-'}</td>
+                <td class="font-mono text-center" style="font-size: 0.75rem;">${item.tgl_approve_label || item.tgl_approve || '-'}</td>
             </tr>
         `;
     });
@@ -6397,3 +6426,388 @@ function renderWhMatTablesError(message) {
 }
 
 
+
+
+// ====================================================================
+// MODAL MONITORING PEMENUHAN ORDER PBF (ATENA ERP)
+// ====================================================================
+
+function formatPbfDate(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function openPbfModal(range = 'month') {
+    const modal = document.getElementById('pbfModal');
+    if (!modal) return;
+
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    state.pbfSearchQuery = '';
+    state.pbfCurrentPage = 1;
+    state.currentPbfStatus = 'all';
+
+    const searchInput = document.getElementById('pbfSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectPbfStatus');
+    if (selectStatus) selectStatus.value = 'all';
+
+    setPbfQuickDate(range);
+}
+
+function closePbfModal() {
+    const modal = document.getElementById('pbfModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+function setPbfQuickDate(preset = 'month') {
+    state.currentPbfRange = preset;
+    state.pbfCurrentPage = 1;
+
+    const now = new Date();
+    const today = formatPbfDate(now);
+    let startDate = today;
+    let endDate = today;
+
+    if (preset === 'month') {
+        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        endDate = today;
+    } else if (preset === 'week') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        startDate = formatPbfDate(d);
+        endDate = today;
+    } else if (preset === 'today') {
+        startDate = today;
+        endDate = today;
+    } else if (preset === 'all') {
+        startDate = '2026-01-01';
+        endDate = today;
+    }
+
+    state.pbfDateStart = startDate;
+    state.pbfDateEnd = endDate;
+
+    const startInput = document.getElementById('pbfDateStart');
+    const endInput = document.getElementById('pbfDateEnd');
+    if (startInput) startInput.value = startDate;
+    if (endInput) endInput.value = endDate;
+
+    const pills = document.querySelectorAll('.pbf-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    const btnMap = {
+        'month': 'btnQuickPbfMonth',
+        'week': 'btnQuickPbfWeek',
+        'today': 'btnQuickPbfToday',
+        'all': 'btnQuickPbfAll'
+    };
+    const activeBtn = document.getElementById(btnMap[preset]);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    loadPbfData();
+}
+
+function handlePbfDateChange(field) {
+    const startInput = document.getElementById('pbfDateStart');
+    const endInput = document.getElementById('pbfDateEnd');
+
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (field === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.pbfDateStart = start;
+    state.pbfDateEnd = end;
+    state.currentPbfRange = 'custom';
+    state.pbfCurrentPage = 1;
+
+    const pills = document.querySelectorAll('.pbf-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    loadPbfData();
+}
+
+function resetPbfFilter() {
+    state.pbfSearchQuery = '';
+    state.pbfCurrentPage = 1;
+    state.currentPbfStatus = 'all';
+
+    const searchInput = document.getElementById('pbfSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selectStatus = document.getElementById('selectPbfStatus');
+    if (selectStatus) selectStatus.value = 'all';
+
+    setPbfQuickDate('month');
+}
+
+let pbfSearchDebounce = null;
+function handlePbfSearch(val) {
+    clearTimeout(pbfSearchDebounce);
+    pbfSearchDebounce = setTimeout(() => {
+        state.pbfSearchQuery = (val || '').trim().toLowerCase();
+        state.pbfCurrentPage = 1;
+        if (state.pbfRawData) {
+            renderPbfModalData(state.pbfRawData);
+        }
+    }, 250);
+}
+
+function switchPbfStatus(val) {
+    state.currentPbfStatus = val;
+    state.pbfCurrentPage = 1;
+    if (state.pbfRawData) {
+        renderPbfModalData(state.pbfRawData);
+    }
+}
+
+async function syncPbfData() {
+    const btn = document.getElementById('btnSyncPbf');
+    const icon = btn ? btn.querySelector('i') : null;
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        if (state.pbfCache) state.pbfCache.clear();
+        await fetch('/api/dashboard/pbf/sync', { method: 'POST' });
+        await loadPbfData(true);
+        await fetchDashboardStats();
+    } catch (err) {
+        console.error('Sync PBF Error:', err);
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+    }
+}
+
+async function loadPbfData(force = false) {
+    let url = '/api/dashboard/pbf?';
+    if (state.pbfDateStart && state.pbfDateEnd) {
+        url += `tglawal=${encodeURIComponent(state.pbfDateStart)}&tglakhir=${encodeURIComponent(state.pbfDateEnd)}`;
+    } else {
+        url += `range=${encodeURIComponent(state.currentPbfRange || 'month')}`;
+    }
+    if (force) url += '&force=true';
+
+    const cacheKey = `pbf_${state.pbfDateStart}_${state.pbfDateEnd}_${state.currentPbfRange}`;
+
+    if (!state.pbfCache) state.pbfCache = new Map();
+
+    if (!force && state.pbfCache.has(cacheKey)) {
+        const cached = state.pbfCache.get(cacheKey);
+        state.pbfRawData = cached.data;
+        renderPbfModalData(cached.data);
+        if (Date.now() - cached.timestamp < 30000) return;
+    } else {
+        renderPbfTableLoading();
+    }
+
+    try {
+        const res = await fetch(url);
+        const result = await res.json();
+
+        if (!result.success || !result.data) {
+            throw new Error(result.message || 'Gagal mengambil data monitoring PBF');
+        }
+
+        state.pbfCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+        state.pbfRawData = result.data;
+        renderPbfModalData(result.data);
+    } catch (err) {
+        console.error('Error memuat data PBF:', err);
+        renderPbfTableError(err.message);
+    }
+}
+
+function renderPbfModalData(data) {
+    if (!data) return;
+
+    const kpi = data.kpi || {};
+    const ringkasan = data.ringkasan || {};
+    const items = Array.isArray(data.items) ? data.items : [];
+    const meta = data.meta || {};
+
+    const elTotal = document.getElementById('modalKpiPbfTotal');
+    const elMemenuhi = document.getElementById('modalKpiPbfMemenuhi');
+    const elPercent = document.getElementById('modalKpiPbfPercent');
+    const elBelum = document.getElementById('modalKpiPbfBelum');
+    const elTepat = document.getElementById('modalKpiPbfTepat');
+    const elQtyPct = document.getElementById('modalKpiPbfQtyPct');
+
+    if (elTotal) elTotal.textContent = Number(kpi.total_order || 0).toLocaleString('id-ID');
+    if (elMemenuhi) elMemenuhi.textContent = Number(kpi.order_memenuhi || 0).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = `${kpi.persentase || 0}%`;
+    if (elBelum) elBelum.textContent = Number(kpi.order_belum_memenuhi || 0).toLocaleString('id-ID');
+    if (elTepat) elTepat.textContent = Number(kpi.tepat_waktu || 0).toLocaleString('id-ID');
+    if (elQtyPct) elQtyPct.textContent = `${kpi.persentase_qty || 0}%`;
+
+    const lastSyncEl = document.getElementById('pbfLastSyncTime');
+    if (lastSyncEl) {
+        lastSyncEl.textContent = `• Sinkronisasi: ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+    }
+
+    // Filter Items
+    const q = (state.pbfSearchQuery || '').toLowerCase();
+    const status = state.currentPbfStatus || 'all';
+
+    let filtered = items.filter(item => {
+        if (status === 'memenuhi' && !item.is_memenuhi) return false;
+        if (status === 'belum' && item.is_memenuhi) return false;
+        if (status === 'tepat_waktu' && !item.is_tepat_waktu) return false;
+        if (status === 'terlambat' && item.is_tepat_waktu) return false;
+
+        if (q) {
+            const matchTrans = item.no_trans && item.no_trans.toLowerCase().includes(q);
+            const matchCust = item.customer && item.customer.toLowerCase().includes(q);
+            const matchKota = item.kota && item.kota.toLowerCase().includes(q);
+            const matchBarang = (item.nama_barang && item.nama_barang.toLowerCase().includes(q)) || (item.kode_barang && item.kode_barang.toLowerCase().includes(q));
+            const matchSj = item.no_surat_jalan && item.no_surat_jalan.toLowerCase().includes(q);
+            if (!matchTrans && !matchCust && !matchKota && !matchBarang && !matchSj) return false;
+        }
+        return true;
+    });
+
+    // Sorting
+    const sort = state.pbfSort || { column: 'tgl_trans', dir: 'desc' };
+    filtered.sort((a, b) => {
+        let valA = a[sort.column] ?? '';
+        let valB = b[sort.column] ?? '';
+        if (typeof valA === 'number' || typeof valB === 'number') {
+            return (Number(valA) - Number(valB)) * (sort.dir === 'asc' ? 1 : -1);
+        }
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+        if (valA < valB) return sort.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return sort.dir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    renderPbfTable(filtered);
+    renderPbfPagination(filtered.length);
+}
+
+function renderPbfTable(list) {
+    const tbody = document.getElementById('pbfTableBody');
+    const footerStats = document.getElementById('pbfModalFooterStats');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="12" class="subcon-empty-row">
+                    <i class="fa-solid fa-boxes-packing" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px;">Tidak ada data Sales Order PBF yang cocok</div>
+                </td>
+            </tr>
+        `;
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 Item Order';
+        return;
+    }
+
+    const pageSize = state.pbfPageSize || 20;
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (state.pbfCurrentPage > totalPages) state.pbfCurrentPage = totalPages;
+    if (state.pbfCurrentPage < 1) state.pbfCurrentPage = 1;
+
+    const startIdx = (state.pbfCurrentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const paged = list.slice(startIdx, endIdx);
+
+    let html = '';
+    paged.forEach((item, idx) => {
+        const orderBadge = item.is_memenuhi
+            ? '<span class="badge-status-memenuhi"><i class="fa-solid fa-circle-check"></i> MEMENUHI</span>'
+            : '<span class="badge-status-belum"><i class="fa-solid fa-circle-xmark"></i> BELUM</span>';
+
+        const kirimBadge = item.is_tepat_waktu
+            ? '<span style="color: #16a34a; font-weight: 700; font-size: 0.76rem;"><i class="fa-solid fa-check-double"></i> TEPAT WAKTU</span>'
+            : (item.no_surat_jalan && item.no_surat_jalan !== '-'
+                ? '<span style="color: #dc2626; font-weight: 700; font-size: 0.76rem;"><i class="fa-solid fa-triangle-exclamation"></i> TERLAMBAT</span>'
+                : '<span style="color: #64748b; font-size: 0.76rem;">BELUM KIRIM</span>');
+
+        const custHtml = `<div><strong style="color: #1e293b;">${item.customer}</strong><br><span style="color: #64748b; font-size: 0.72rem;"><i class="fa-solid fa-location-dot"></i> ${item.kota || '-'}</span></div>`;
+
+        const barangHtml = `<div><span class="font-mono" style="font-size: 0.72rem; color: #64748b;">[${item.kode_barang}]</span> <span style="font-weight: 600; font-size: 0.8rem;">${item.nama_barang}</span></div>`;
+
+        const dnHtml = (item.no_surat_jalan && item.no_surat_jalan !== '-')
+            ? `<div><strong style="color: #2563eb; font-size: 0.78rem;">${item.no_surat_jalan}</strong><br><span style="color: #64748b; font-size: 0.72rem;">${item.tgl_surat_jalan_label || item.tgl_surat_jalan}</span></div>`
+            : '<span style="color: #94a3b8;">-</span>';
+
+        html += `
+            <tr>
+                <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
+                <td class="text-center font-mono" style="font-size: 0.78rem;">${item.tgl_trans_label || item.tgl_trans}</td>
+                <td><strong style="color: #8b5cf6; font-size: 0.82rem;">${item.no_trans}</strong></td>
+                <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.customer}">${custHtml}</td>
+                <td style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.nama_barang}">${barangHtml}</td>
+                <td class="text-right font-mono" style="font-weight: 600;">${Number(item.jml || 0).toLocaleString('id-ID')} <span style="font-size: 0.7rem; color: #64748b;">${item.satuan}</span></td>
+                <td class="text-right font-mono" style="color: #16a34a; font-weight: 700;">${Number(item.terpenuhi || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right font-mono" style="color: ${item.sisa > 0 ? '#dc2626' : '#64748b'};">${Number(item.sisa || 0).toLocaleString('id-ID')}</td>
+                <td class="text-center font-mono" style="font-size: 0.75rem; color: #d97706;">${item.leadtime_label || item.leadtime}</td>
+                <td class="text-center">${dnHtml}</td>
+                <td class="text-center">${kirimBadge}</td>
+                <td class="text-center">${orderBadge}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Item Order PBF`;
+    }
+}
+
+function renderPbfPagination(totalItems) {
+    const pageInfo = document.getElementById('pbfPageInfo');
+    const btnPrev = document.getElementById('btnPbfPrevPage');
+    const btnNext = document.getElementById('btnPbfNextPage');
+
+    const pageSize = state.pbfPageSize || 20;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+    if (pageInfo) {
+        pageInfo.textContent = `Halaman ${state.pbfCurrentPage} dari ${totalPages} (${totalItems} Data)`;
+    }
+    if (btnPrev) btnPrev.disabled = state.pbfCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = state.pbfCurrentPage >= totalPages;
+}
+
+function changePbfPage(delta) {
+    state.pbfCurrentPage = (state.pbfCurrentPage || 1) + delta;
+    if (state.pbfRawData) {
+        renderPbfModalData(state.pbfRawData);
+    }
+}
+
+function sortPbf(column) {
+    if (!state.pbfSort) {
+        state.pbfSort = { column: 'tgl_trans', dir: 'desc' };
+    }
+    if (state.pbfSort.column === column) {
+        state.pbfSort.dir = state.pbfSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.pbfSort.column = column;
+        state.pbfSort.dir = ['jml', 'terpenuhi', 'sisa', 'tgl_trans', 'leadtime', 'tgl_surat_jalan'].includes(column) ? 'desc' : 'asc';
+    }
+    if (state.pbfRawData) {
+        renderPbfModalData(state.pbfRawData);
+    }
+}

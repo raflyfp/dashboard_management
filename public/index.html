@@ -960,21 +960,24 @@
                     </div>
                 </section>
 
-                <!-- CARD: PBF (STANDBY) -->
+                <!-- CARD: PBF (LIVE ATENA ERP) -->
                 <section class="service-card" id="card-PBF">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-pills"></i></div>
-                            <h2>PBF</h2>
+                            <div class="service-icon-box pbf-theme"><i class="fa-solid fa-prescription-bottle-medical"></i></div>
+                            <div>
+                                <h2>PBF (Distribusi)</h2>
+                                <span class="card-sub-title">Pemenuhan Order +7 Hari</span>
+                            </div>
                         </div>
-                        <span class="service-status-pill status-standby">Standby</span>
+                        <span class="service-status-pill status-live">Live</span>
                     </div>
 
                     <div class="card-body">
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPBF">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPBF" style="width: 0%"></div>
@@ -983,11 +986,11 @@
 
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total Order</span>
                                 <span class="m-val" id="totalPBF">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Memenuhi</span>
                                 <span class="m-val text-success" id="selesaiPBF">0</span>
                             </div>
                             <div class="metric-box m-warning">
@@ -995,11 +998,17 @@
                                 <span class="m-val text-warning" id="belumPBF">0</span>
                             </div>
                         </div>
+
+                        <!-- Sub-indikator mini PBF -->
+                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-color); color: var(--text-secondary);">
+                            <span>Tepat Waktu: <b id="pbfMiniTepatPercent" style="color: #10b981;">-</b></span>
+                            <span>Pemenuhan Qty: <b id="pbfMiniQtyPercent" style="color: #2563eb;">-</b></span>
+                        </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail pbf-btn"
+                            onclick="openPbfModal()">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -2025,11 +2034,11 @@
                             <table class="tickets-table subcon-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 45px; text-align: center;">No</th>
+                                        <th style="width: 40px; text-align: center;">No</th>
                                         <th class="sortable-th" onclick="sortQa('grs', 'no_grs')" data-sort-key="no_grs" title="Klik untuk mengurutkan No GRS">
                                             No. GRS <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('grs', 'tanggal')" data-sort-key="tanggal" title="Klik untuk mengurutkan Tanggal">
+                                        <th class="sortable-th text-center" onclick="sortQa('grs', 'tanggal')" data-sort-key="tanggal" title="Klik untuk mengurutkan Tanggal">
                                             Tanggal <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
                                         <th class="sortable-th" onclick="sortQa('grs', 'no_po')" data-sort-key="no_po" title="Klik untuk mengurutkan No PO">
@@ -2038,20 +2047,29 @@
                                         <th class="sortable-th" onclick="sortQa('grs', 'supplier')" data-sort-key="supplier" title="Klik untuk mengurutkan Supplier">
                                             Supplier <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('grs', 'disposisi_qc')" data-sort-key="disposisi_qc" style="text-align: center;" title="Klik untuk mengurutkan Disposisi QC">
+                                        <th class="sortable-th" onclick="sortQa('grs', 'nama_barang')" data-sort-key="nama_barang" title="Klik untuk mengurutkan Barang">
+                                            Kode & Nama Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                        </th>
+                                        <th class="text-right" title="Jumlah Datang / Rilis / Reject">
+                                            Qty (Datang / Rilis)
+                                        </th>
+                                        <th class="text-center" title="Nomor Lot & Expired Date">
+                                            No. Lot / ED
+                                        </th>
+                                        <th class="sortable-th text-center" onclick="sortQa('grs', 'disposisi_qc')" data-sort-key="disposisi_qc" title="Klik untuk mengurutkan Disposisi QC">
                                             Disposisi QC <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('grs', 'status_code')" data-sort-key="status_code" style="text-align: center;" title="Klik untuk mengurutkan Status Approve">
+                                        <th class="sortable-th text-center" onclick="sortQa('grs', 'status_code')" data-sort-key="status_code" title="Klik untuk mengurutkan Status Approve">
                                             Status Release <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
-                                        <th class="sortable-th" onclick="sortQa('grs', 'tgl_approve')" data-sort-key="tgl_approve" title="Klik untuk mengurutkan Tanggal Approve">
+                                        <th class="sortable-th text-center" onclick="sortQa('grs', 'tgl_approve')" data-sort-key="tgl_approve" title="Klik untuk mengurutkan Tanggal Approve">
                                             Tgl Approve <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody id="qaGrsTableBody">
                                     <tr class="skeleton-row">
-                                        <td colspan="8" class="text-center">Memuat data...</td>
+                                        <td colspan="11" class="text-center">Memuat data...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -2212,6 +2230,225 @@
                     <span id="qaLastSyncTime" style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
                 </div>
                 <button class="btn-secondary" onclick="closeQaModal()">Tutup</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 8. MODAL MONITORING PEMENUHAN ORDER PBF (ATENA ERP)           -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="pbfModal" aria-hidden="true">
+        <div class="modal-card modal-card-xl">
+
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon pbf-theme"><i class="fa-solid fa-prescription-bottle-medical"></i></div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h3 id="pbfModalTitle">Monitoring Pemenuhan Order +7 Hari (PBF)</h3>
+                                <span class="service-status-pill status-live" style="font-size: 0.72rem;">Live Atena</span>
+                            </div>
+                            <p id="pbfModalSubtitle">Fulfillment Sales Order (SO) & Surat Jalan (DN) Distribusi Farmasi Atena ERP</p>
+                        </div>
+                    </div>
+                    <button class="modal-close-btn" onclick="closePbfModal()" title="Tutup">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Bar Filter: Date Range Picker, Presets, Reset, Search & Sync -->
+                <div class="subcon-filter-bar" style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="date" id="pbfDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handlePbfDateChange('start')">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="date" id="pbfDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handlePbfDateChange('end')">
+                                </div>
+                            </div>
+
+                            <!-- Shortcut Presets Cepat -->
+                            <div class="filter-pills pbf-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnQuickPbfMonth" onclick="setPbfQuickDate('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickPbfWeek" onclick="setPbfQuickDate('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnQuickPbfToday" onclick="setPbfQuickDate('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickPbfAll" onclick="setPbfQuickDate('all')">
+                                    <i class="fa-solid fa-layer-group"></i> Semua
+                                </button>
+                            </div>
+
+                            <button class="filter-reset-btn" id="btnResetPbfFilter" onclick="resetPbfFilter()" title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Right Group: Search Box + Sync Atena -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="pbfSearchInput" placeholder="Cari No SO / Customer / Barang / DN..."
+                                    oninput="handlePbfSearch(this.value)">
+                            </div>
+
+                            <button class="modal-refresh-btn" id="btnSyncPbf" onclick="syncPbfData()"
+                                title="Sinkronkan dengan Atena ERP">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Modal PBF -->
+            <div class="modal-body subcon-modal-body">
+                <!-- 5 KPI Cards PBF -->
+                <div class="subcon-kpi-grid pbf-kpi-grid">
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-file-invoice"></i></div>
+                        <div>
+                            <div class="kpi-num" id="modalKpiPbfTotal">0</div>
+                            <div class="kpi-label">Total Order (SO)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
+                        <div>
+                            <div class="kpi-num text-success" id="modalKpiPbfMemenuhi">0</div>
+                            <div class="kpi-label">Order Memenuhi (<span id="modalKpiPbfPercent">0%</span>)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-warning"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div>
+                            <div class="kpi-num text-warning" id="modalKpiPbfBelum">0</div>
+                            <div class="kpi-label">Belum Memenuhi</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #6366f1;"><i class="fa-solid fa-truck-ramp-box"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiPbfTepat">0</div>
+                            <div class="kpi-label">Kirim Tepat Waktu</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #0284c7;"><i class="fa-solid fa-boxes-stacked"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #0284c7;" id="modalKpiPbfQtyPct">0%</div>
+                            <div class="kpi-label">Pemenuhan Qty Barang</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sub-Navbar: Filter Status -->
+                <div class="subcon-detail-section" style="margin-top: 1rem;">
+                    <div class="modal-tab-nav-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 0.4rem;">
+                        <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-list-check" style="color: #0284c7;"></i>
+                            <span>Rincian Item Sales Order &amp; Pengiriman DN</span>
+                        </div>
+
+                        <div class="tab-group-right" style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Filter Status:</span>
+                            <select id="selectPbfStatus" class="purchasing-select" onchange="switchPbfStatus(this.value)">
+                                <option value="all">Semua Status</option>
+                                <option value="memenuhi">Order: MEMENUHI Saja</option>
+                                <option value="belum">Order: BELUM MEMENUHI Saja</option>
+                                <option value="tepat_waktu">Kirim: TEPAT WAKTU Saja</option>
+                                <option value="terlambat">Kirim: TERLAMBAT Saja</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Detail PBF -->
+                    <div class="table-responsive" style="margin-top: 0.75rem;">
+                        <table class="tickets-table subcon-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px; text-align: center;">No</th>
+                                    <th class="sortable-th text-center" onclick="sortPbf('tgl_trans')" data-sort-key="tgl_trans" title="Klik untuk mengurutkan Tanggal SO">
+                                        Tgl SO <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="sortable-th" onclick="sortPbf('no_trans')" data-sort-key="no_trans" title="Klik untuk mengurutkan No SO">
+                                        No. SO <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="sortable-th" onclick="sortPbf('customer')" data-sort-key="customer" title="Klik untuk mengurutkan Customer">
+                                        Customer &amp; Kota <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="sortable-th" onclick="sortPbf('nama_barang')" data-sort-key="nama_barang" title="Klik untuk mengurutkan Barang">
+                                        Barang <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="text-right sortable-th" onclick="sortPbf('jml')" data-sort-key="jml" title="Klik untuk mengurutkan Target Order">
+                                        Order <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="text-right sortable-th" onclick="sortPbf('terpenuhi')" data-sort-key="terpenuhi" title="Klik untuk mengurutkan Terpenuhi">
+                                        Terpenuhi <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="text-right sortable-th" onclick="sortPbf('sisa')" data-sort-key="sisa" title="Klik untuk mengurutkan Sisa">
+                                        Sisa <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="text-center sortable-th" onclick="sortPbf('leadtime')" data-sort-key="leadtime" title="Batas Waktu +7 Hari">
+                                        Leadtime <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="text-center sortable-th" onclick="sortPbf('tgl_surat_jalan')" data-sort-key="tgl_surat_jalan" title="Surat Jalan DN">
+                                        Surat Jalan (DN) <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="text-center sortable-th" onclick="sortPbf('status_kirim')" data-sort-key="status_kirim" title="Ketepatan Waktu">
+                                        Status Kirim <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="text-center sortable-th" onclick="sortPbf('status_order')" data-sort-key="status_order" title="Status Pemenuhan Order">
+                                        Status Order <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="pbfTableBody">
+                                <tr class="skeleton-row">
+                                    <td colspan="12" class="text-center">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Bar PBF -->
+                    <div class="purchasing-pagination-bar" id="pbfPaginationBar"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                        <div style="font-size: 0.8rem; color: var(--text-muted);" id="pbfPageInfo">
+                            Halaman 1 dari 1
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="filter-pill" id="btnPbfPrevPage" onclick="changePbfPage(-1)">
+                                <i class="fa-solid fa-chevron-left"></i> Prev
+                            </button>
+                            <button class="filter-pill" id="btnPbfNextPage" onclick="changePbfPage(1)">
+                                Next <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div class="modal-stats" id="pbfModalFooterStats">
+                        Menampilkan data monitoring Pemenuhan Order PBF Atena ERP
+                    </div>
+                    <span id="pbfLastSyncTime" style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
+                </div>
+                <button class="btn-secondary" onclick="closePbfModal()">Tutup</button>
             </div>
 
         </div>

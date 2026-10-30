@@ -20,6 +20,7 @@ const logistikService = require('../services/logistikService');
 const qaService = require('../services/qaService');
 const whFgService = require('../services/whFgService');
 const whMatService = require('../services/whMatService');
+const pbfService = require('../services/pbfService');
 
 // In-memory cache sederhana untuk efisiensi beban server
 const cache = {
@@ -86,7 +87,7 @@ router.get('/stats', async (req, res) => {
 
     try {
         // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi, Logistik, QA, WH FG & WH Mat secara paralel
-        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled] = await Promise.allSettled([
+        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled, pbfSettled] = await Promise.allSettled([
             ticketingService.getSummary(forceRefresh),
             subconService.getMonitoringToday(forceRefresh),
             purchasingService.getSummary(forceRefresh),
@@ -94,7 +95,8 @@ router.get('/stats', async (req, res) => {
             logistikService.getSummary(forceRefresh),
             qaService.getSummary(forceRefresh),
             whFgService.getSummary(forceRefresh),
-            whMatService.getSummary(forceRefresh)
+            whMatService.getSummary(forceRefresh),
+            pbfService.getSummary(forceRefresh)
         ]);
 
         let apiData = null;
@@ -164,6 +166,14 @@ router.get('/stats', async (req, res) => {
             console.error(`❌ [API WH MAT ERROR]: ${whMatSettled.reason?.message}`);
         }
         const whMatKpi = whMatData?.kpi || {};
+
+        let pbfData = null;
+        if (pbfSettled && pbfSettled.status === 'fulfilled') {
+            pbfData = pbfSettled.value;
+        } else if (pbfSettled && pbfSettled.reason) {
+            console.error(`❌ [API PBF ERROR]: ${pbfSettled.reason?.message}`);
+        }
+        const pbfKpi = pbfData?.kpi || {};
 
         const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
@@ -762,19 +772,30 @@ router.get('/stats', async (req, res) => {
                 nama: 'PBF (Distribusi)',
                 kategori: 'supply_chain',
                 kategori_label: 'Supply Chain & Gudang',
-                data_ditampilkan: 'Pemenuhan Order',
-                sub_nama: 'Fulfillment Order PBF Farmasi',
-                sumber_data: 'Sistem Distribusi / Order Penjualan PBF',
-                sumber: 'Sistem Order PBF',
-                catatan: 'Pemenuhan order Pedagang Besar Farmasi',
+                data_ditampilkan: 'Pemenuhan Order +7 Hari',
+                sub_nama: 'Fulfillment Sales Order (SO) PBF Farmasi',
+                sumber_data: 'Atena ERP REST API (PemenuhanOrderPBF)',
+                sumber: 'Atena ERP',
+                catatan: 'Pemenuhan Sales Order (SO) Distribusi Farmasi Atena ERP',
                 icon: 'prescription-bottle-medical',
-                is_active: false,
-                metric_labels: { total: 'Total Order', selesai: 'Terpenuhi', belum: 'Proses' },
+                is_active: Boolean((pbfKpi.total_order ?? 0) > 0 || (pbfData?.today_total ?? 0) > 0),
+                metric_labels: { total: 'Total Order', selesai: 'Memenuhi', belum: 'Belum' },
                 unit: 'Order',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                total_tiket: pbfKpi.total_order ?? 0,
+                selesai: pbfKpi.order_memenuhi ?? 0,
+                belum_selesai: pbfKpi.order_belum_memenuhi ?? 0,
+                ditolak: 0,
+                total_efektif: pbfKpi.total_order ?? 0,
+                persentase_selesai: pbfKpi.persentase_selesai ?? pbfKpi.persentase ?? 0,
+                today_total: pbfData?.today_total ?? 0,
+                today_selesai: pbfData?.today_selesai ?? 0,
+                today_belum: pbfData?.today_belum ?? 0,
+                today_persentase: pbfData?.today_persentase ?? 0,
+                month_total: pbfData?.month_total ?? pbfKpi.total_order ?? 0,
+                month_selesai: pbfData?.month_selesai ?? pbfKpi.order_memenuhi ?? 0,
+                month_belum: pbfData?.month_belum ?? pbfKpi.order_belum_memenuhi ?? 0,
+                month_persentase: pbfData?.month_persentase ?? pbfKpi.persentase ?? 0,
+                kpi: pbfKpi,
             },
             DEVELOPMENT: {
                 no: 22,
@@ -1282,3 +1303,53 @@ router.post('/wh-mat/sync', async (req, res) => {
 });
 
 module.exports = router;
+
+/**
+ * GET /api/dashboard/pbf
+ * Mengambil data monitoring Pemenuhan Order PBF dari Atena ERP
+ */
+router.get('/pbf', async (req, res) => {
+    try {
+        const { range = 'month', status = 'all', search = '', force = false, tglawal, tglakhir } = req.query;
+        const data = await pbfService.getMonitoringData({
+            range,
+            status,
+            search,
+            force: force === 'true',
+            tglawal,
+            tglakhir,
+        });
+
+        return res.json({
+            success: true,
+            data: data
+        });
+    } catch (error) {
+        console.error('[API ERROR /pbf]:', error.message);
+        return res.status(502).json({
+            success: false,
+            message: 'Gagal mengambil data monitoring PBF Atena ERP: ' + error.message,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/dashboard/pbf/sync
+ * Memaksa sinkronisasi data PBF terbaru dari Atena ERP
+ */
+router.post('/pbf/sync', async (req, res) => {
+    try {
+        const rawData = await pbfService.fetchData(true);
+        return res.json({
+            success: true,
+            message: 'Sinkronisasi data PBF dari Atena ERP berhasil',
+            data: rawData
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Gagal sinkronisasi data PBF dari Atena ERP: ' + error.message
+        });
+    }
+});

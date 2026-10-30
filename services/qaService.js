@@ -260,46 +260,67 @@ class QaService {
                 return rawRows.map((r, idx) => {
                     const statusStr = String(r.status || '').trim();
                     const isApprovedDoc = statusStr.toUpperCase().includes('SUDAH');
-                    const disposisi = String(r.disposisi_qc || '').trim().toUpperCase();
+                    const disposisi = String(r.status_qc_1 || r.disposisi_qc || '').trim().toUpperCase();
                     // Sesuai kriteria QA: Release = Disposisi QC DISETUJUI / DITERIMA
-                    const isReleased = isApprovedDoc && (disposisi === 'DITERIMA' || disposisi === 'DISETUJUI');
+                    const isReleased = isApprovedDoc || disposisi === 'DITERIMA' || disposisi === 'DISETUJUI';
                     const isRejected = disposisi === 'DITOLAK';
                     const isHold = disposisi === 'DITAHAN';
 
                     let statusCode = 'pending';
                     let statusLabel = 'Belum Approve';
 
-                    if (isReleased) {
-                        statusCode = 'terpenuhi';
-                        statusLabel = 'Disetujui (Release)';
-                    } else if (isRejected) {
+                    if (isRejected) {
                         statusCode = 'ditolak';
                         statusLabel = 'Ditolak';
                     } else if (isHold) {
                         statusCode = 'ditahan';
                         statusLabel = 'Ditahan';
+                    } else if (isReleased) {
+                        statusCode = 'terpenuhi';
+                        statusLabel = 'Disetujui (Release)';
                     } else {
                         statusCode = 'pending';
                         statusLabel = 'Belum Approve';
                     }
 
+                    const noGrs = r.no_trans || r.no_grs || '-';
+                    const tglGrs = r.tgl_trans || r.tanggal || '';
+                    const noPo = r.kode_po || r.no_po || '-';
+                    const supplier = r.nama_supplier || r.supplier || '-';
+
                     return {
                         no: idx + 1,
-                        no_grs: r.no_grs || '-',
-                        tanggal: r.tanggal || '',
-                        tanggal_label: formatShortDate(r.tanggal),
-                        no_po: r.no_po || '-',
+                        no_grs: noGrs,
+                        tanggal: tglGrs,
+                        tanggal_label: formatShortDate(tglGrs),
+                        no_po: noPo,
+                        kode_pr: r.kode_pr || '-',
                         kode_supplier: r.kode_supplier || '-',
-                        supplier: r.supplier || '-',
+                        supplier: supplier,
+                        kode_barang: r.kode_barang || '-',
+                        nama_barang: r.nama_barang || '-',
+                        no_lot: r.no_lot || '-',
+                        no_control: r.no_control || '-',
+                        rak: r.rak || '-',
+                        jumlah: Number(r.jumlah || 0),
+                        jumlah_sample: Number(r.jumlah_sample || 0),
+                        jumlah_rilis: Number(r.jumlah_rilis || 0),
+                        jumlah_reject: Number(r.jumlah_reject || 0),
+                        tgl_expired: r.tgl_expired || '-',
+                        tgl_expired_label: formatShortDate(r.tgl_expired),
                         surat_jalan: r.surat_jalan || '-',
                         status: statusLabel,
                         status_doc: statusStr,
                         status_code: statusCode,
                         is_approved: isApprovedDoc,
                         is_released: isReleased,
-                        disposisi_qc: disposisi || '-',
-                        tgl_approve: r.tgl_approve || '-',
-                        tgl_approve_label: formatShortDate(r.tgl_approve),
+                        disposisi_qc: disposisi || statusLabel,
+                        user_qc: r.user_qc_1 || r.user_qc || '-',
+                        tgl_approve: r.tgl_approve_qc_1 || r.tgl_approve || '-',
+                        tgl_approve_label: formatShortDate(r.tgl_approve_qc_1 || r.tgl_approve),
+                        catatan_qc: r.catatan_qc_1 || r.catatan || '',
+                        user_entry: r.user_entry || '-',
+                        harga: Number(r.harga || 0),
                     };
                 });
             } else if (bagian === 'scn') {

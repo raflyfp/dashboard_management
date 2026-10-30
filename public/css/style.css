@@ -291,7 +291,7 @@ html, body {
 .status-standby { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
 /* Penyeragaman Icon Background Themes */
-.it-theme, .tk-theme, .ga-theme, .subcon-theme, .purchasing-theme, .produksi-theme, .logistik-theme, .qa-theme {
+.it-theme, .tk-theme, .ga-theme, .subcon-theme, .purchasing-theme, .produksi-theme, .logistik-theme, .qa-theme, .pbf-theme {
     background: var(--sna-blue-light);
     color: var(--sna-blue);
 }
@@ -508,11 +508,11 @@ html, body {
 }
 
 /* Penyeragaman Tombol Detail (Biru Tema SNA Medika untuk Semua Kartu Aktif) */
-.it-btn, .tk-btn, .ga-btn, .subcon-btn, .purchasing-btn, .produksi-btn, .logistik-btn, .qa-btn {
+.it-btn, .tk-btn, .ga-btn, .subcon-btn, .purchasing-btn, .produksi-btn, .logistik-btn, .qa-btn, .pbf-btn {
     background: var(--sna-blue);
     color: #fff;
 }
-.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover, .purchasing-btn:hover, .produksi-btn:hover, .logistik-btn:hover, .qa-btn:hover {
+.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover, .purchasing-btn:hover, .produksi-btn:hover, .logistik-btn:hover, .qa-btn:hover, .pbf-btn:hover {
     background: #0c4a86;
 }
 
@@ -2219,3 +2219,21 @@ html, body {
 
 
 
+
+
+/* ====================================================================
+   PBF THEME & RESPONSIVE GRID
+   ==================================================================== */
+.pbf-kpi-grid {
+    grid-template-columns: repeat(5, 1fr);
+}
+@media (max-width: 1100px) {
+    .pbf-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+@media (max-width: 768px) {
+    .pbf-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
