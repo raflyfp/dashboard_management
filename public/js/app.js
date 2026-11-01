@@ -212,6 +212,7 @@ function initEventListeners() {
             closeLogistikModal();
             closeWhFgModal();
             closeWhMatModal();
+            closePbfModal();
         }
     });
 
@@ -293,6 +294,15 @@ function initEventListeners() {
         whMatModalOverlay.addEventListener('click', (e) => {
             if (e.target === whMatModalOverlay) {
                 closeWhMatModal();
+            }
+        });
+    }
+
+    const pbfModalOverlay = document.getElementById('pbfModal');
+    if (pbfModalOverlay) {
+        pbfModalOverlay.addEventListener('click', (e) => {
+            if (e.target === pbfModalOverlay) {
+                closePbfModal();
             }
         });
     }
@@ -533,36 +543,103 @@ function renderServiceCards(layanan) {
             barFill.className = `progress-bar-fill ${kpiFillClass}`;
         }
 
-        // 3. Update Status Badge (Live vs Standby) secara dinamis
+        // 3. Update Status Badge (Live vs Standby) & Dual/Triple Hero secara dinamis
+        const getKpiClass = (val) => {
+            if (val > 85) return { text: 'kpi-color-green', fill: 'kpi-fill-green' };
+            if (val >= 75) return { text: 'kpi-color-yellow', fill: 'kpi-fill-yellow' };
+            return { text: 'kpi-color-red', fill: 'kpi-fill-red' };
+        };
+
+        if (code === 'PURCHASING') {
+            const matPct = Number(item.persentase_material ?? item.material?.persentase ?? 0);
+            const nonMatPct = Number(item.persentase_non_material ?? item.non_material?.persentase ?? 0);
+
+            const elMat = document.getElementById('percentPurchasingMaterial');
+            const barMat = document.getElementById('barFillPurchasingMaterial');
+            if (elMat) {
+                elMat.textContent = `${matPct}%`;
+                elMat.className = `percent-val ${getKpiClass(matPct).text}`;
+            }
+            if (barMat) {
+                barMat.style.width = `${Math.min(Math.max(matPct, 0), 100)}%`;
+                barMat.className = `progress-bar-fill ${getKpiClass(matPct).fill}`;
+            }
+
+            const elNon = document.getElementById('percentPurchasingNonMaterial');
+            const barNon = document.getElementById('barFillPurchasingNonMaterial');
+            if (elNon) {
+                elNon.textContent = `${nonMatPct}%`;
+                elNon.className = `percent-val ${getKpiClass(nonMatPct).text}`;
+            }
+            if (barNon) {
+                barNon.style.width = `${Math.min(Math.max(nonMatPct, 0), 100)}%`;
+                barNon.className = `progress-bar-fill ${getKpiClass(nonMatPct).fill}`;
+            }
+        }
+
         if (code === 'QA') {
-            const miniGrs = document.getElementById('qaMiniGrsPercent');
-            if (miniGrs) miniGrs.textContent = `${item.grs?.persentase ?? item.persentase_grs ?? 0}%`;
-            const miniScn = document.getElementById('qaMiniScnPercent');
-            if (miniScn) miniScn.textContent = `${item.scn?.persentase ?? item.persentase_scn ?? 0}%`;
-            const miniBr = document.getElementById('qaMiniBrPercent');
-            if (miniBr) miniBr.textContent = `${item.acceptbr?.persentase ?? item.persentase_br ?? 0}%`;
+            const grsPct = Number(item.grs?.persentase ?? item.persentase_grs ?? 0);
+            const scnPct = Number(item.scn?.persentase ?? item.persentase_scn ?? 0);
+            const brPct = Number(item.acceptbr?.persentase ?? item.persentase_br ?? 0);
+
+            const elGrs = document.getElementById('percentQaGrs');
+            const barGrs = document.getElementById('barFillQaGrs');
+            if (elGrs) {
+                elGrs.textContent = `${grsPct}%`;
+                elGrs.className = `percent-val ${getKpiClass(grsPct).text}`;
+            }
+            if (barGrs) {
+                barGrs.style.width = `${Math.min(Math.max(grsPct, 0), 100)}%`;
+                barGrs.className = `progress-bar-fill ${getKpiClass(grsPct).fill}`;
+            }
+
+            const elScn = document.getElementById('percentQaScn');
+            const barScn = document.getElementById('barFillQaScn');
+            if (elScn) {
+                elScn.textContent = `${scnPct}%`;
+                elScn.className = `percent-val ${getKpiClass(scnPct).text}`;
+            }
+            if (barScn) {
+                barScn.style.width = `${Math.min(Math.max(scnPct, 0), 100)}%`;
+                barScn.className = `progress-bar-fill ${getKpiClass(scnPct).fill}`;
+            }
+
+            const elBr = document.getElementById('percentQaBr');
+            const barBr = document.getElementById('barFillQaBr');
+            if (elBr) {
+                elBr.textContent = `${brPct}%`;
+                elBr.className = `percent-val ${getKpiClass(brPct).text}`;
+            }
+            if (barBr) {
+                barBr.style.width = `${Math.min(Math.max(brPct, 0), 100)}%`;
+                barBr.className = `progress-bar-fill ${getKpiClass(brPct).fill}`;
+            }
         }
 
         if (code === 'WH_MAT') {
             const pctMr = Number(item.persentase_mr ?? item.mr?.persentase_selesai ?? 0);
             const pctDr = Number(item.persentase_dr ?? item.dr?.persentase_selesai ?? 0);
-            const miniMr = document.getElementById('whMatMiniMrPercent');
-            if (miniMr) miniMr.textContent = `${pctMr}%`;
-            const miniDr = document.getElementById('whMatMiniDrPercent');
-            if (miniDr) miniDr.textContent = `${pctDr}%`;
-        }
 
-
-        if (code === 'PBF') {
-            const miniTepat = document.getElementById('pbfMiniTepatPercent');
-            if (miniTepat) {
-                const tepatCount = item.kpi?.tepat_waktu ?? item.tepat_waktu;
-                miniTepat.textContent = tepatCount !== undefined ? `${tepatCount} Item` : '-';
+            const elMr = document.getElementById('percentWhMatMr');
+            const barMr = document.getElementById('barFillWhMatMr');
+            if (elMr) {
+                elMr.textContent = `${pctMr}%`;
+                elMr.className = `percent-val ${getKpiClass(pctMr).text}`;
             }
-            const miniQty = document.getElementById('pbfMiniQtyPercent');
-            if (miniQty) {
-                const qtyPct = item.kpi?.persentase_qty ?? item.persentase_qty;
-                miniQty.textContent = qtyPct !== undefined ? `${qtyPct}%` : '-';
+            if (barMr) {
+                barMr.style.width = `${Math.min(Math.max(pctMr, 0), 100)}%`;
+                barMr.className = `progress-bar-fill ${getKpiClass(pctMr).fill}`;
+            }
+
+            const elDr = document.getElementById('percentWhMatDr');
+            const barDr = document.getElementById('barFillWhMatDr');
+            if (elDr) {
+                elDr.textContent = `${pctDr}%`;
+                elDr.className = `percent-val ${getKpiClass(pctDr).text}`;
+            }
+            if (barDr) {
+                barDr.style.width = `${Math.min(Math.max(pctDr, 0), 100)}%`;
+                barDr.className = `progress-bar-fill ${getKpiClass(pctDr).fill}`;
             }
         }
 
@@ -6633,6 +6710,37 @@ async function loadPbfData(force = false) {
     } catch (err) {
         console.error('Error memuat data PBF:', err);
         renderPbfTableError(err.message);
+    }
+}
+
+function renderPbfTableLoading() {
+    const tbody = document.getElementById('pbfTableBody');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="12" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-secondary);">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.8rem; color: #8b5cf6;"></i>
+                    <div style="margin-top: 10px; font-weight: 600; font-size: 0.9rem;">Memuat data Pemenuhan Order PBF dari Atena ERP...</div>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function renderPbfTableError(message) {
+    const tbody = document.getElementById('pbfTableBody');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="12" style="padding: 2.5rem 1rem; text-align: center; color: #dc2626;">
+                    <i class="fa-solid fa-circle-exclamation" style="font-size: 1.8rem; color: #dc2626;"></i>
+                    <div style="margin-top: 10px; font-weight: 600; font-size: 0.9rem;">${message || 'Gagal mengambil data monitoring PBF'}</div>
+                    <button class="filter-pill" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px;" onclick="loadPbfData(true)">
+                        <i class="fa-solid fa-rotate-right"></i> Coba Lagi
+                    </button>
+                </td>
+            </tr>
+        `;
     }
 }
 

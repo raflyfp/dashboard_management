@@ -662,6 +662,8 @@ router.get('/stats', async (req, res) => {
                 total_efektif: purchasingKpi.total_pr ?? 0,
                 persentase_selesai: purchasingKpi.persentase_selesai ?? 0,
                 total_item: purchasingKpi.total_item ?? 0,
+                persentase_material: purchasingKpi.material?.persentase ?? 0,
+                persentase_non_material: purchasingKpi.non_material?.persentase ?? 0,
                 material: purchasingKpi.material || {},
                 non_material: purchasingKpi.non_material || {},
                 total_qty_request: purchasingKpi.total_qty_request ?? 0,
@@ -738,7 +740,7 @@ router.get('/stats', async (req, res) => {
                 nama: 'WH Mat (Gudang Bahan)',
                 kategori: 'supply_chain',
                 kategori_label: 'Supply Chain & Gudang',
-                data_ditampilkan: 'Pemenuhan DR & Permintaan Barang',
+                data_ditampilkan: 'Pemenuhan DR & MR',
                 sub_nama: 'DR Paskot & MR Bahan (MR +1)',
                 sumber_data: 'Atena ERP REST API (PemenuhanWHMat)',
                 sumber: 'Atena ERP',
@@ -1302,8 +1304,6 @@ router.post('/wh-mat/sync', async (req, res) => {
     }
 });
 
-module.exports = router;
-
 /**
  * GET /api/dashboard/pbf
  * Mengambil data monitoring Pemenuhan Order PBF dari Atena ERP
@@ -1353,3 +1353,7 @@ router.post('/pbf/sync', async (req, res) => {
         });
     }
 });
+
+module.exports = router;
+
+

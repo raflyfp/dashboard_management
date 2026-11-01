@@ -718,16 +718,38 @@
                     </div>
 
                     <div class="card-body">
-                        <div class="percent-hero">
-                            <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentPURCHASING">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                        <!-- Dual Percent Hero (Material & Non-Material) -->
+                        <div class="purchasing-dual-hero" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div class="percent-hero" style="padding: 0.45rem 0.55rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                                    <span><i class="fa-solid fa-boxes-stacked" style="color: #2563eb; margin-right: 3px;"></i> Material</span>
+                                    <span style="font-size: 0.62rem; color: var(--text-muted);">Bln Ini</span>
+                                </div>
+                                <div class="percent-number-row" style="margin-top: 2px;">
+                                    <span class="percent-val kpi-color-red" id="percentPurchasingMaterial" style="font-size: 1.45rem;">0%</span>
+                                </div>
+                                <div class="progress-bar-track" style="margin-top: 3px;">
+                                    <div class="progress-bar-fill kpi-fill-red" id="barFillPurchasingMaterial" style="width: 0%"></div>
+                                </div>
                             </div>
-                            <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillPURCHASING" style="width: 0%">
+
+                            <div class="percent-hero" style="padding: 0.45rem 0.55rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                                    <span><i class="fa-solid fa-screwdriver-wrench" style="color: #8b5cf6; margin-right: 3px;"></i> Non-Mat</span>
+                                    <span style="font-size: 0.62rem; color: var(--text-muted);">Bln Ini</span>
+                                </div>
+                                <div class="percent-number-row" style="margin-top: 2px;">
+                                    <span class="percent-val kpi-color-red" id="percentPurchasingNonMaterial" style="font-size: 1.45rem;">0%</span>
+                                </div>
+                                <div class="progress-bar-track" style="margin-top: 3px;">
+                                    <div class="progress-bar-fill kpi-fill-red" id="barFillPurchasingNonMaterial" style="width: 0%"></div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Fallback / Hidden element for percentPURCHASING if accessed by any legacy updater -->
+                        <span id="percentPURCHASING" style="display: none;">0%</span>
+                        <div id="barFillPURCHASING" style="display: none;"></div>
 
                         <div class="metrics-row">
                             <div class="metric-box">
@@ -767,15 +789,51 @@
                     </div>
 
                     <div class="card-body">
-                        <div class="percent-hero">
-                            <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentQA">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                        <!-- Triple Percent Hero (GRS, SCN, Acc BR) -->
+                        <div class="qa-triple-hero" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                            <div class="percent-hero" style="padding: 0.4rem 0.45rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                                    <span><i class="fa-solid fa-boxes-packing" style="color: #2563eb; margin-right: 2px;"></i> GRS</span>
+                                    <span style="font-size: 0.58rem; color: var(--text-muted);">Bln Ini</span>
+                                </div>
+                                <div class="percent-number-row" style="margin-top: 2px;">
+                                    <span class="percent-val kpi-color-red" id="percentQaGrs" style="font-size: 1.25rem;">0%</span>
+                                </div>
+                                <div class="progress-bar-track" style="margin-top: 3px;">
+                                    <div class="progress-bar-fill kpi-fill-red" id="barFillQaGrs" style="width: 0%"></div>
+                                </div>
                             </div>
-                            <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillQA" style="width: 0%"></div>
+
+                            <div class="percent-hero" style="padding: 0.4rem 0.45rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                                    <span><i class="fa-solid fa-industry" style="color: #8b5cf6; margin-right: 2px;"></i> SCN</span>
+                                    <span style="font-size: 0.58rem; color: var(--text-muted);">Bln Ini</span>
+                                </div>
+                                <div class="percent-number-row" style="margin-top: 2px;">
+                                    <span class="percent-val kpi-color-red" id="percentQaScn" style="font-size: 1.25rem;">0%</span>
+                                </div>
+                                <div class="progress-bar-track" style="margin-top: 3px;">
+                                    <div class="progress-bar-fill kpi-fill-red" id="barFillQaScn" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <div class="percent-hero" style="padding: 0.4rem 0.45rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                                    <span><i class="fa-solid fa-file-circle-check" style="color: #10b981; margin-right: 2px;"></i> Acc BR</span>
+                                    <span style="font-size: 0.58rem; color: var(--text-muted);">Bln Ini</span>
+                                </div>
+                                <div class="percent-number-row" style="margin-top: 2px;">
+                                    <span class="percent-val kpi-color-red" id="percentQaBr" style="font-size: 1.25rem;">0%</span>
+                                </div>
+                                <div class="progress-bar-track" style="margin-top: 3px;">
+                                    <div class="progress-bar-fill kpi-fill-red" id="barFillQaBr" style="width: 0%"></div>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Fallback / Hidden element for percentQA if accessed by legacy updater -->
+                        <span id="percentQA" style="display: none;">0%</span>
+                        <div id="barFillQA" style="display: none;"></div>
 
                         <div class="metrics-row">
                             <div class="metric-box">
@@ -790,13 +848,6 @@
                                 <span class="m-lbl">Pending</span>
                                 <span class="m-val text-warning" id="belumQA">0</span>
                             </div>
-                        </div>
-
-                        <!-- Sub-indikator mini 3 bagian QA -->
-                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-color); color: var(--text-secondary);">
-                            <span>GRS: <b id="qaMiniGrsPercent" style="color: #2563eb;">-</b></span>
-                            <span>SCN: <b id="qaMiniScnPercent" style="color: #8b5cf6;">-</b></span>
-                            <span>Acc BR: <b id="qaMiniBrPercent" style="color: #10b981;">-</b></span>
                         </div>
                     </div>
 
@@ -912,22 +963,45 @@
                             <div class="service-icon-box logistik-theme"><i class="fa-solid fa-dolly"></i></div>
                             <div>
                                 <h2>WH Mat</h2>
-                                <span class="card-sub-title">Pemenuhan DR & Permintaan Bahan</span>
+                                <span class="card-sub-title">Pemenuhan DR & MR</span>
                             </div>
                         </div>
                         <span class="service-status-pill status-live">Live</span>
                     </div>
 
                     <div class="card-body">
-                        <div class="percent-hero">
-                            <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentWH_MAT">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                        <!-- Dual Percent Hero (MR Bahan & DR Paskot) -->
+                        <div class="whmat-dual-hero" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div class="percent-hero" style="padding: 0.45rem 0.55rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                                    <span><i class="fa-solid fa-boxes-stacked" style="color: #2563eb; margin-right: 3px;"></i> MR Bahan</span>
+                                    <span style="font-size: 0.62rem; color: var(--text-muted);">Bln Ini</span>
+                                </div>
+                                <div class="percent-number-row" style="margin-top: 2px;">
+                                    <span class="percent-val kpi-color-red" id="percentWhMatMr" style="font-size: 1.45rem;">0%</span>
+                                </div>
+                                <div class="progress-bar-track" style="margin-top: 3px;">
+                                    <div class="progress-bar-fill kpi-fill-red" id="barFillWhMatMr" style="width: 0%"></div>
+                                </div>
                             </div>
-                            <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillWH_MAT" style="width: 0%"></div>
+
+                            <div class="percent-hero" style="padding: 0.45rem 0.55rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                                    <span><i class="fa-solid fa-truck-ramp-box" style="color: #10b981; margin-right: 3px;"></i> DR Paskot</span>
+                                    <span style="font-size: 0.62rem; color: var(--text-muted);">Bln Ini</span>
+                                </div>
+                                <div class="percent-number-row" style="margin-top: 2px;">
+                                    <span class="percent-val kpi-color-red" id="percentWhMatDr" style="font-size: 1.45rem;">0%</span>
+                                </div>
+                                <div class="progress-bar-track" style="margin-top: 3px;">
+                                    <div class="progress-bar-fill kpi-fill-red" id="barFillWhMatDr" style="width: 0%"></div>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Fallback / Hidden element for percentWH_MAT if accessed by legacy updater -->
+                        <span id="percentWH_MAT" style="display: none;">0%</span>
+                        <div id="barFillWH_MAT" style="display: none;"></div>
 
                         <div class="metrics-row">
                             <div class="metric-box">
@@ -942,12 +1016,6 @@
                                 <span class="m-lbl">Belum</span>
                                 <span class="m-val text-warning" id="belumWH_MAT">0</span>
                             </div>
-                        </div>
-
-                        <!-- Sub-indikator mini 2 bagian WH Mat (MR & DR Lain/Paskot) -->
-                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-color); color: var(--text-secondary);">
-                            <span>MR: <b id="whMatMiniMrPercent" style="color: #2563eb;">-</b></span>
-                            <span>DR Lain & Paskot: <b id="whMatMiniDrPercent" style="color: #10b981;">-</b></span>
                         </div>
                     </div>
 
@@ -997,12 +1065,6 @@
                                 <span class="m-lbl">Belum</span>
                                 <span class="m-val text-warning" id="belumPBF">0</span>
                             </div>
-                        </div>
-
-                        <!-- Sub-indikator mini PBF -->
-                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-color); color: var(--text-secondary);">
-                            <span>Tepat Waktu: <b id="pbfMiniTepatPercent" style="color: #10b981;">-</b></span>
-                            <span>Pemenuhan Qty: <b id="pbfMiniQtyPercent" style="color: #2563eb;">-</b></span>
                         </div>
                     </div>
 
