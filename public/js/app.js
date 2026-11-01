@@ -213,6 +213,7 @@ function initPeriodSelector() {
                     pickerInput.value = `${monthNames[state.selectedMonth - 1]} ${state.selectedYear}`;
                     console.log(`📅 [Periode]: Bulan diubah ke ${state.selectedMonth}, Tahun ${state.selectedYear}`);
                     fetchDashboardStats(true);
+                    refreshOpenModalOnPeriodChange();
                 }
             }
         });
@@ -222,6 +223,107 @@ function initPeriodSelector() {
                 if (fpInstance) fpInstance.open();
             });
         }
+    }
+}
+
+
+/**
+ * Helper: Menghitung rentang tanggal aktif berdasarkan bulan & tahun yang dipilih di header dashboard
+ * @param {string} preset 'month' | 'today' | 'week' | 'all' | 'last_month'
+ * @returns {{ startDate: string, endDate: string, today: string, firstDay: string, lastDayOfMonth: string }}
+ */
+function getActivePeriodDates(preset = 'month') {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1; // 1-12
+    const curDay = now.getDate();
+
+    const year = state.selectedYear ? parseInt(state.selectedYear, 10) : curYear;
+    const month = state.selectedMonth ? parseInt(state.selectedMonth, 10) : curMonth;
+    const isCurrentPeriod = (year === curYear && month === curMonth);
+
+    const padMonth = String(month).padStart(2, '0');
+    const firstDay = `${year}-${padMonth}-01`;
+    const lastDayNum = new Date(year, month, 0).getDate();
+    const lastDayOfMonth = `${year}-${padMonth}-${String(lastDayNum).padStart(2, '0')}`;
+    const today = `${curYear}-${String(curMonth).padStart(2, '0')}-${String(curDay).padStart(2, '0')}`;
+
+    let startDate = firstDay;
+    let endDate = isCurrentPeriod ? today : lastDayOfMonth;
+
+    if (preset === 'month') {
+        startDate = firstDay;
+        endDate = isCurrentPeriod ? today : lastDayOfMonth;
+    } else if (preset === 'today') {
+        startDate = isCurrentPeriod ? today : firstDay;
+        endDate = isCurrentPeriod ? today : firstDay;
+    } else if (preset === 'week') {
+        if (isCurrentPeriod) {
+            const d = new Date();
+            d.setDate(d.getDate() - 7);
+            const wYear = d.getFullYear();
+            const wMonth = String(d.getMonth() + 1).padStart(2, '0');
+            const wDay = String(d.getDate()).padStart(2, '0');
+            startDate = `${wYear}-${wMonth}-${wDay}`;
+            endDate = today;
+        } else {
+            startDate = firstDay;
+            endDate = `${year}-${padMonth}-${String(Math.min(7, lastDayNum)).padStart(2, '0')}`;
+        }
+    } else if (preset === 'all') {
+        startDate = '2024-01-01';
+        endDate = isCurrentPeriod ? today : lastDayOfMonth;
+    } else if (preset === 'last_month') {
+        const prevDate = new Date(year, month - 1, 0);
+        const pYear = prevDate.getFullYear();
+        const pMonth = prevDate.getMonth() + 1;
+        const pLastDay = prevDate.getDate();
+        startDate = `${pYear}-${String(pMonth).padStart(2, '0')}-01`;
+        endDate = `${pYear}-${String(pMonth).padStart(2, '0')}-${String(pLastDay).padStart(2, '0')}`;
+    }
+
+    return { startDate, endDate, today, firstDay, lastDayOfMonth, isCurrentPeriod };
+}
+
+/**
+ * Sinkronisasi nilai input datepicker DOM dan instance flatpickr-nya jika ada
+ */
+function setDateInputValue(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val;
+    if (el._flatpickr) {
+        el._flatpickr.setDate(val, false);
+    }
+}
+
+/**
+ * Otomatis menyinkronkan modal yang sedang terbuka saat filter bulan di header diubah
+ */
+function refreshOpenModalOnPeriodChange() {
+    if (document.getElementById('qaModal')?.classList.contains('active') && typeof setQaQuickDate === 'function') {
+        setQaQuickDate(state.currentQaRange || 'month');
+    }
+    if (document.getElementById('purchasingModal')?.classList.contains('active') && typeof setPurchasingQuickDate === 'function') {
+        setPurchasingQuickDate(state.currentPurchasingRange || 'month');
+    }
+    if (document.getElementById('subconModal')?.classList.contains('active') && typeof switchSubconRange === 'function') {
+        switchSubconRange(state.currentSubconRange || 'month');
+    }
+    if (document.getElementById('produksiModal')?.classList.contains('active') && typeof setProduksiQuickDate === 'function') {
+        setProduksiQuickDate(state.currentProduksiPeriod || 'month');
+    }
+    if (document.getElementById('logistikModal')?.classList.contains('active') && typeof setLogistikQuickDate === 'function') {
+        setLogistikQuickDate(state.currentLogistikRange || 'month');
+    }
+    if (document.getElementById('whFgModal')?.classList.contains('active') && typeof setWhFgQuickDate === 'function') {
+        setWhFgQuickDate(state.currentWhFgRange || 'month');
+    }
+    if (document.getElementById('whMatModal')?.classList.contains('active') && typeof setWhMatQuickDate === 'function') {
+        setWhMatQuickDate(state.currentWhMatRange || 'month');
+    }
+    if (document.getElementById('pbfModal')?.classList.contains('active') && typeof setPbfQuickDate === 'function') {
+        setPbfQuickDate(state.currentPbfRange || 'month');
     }
 }
 
@@ -1453,33 +1555,12 @@ function formatSubconDate(d) {
 async function switchSubconRange(range = 'today') {
     state.currentSubconRange = range;
 
-    const now = new Date();
-    const today = formatSubconDate(now);
-    let startDate = today;
-    let endDate = today;
-
-    if (range === 'today') {
-        startDate = today;
-        endDate = today;
-    } else if (range === 'week') {
-        const past7 = new Date();
-        past7.setDate(now.getDate() - 6);
-        startDate = formatSubconDate(past7);
-        endDate = today;
-    } else if (range === 'month') {
-        const past30 = new Date();
-        past30.setDate(now.getDate() - 29);
-        startDate = formatSubconDate(past30);
-        endDate = today;
-    }
-
+    const { startDate, endDate } = getActivePeriodDates(range);
     state.subconDateStart = startDate;
     state.subconDateEnd = endDate;
 
-    const startInput = document.getElementById('subconDateStart');
-    const endInput = document.getElementById('subconDateEnd');
-    if (startInput) startInput.value = startDate;
-    if (endInput) endInput.value = endDate;
+    setDateInputValue('subconDateStart', startDate);
+    setDateInputValue('subconDateEnd', endDate);
 
     // Update tampilan tombol range
     const btnToday = document.getElementById('btnRangeToday');
@@ -2068,35 +2149,12 @@ function setPurchasingQuickDate(preset = 'month') {
     state.currentPurchasingRange = preset;
     state.purchasingCurrentPage = 1;
 
-    const now = new Date();
-    const today = formatPurchasingDate(now);
-    let startDate = today;
-    let endDate = today;
-
-    if (preset === 'month') {
-        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        endDate = today;
-    } else if (preset === 'week') {
-        const d = new Date();
-        d.setDate(d.getDate() - 7);
-        startDate = formatPurchasingDate(d);
-        endDate = today;
-    } else if (preset === 'today') {
-        startDate = today;
-        endDate = today;
-    } else if (preset === 'all') {
-        startDate = '2026-01-01';
-        endDate = today;
-    }
-
+    const { startDate, endDate } = getActivePeriodDates(preset);
     state.purchasingDateStart = startDate;
     state.purchasingDateEnd = endDate;
 
-    // Sinkronisasi ke input DOM
-    const startInput = document.getElementById('purchasingDateStart');
-    const endInput = document.getElementById('purchasingDateEnd');
-    if (startInput) startInput.value = startDate;
-    if (endInput) endInput.value = endDate;
+    setDateInputValue('purchasingDateStart', startDate);
+    setDateInputValue('purchasingDateEnd', endDate);
 
     // Update active class pada pill
     const pills = document.querySelectorAll('.purchasing-range-pills .filter-pill');
@@ -2879,9 +2937,7 @@ function openProduksiModal(bagian = 'stentor') {
     state.produksiSearchQuery = '';
     state.produksiCurrentPage = 1;
 
-    const now = new Date();
-    const today = formatProdDate(now);
-    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const { startDate: monthStart, endDate: today } = getActivePeriodDates('month');
 
     // Pastikan container filter independen per lini bagian tersedia
     if (!state.produksiFilters) state.produksiFilters = {};
@@ -2934,26 +2990,7 @@ function closeProduksiModal() {
  * Tombol shortcut cepat rentang tanggal: 'month', 'today', 'week'
  */
 function setProduksiQuickDate(preset) {
-    const now = new Date();
-    const today = formatProdDate(now);
-    let tglawal = today;
-    let tglakhir = today;
-
-    if (preset === 'month') {
-        tglawal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        tglakhir = today;
-    } else if (preset === 'today') {
-        tglawal = today;
-        tglakhir = today;
-    } else if (preset === 'week') {
-        const weekAgo = new Date();
-        weekAgo.setDate(now.getDate() - 7);
-        tglawal = formatProdDate(weekAgo);
-        tglakhir = today;
-    } else if (preset === 'all') {
-        tglawal = '2026-01-01';
-        tglakhir = today;
-    }
+    const { startDate: tglawal, endDate: tglakhir } = getActivePeriodDates(preset);
 
     state.produksiTglAwal = tglawal;
     state.produksiTglAkhir = tglakhir;
@@ -2968,10 +3005,8 @@ function setProduksiQuickDate(preset) {
         period: preset
     };
 
-    const startInput = document.getElementById('prodDateStart');
-    const endInput = document.getElementById('prodDateEnd');
-    if (startInput) startInput.value = tglawal;
-    if (endInput) endInput.value = tglakhir;
+    setDateInputValue('prodDateStart', tglawal);
+    setDateInputValue('prodDateEnd', tglakhir);
 
     updateProduksiQuickPills(preset);
     fetchProduksiDetail(state.currentProduksiBagian, tglawal, tglakhir);
@@ -3561,43 +3596,13 @@ function setLogistikQuickDate(preset = 'month') {
     state.currentLogistikRange = preset;
     state.logistikCurrentPage = 1;
 
-    const now = new Date();
-    const today = formatLogistikDate(now);
-    let startDate = today;
-    let endDate = today;
-
-    if (preset === 'month') {
-        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        endDate = today;
-    } else if (preset === 'last_month') {
-        const year = now.getFullYear();
-        const month = now.getMonth(); // 0-indexed (bulan lalu)
-        const prevYear = month === 0 ? year - 1 : year;
-        const prevMonth = month === 0 ? 12 : month;
-        const lastDay = new Date(year, month, 0).getDate();
-        startDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
-        endDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    } else if (preset === 'week') {
-        const d = new Date();
-        d.setDate(d.getDate() - 7);
-        startDate = formatLogistikDate(d);
-        endDate = today;
-    } else if (preset === 'today') {
-        startDate = today;
-        endDate = today;
-    } else if (preset === 'all') {
-        startDate = '2026-01-01';
-        endDate = today;
-    }
+    const { startDate, endDate } = getActivePeriodDates(preset);
 
     state.logistikDateStart = startDate;
     state.logistikDateEnd = endDate;
 
-    // Sinkronisasi ke input DOM
-    const startInput = document.getElementById('logistikDateStart');
-    const endInput = document.getElementById('logistikDateEnd');
-    if (startInput) startInput.value = startDate;
-    if (endInput) endInput.value = endDate;
+    setDateInputValue('logistikDateStart', startDate);
+    setDateInputValue('logistikDateEnd', endDate);
 
     // Update active class pada pill
     const pills = document.querySelectorAll('.logistik-range-pills .filter-pill');
@@ -4384,34 +4389,12 @@ function setQaQuickDate(preset = 'month') {
     state.currentQaRange = preset;
     state.qaCurrentPage = 1;
 
-    const now = new Date();
-    const today = formatQaDate(now);
-    let startDate = today;
-    let endDate = today;
-
-    if (preset === 'month') {
-        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        endDate = today;
-    } else if (preset === 'week') {
-        const d = new Date();
-        d.setDate(d.getDate() - 7);
-        startDate = formatQaDate(d);
-        endDate = today;
-    } else if (preset === 'today') {
-        startDate = today;
-        endDate = today;
-    } else if (preset === 'all') {
-        startDate = '2026-01-01';
-        endDate = today;
-    }
-
+    const { startDate, endDate } = getActivePeriodDates(preset);
     state.qaDateStart = startDate;
     state.qaDateEnd = endDate;
 
-    const startInput = document.getElementById('qaDateStart');
-    const endInput = document.getElementById('qaDateEnd');
-    if (startInput) startInput.value = startDate;
-    if (endInput) endInput.value = endDate;
+    setDateInputValue('qaDateStart', startDate);
+    setDateInputValue('qaDateEnd', endDate);
 
     const pills = document.querySelectorAll('.qa-range-pills .filter-pill');
     pills.forEach(p => p.classList.remove('active'));
@@ -4552,11 +4535,9 @@ async function syncQaData() {
  */
 async function loadQaData(force = false) {
     const bagian = state.currentQaBagian || 'grsmaterial';
-    let url = `/api/dashboard/qa?bagian=${encodeURIComponent(bagian)}&`;
+    let url = `/api/dashboard/qa?bagian=${encodeURIComponent(bagian)}&range=${encodeURIComponent(state.currentQaRange || 'month')}&`;
     if (state.qaDateStart && state.qaDateEnd) {
-        url += `startDate=${encodeURIComponent(state.qaDateStart)}&endDate=${encodeURIComponent(state.qaDateEnd)}`;
-    } else {
-        url += `range=${encodeURIComponent(state.currentQaRange)}`;
+        url += `tglawal=${encodeURIComponent(state.qaDateStart)}&tglakhir=${encodeURIComponent(state.qaDateEnd)}&startDate=${encodeURIComponent(state.qaDateStart)}&endDate=${encodeURIComponent(state.qaDateEnd)}&`;
     }
     if (force) url += '&force=true';
 
@@ -5301,34 +5282,13 @@ function setWhFgQuickDate(preset = 'month') {
     state.currentWhFgRange = preset;
     state.whFgCurrentPage = 1;
 
-    const now = new Date();
-    const today = formatWhFgDate(now);
-    let startDate = today;
-    let endDate = today;
-
-    if (preset === 'month') {
-        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        endDate = today;
-    } else if (preset === 'week') {
-        const d = new Date();
-        d.setDate(d.getDate() - 7);
-        startDate = formatWhFgDate(d);
-        endDate = today;
-    } else if (preset === 'today') {
-        startDate = today;
-        endDate = today;
-    } else if (preset === 'all') {
-        startDate = '2026-01-01';
-        endDate = today;
-    }
+    const { startDate, endDate } = getActivePeriodDates(preset);
 
     state.whFgDateStart = startDate;
     state.whFgDateEnd = endDate;
 
-    const startInput = document.getElementById('whFgDateStart');
-    const endInput = document.getElementById('whFgDateEnd');
-    if (startInput) startInput.value = startDate;
-    if (endInput) endInput.value = endDate;
+    setDateInputValue('whFgDateStart', startDate);
+    setDateInputValue('whFgDateEnd', endDate);
 
     const pills = document.querySelectorAll('.wh-fg-range-pills .filter-pill');
     pills.forEach(p => p.classList.remove('active'));
@@ -5876,34 +5836,13 @@ function setWhMatQuickDate(preset = 'month') {
     state.currentWhMatRange = preset;
     state.whMatCurrentPage = 1;
 
-    const now = new Date();
-    const today = formatWhMatDate(now);
-    let startDate = today;
-    let endDate = today;
-
-    if (preset === 'month') {
-        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        endDate = today;
-    } else if (preset === 'week') {
-        const d = new Date();
-        d.setDate(d.getDate() - 7);
-        startDate = formatWhMatDate(d);
-        endDate = today;
-    } else if (preset === 'today') {
-        startDate = today;
-        endDate = today;
-    } else if (preset === 'all') {
-        startDate = '2026-01-01';
-        endDate = today;
-    }
+    const { startDate, endDate } = getActivePeriodDates(preset);
 
     state.whMatDateStart = startDate;
     state.whMatDateEnd = endDate;
 
-    const startInput = document.getElementById('whMatDateStart');
-    const endInput = document.getElementById('whMatDateEnd');
-    if (startInput) startInput.value = startDate;
-    if (endInput) endInput.value = endDate;
+    setDateInputValue('whMatDateStart', startDate);
+    setDateInputValue('whMatDateEnd', endDate);
 
     const pills = document.querySelectorAll('.wh-mat-range-pills .filter-pill');
     pills.forEach(p => p.classList.remove('active'));
@@ -6646,34 +6585,13 @@ function setPbfQuickDate(preset = 'month') {
     state.currentPbfRange = preset;
     state.pbfCurrentPage = 1;
 
-    const now = new Date();
-    const today = formatPbfDate(now);
-    let startDate = today;
-    let endDate = today;
-
-    if (preset === 'month') {
-        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        endDate = today;
-    } else if (preset === 'week') {
-        const d = new Date();
-        d.setDate(d.getDate() - 7);
-        startDate = formatPbfDate(d);
-        endDate = today;
-    } else if (preset === 'today') {
-        startDate = today;
-        endDate = today;
-    } else if (preset === 'all') {
-        startDate = '2026-01-01';
-        endDate = today;
-    }
+    const { startDate, endDate } = getActivePeriodDates(preset);
 
     state.pbfDateStart = startDate;
     state.pbfDateEnd = endDate;
 
-    const startInput = document.getElementById('pbfDateStart');
-    const endInput = document.getElementById('pbfDateEnd');
-    if (startInput) startInput.value = startDate;
-    if (endInput) endInput.value = endDate;
+    setDateInputValue('pbfDateStart', startDate);
+    setDateInputValue('pbfDateEnd', endDate);
 
     const pills = document.querySelectorAll('.pbf-range-pills .filter-pill');
     pills.forEach(p => p.classList.remove('active'));

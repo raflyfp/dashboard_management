@@ -1109,7 +1109,9 @@ router.post('/purchasing/sync', async (req, res) => {
  */
 router.get('/qa', async (req, res) => {
     try {
-        const { bagian = 'grsmaterial', range = 'month', status = 'all', search = '', force = false, tglawal, tglakhir } = req.query;
+        const { bagian = 'grsmaterial', range = 'month', status = 'all', search = '', force = false } = req.query;
+        const tglawal = req.query.tglawal || req.query.startDate;
+        const tglakhir = req.query.tglakhir || req.query.endDate;
         const data = await qaService.getMonitoringData({
             bagian,
             range,
@@ -1141,7 +1143,10 @@ router.get('/qa', async (req, res) => {
 router.post('/qa/sync', async (req, res) => {
     try {
         const bagian = req.body.bagian || 'grsmaterial';
-        const rawData = await qaService.fetchData(bagian, true);
+        const tglawal = req.body.tglawal || req.body.startDate;
+        const tglakhir = req.body.tglakhir || req.body.endDate;
+        const dates = (tglawal && tglakhir) ? { tglawal, tglakhir } : {};
+        const rawData = await qaService.fetchData(bagian, true, dates);
         return res.json({
             success: true,
             message: `Sinkronisasi data QA (${bagian}) dari Atena ERP berhasil`,

@@ -218,7 +218,7 @@ class QaService {
                     const totalBr = Number(d.total_br || 0);
                     const brBelum = Number(d.br_belum || 0);
                     const brSudah = Math.max(0, totalBr - brBelum);
-                    const persentase = totalBr > 0 ? Number(((brSudah / totalBr) * 100).toFixed(2)) : 100;
+                    const persentase = totalBr > 0 ? Number(((brSudah / totalBr) * 100).toFixed(2)) : 0;
                     return {
                         bagian: 'acceptbr',
                         judul: d.judul || 'Accept BR',
@@ -756,7 +756,7 @@ class QaService {
         } else if (range === 'month') {
             dateParams = { tglawal: monthStart, tglakhir: today };
         } else if (range === 'all') {
-            dateParams = { tglawal: '2026-01-01', tglakhir: today };
+            dateParams = { tglawal: '2024-01-01', tglakhir: today };
         }
 
         const data = await this.fetchData(bagian, force, dateParams);
