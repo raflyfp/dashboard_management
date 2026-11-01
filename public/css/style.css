@@ -287,6 +287,10 @@ html, body {
     text-transform: uppercase;
 }
 
+.service-card .service-status-pill {
+    display: none !important;
+}
+
 .status-live { background: var(--status-success-bg); color: var(--status-success); }
 .status-standby { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 

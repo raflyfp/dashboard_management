@@ -642,20 +642,6 @@ function renderServiceCards(layanan) {
                 barDr.className = `progress-bar-fill ${getKpiClass(pctDr).fill}`;
             }
         }
-
-        const cardEl = document.getElementById(`card-${code}`);
-        if (cardEl) {
-            const statusPill = cardEl.querySelector('.service-status-pill');
-            if (statusPill) {
-                if (item.is_active) {
-                    statusPill.className = 'service-status-pill status-live';
-                    statusPill.textContent = 'Live';
-                } else {
-                    statusPill.className = 'service-status-pill status-standby';
-                    statusPill.textContent = 'Standby';
-                }
-            }
-        }
     });
 }
 
