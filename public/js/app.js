@@ -145,6 +145,10 @@ const state = {
         dr_doc: { column: 'tgl_kirim', dir: 'desc' },
         dr: { column: 'tgl_kirim', dir: 'desc' }
     },
+
+    // Filter Periode Global Header (Bulan & Tahun)
+    selectedMonth: new Date().getMonth() + 1,
+    selectedYear: new Date().getFullYear(),
 };
 
 // ====================================================================
@@ -152,10 +156,113 @@ const state = {
 // ====================================================================
 document.addEventListener('DOMContentLoaded', () => {
     initClock();
+    initPeriodSelector();
+    initModalDatePickers();
     initEventListeners();
     fetchDashboardStats();
     startAutoRefresh();
 });
+
+// ====================================================================
+// 1B. INISIALISASI SELECTOR PERIODE BULAN & TAHUN HEADER (FLATPICKR DEFAULT)
+// ====================================================================
+function initPeriodSelector() {
+    const pickerInput = document.getElementById('headerMonthPicker');
+    const periodBox = document.getElementById('headerPeriodBox');
+    if (!pickerInput) return;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+
+    state.selectedMonth = currentMonth;
+    state.selectedYear = currentYear;
+
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+    pickerInput.value = `${monthNames[state.selectedMonth - 1]} ${state.selectedYear}`;
+
+    let fpInstance = null;
+    if (typeof flatpickr !== 'undefined') {
+        const plugins = [];
+        if (typeof monthSelectPlugin !== 'undefined') {
+            plugins.push(new monthSelectPlugin({
+                shorthand: true,
+                dateFormat: "F Y",
+                altFormat: "F Y",
+                theme: "light"
+            }));
+        }
+
+        fpInstance = flatpickr(pickerInput, {
+            locale: 'id',
+            defaultDate: `${state.selectedYear}-${String(state.selectedMonth).padStart(2, '0')}-01`,
+            plugins: plugins,
+            disableMobile: true,
+            onOpen: () => {
+                if (periodBox) periodBox.classList.add('is-open');
+            },
+            onClose: () => {
+                if (periodBox) periodBox.classList.remove('is-open');
+            },
+            onChange: (selectedDates) => {
+                if (selectedDates && selectedDates.length > 0) {
+                    const d = selectedDates[0];
+                    state.selectedYear = d.getFullYear();
+                    state.selectedMonth = d.getMonth() + 1;
+                    pickerInput.value = `${monthNames[state.selectedMonth - 1]} ${state.selectedYear}`;
+                    console.log(`📅 [Periode]: Bulan diubah ke ${state.selectedMonth}, Tahun ${state.selectedYear}`);
+                    fetchDashboardStats(true);
+                }
+            }
+        });
+
+        if (periodBox) {
+            periodBox.addEventListener('click', () => {
+                if (fpInstance) fpInstance.open();
+            });
+        }
+    }
+}
+
+// ====================================================================
+// 1C. INISIALISASI FLATPICKR PADA SELURUH FILTER TANGGAL MODAL DETAIL
+// ====================================================================
+function initModalDatePickers() {
+    if (typeof flatpickr === 'undefined') return;
+
+    const dateInputIds = [
+        'subconDateStart', 'subconDateEnd',
+        'purchasingDateStart', 'purchasingDateEnd',
+        'qaDateStart', 'qaDateEnd',
+        'pbfDateStart', 'pbfDateEnd',
+        'prodDateStart', 'prodDateEnd',
+        'logistikDateStart', 'logistikDateEnd',
+        'whFgDateStart', 'whFgDateEnd',
+        'whMatDateStart', 'whMatDateEnd'
+    ];
+
+    dateInputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || el._flatpickr) return;
+
+        flatpickr(el, {
+            locale: 'id',
+            dateFormat: 'Y-m-d',
+            disableMobile: true,
+            allowInput: false,
+            onOpen: function(selectedDates, dateStr, instance) {
+                if (el.value) {
+                    instance.setDate(el.value, false);
+                }
+            },
+            onChange: function(selectedDates, dateStr) {
+                el.value = dateStr;
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+    });
+}
 
 // ====================================================================
 // 2. JAM DIGITAL & TANGGAL (WAKTU INDONESIA)
@@ -376,7 +483,11 @@ async function fetchDashboardStats(force = false) {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-        const url = `/api/dashboard/stats${force ? '?force=true' : ''}`;
+        const params = new URLSearchParams();
+        if (state.selectedMonth) params.set('bulan', state.selectedMonth);
+        if (state.selectedYear) params.set('tahun', state.selectedYear);
+        if (force) params.set('force', 'true');
+        const url = `/api/dashboard/stats?${params.toString()}`;
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
 

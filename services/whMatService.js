@@ -75,11 +75,14 @@ function formatShortDate(dateStr) {
 /**
  * Helper mendapatkan parameter tanggal hari ini dan awal bulan
  */
-function getDateParams() {
+function getDateParams(customMonth, customYear) {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const year = customYear ? parseInt(customYear, 10) : now.getFullYear();
+    const monthNum = customMonth ? parseInt(customMonth, 10) : (now.getMonth() + 1);
+    const month = String(monthNum).padStart(2, '0');
+    const isCurrent = (year === now.getFullYear() && monthNum === (now.getMonth() + 1));
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    const day = isCurrent ? String(now.getDate()).padStart(2, '0') : String(lastDay).padStart(2, '0');
     const today = `${year}-${month}-${day}`;
     const monthStart = `${year}-${month}-01`;
     return { today, monthStart };
@@ -599,8 +602,12 @@ class WhMatService {
     /**
      * Ringkasan KPI untuk kartu utama dashboard (MR & DR)
      */
-    async getSummary(force = false) {
-        const { today, monthStart } = getDateParams();
+    async getSummary(force = false, customDates = null) {
+        const { today, monthStart } = (customDates && customDates.tglawal)
+            ? { today: customDates.tglakhir, monthStart: customDates.tglawal }
+            : (customDates && (customDates.bulan || customDates.tahun))
+                ? getDateParams(customDates.bulan, customDates.tahun)
+                : getDateParams();
 
         try {
             // Ambil MR (Permintaan Bahan) & DR untuk Hari Ini dan Bulan Ini secara paralel

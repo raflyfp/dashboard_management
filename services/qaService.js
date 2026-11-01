@@ -66,11 +66,14 @@ function formatShortDate(dateStr) {
     return dateStr;
 }
 
-function getDateParams() {
+function getDateParams(customMonth, customYear) {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const year = customYear ? parseInt(customYear, 10) : now.getFullYear();
+    const monthNum = customMonth ? parseInt(customMonth, 10) : (now.getMonth() + 1);
+    const month = String(monthNum).padStart(2, '0');
+    const isCurrent = (year === now.getFullYear() && monthNum === (now.getMonth() + 1));
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    const day = isCurrent ? String(now.getDate()).padStart(2, '0') : String(lastDay).padStart(2, '0');
     const today = `${year}-${month}-${day}`;
     const monthStart = `${year}-${month}-01`;
     return { today, monthStart };
@@ -606,8 +609,12 @@ class QaService {
      * Ringkasan KPI gabungan untuk kartu utama dashboard
      * Mengambil ringkasan dari 3 bagian: GRS Material, SCN, dan Accept BR
      */
-    async getSummary(force = false) {
-        const { today, monthStart } = getDateParams();
+    async getSummary(force = false, customDates = null) {
+        const { today, monthStart } = (customDates && customDates.tglawal)
+            ? { today: customDates.tglakhir, monthStart: customDates.tglawal }
+            : (customDates && (customDates.bulan || customDates.tahun))
+                ? getDateParams(customDates.bulan, customDates.tahun)
+                : getDateParams();
         const dateParams = { tglawal: monthStart, tglakhir: today };
 
         try {

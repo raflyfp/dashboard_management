@@ -105,11 +105,14 @@ const CACHE_TTL_MS = 60 * 1000; // 60 detik in-memory TTL
 /**
  * Helper mendapatkan tanggal hari ini dan awal bulan dalam format YYYY-MM-DD
  */
-function getDateParams() {
+function getDateParams(customMonth, customYear) {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const year = customYear ? parseInt(customYear, 10) : now.getFullYear();
+    const monthNum = customMonth ? parseInt(customMonth, 10) : (now.getMonth() + 1);
+    const month = String(monthNum).padStart(2, '0');
+    const isCurrent = (year === now.getFullYear() && monthNum === (now.getMonth() + 1));
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    const day = isCurrent ? String(now.getDate()).padStart(2, '0') : String(lastDay).padStart(2, '0');
     const today = `${year}-${month}-${day}`;
     const monthStart = `${year}-${month}-01`;
     return { today, monthStart };
@@ -225,18 +228,26 @@ class ProduksiService {
     /**
      * Ambil ringkasan seluruh lini produksi (7 lini) untuk HARI INI dan BULAN INI secara paralel
      */
-    async getRingkasanAll(forceRefresh = false) {
+    async getRingkasanAll(forceRefresh = false, customDates = null) {
+        const { today, monthStart } = (customDates && customDates.tglawal)
+            ? { today: customDates.tglakhir, monthStart: customDates.tglawal }
+            : (customDates && (customDates.bulan || customDates.tahun))
+                ? getDateParams(customDates.bulan, customDates.tahun)
+                : getDateParams();
+
+        const cacheKey = `summary_${monthStart}_${today}`;
         const now = Date.now();
 
-        if (!forceRefresh && cache.summary.data && (now - cache.summary.timestamp < CACHE_TTL_MS)) {
-            return {
-                data: cache.summary.data,
-                cached: true,
-                lastFetchedAt: cache.lastFetchedAt
-            };
+        if (!forceRefresh && cache.detailCache.has(cacheKey)) {
+            const cached = cache.detailCache.get(cacheKey);
+            if (now - cached.timestamp < CACHE_TTL_MS) {
+                return {
+                    data: cached.data,
+                    cached: true,
+                    lastFetchedAt: cache.lastFetchedAt
+                };
+            }
         }
-
-        const { today, monthStart } = getDateParams();
 
         try {
             // Ambil data detail/ringkasan Hari Ini & Bulan Ini untuk 8 lini secara paralel agar mendapatkan row capaian

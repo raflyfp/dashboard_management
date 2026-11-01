@@ -17,7 +17,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <!-- Stylesheet Tema Flat SNA Medika -->
-    <link rel="stylesheet" href="/css/style.css?v=2.3.0">
+
+    <!-- Flatpickr CSS & MonthSelect Plugin (Default) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+
+    <!-- Stylesheet Tema Flat SNA Medika -->
+    <link rel="stylesheet" href="/css/style.css?v=2.5.0">
 </head>
 
 <body>
@@ -44,6 +50,13 @@
 
             <!-- Header Controls & Digital Clock -->
             <div class="header-right">
+                <!-- Selector Periode Bulan & Tahun -->
+                <div class="header-period-box" id="headerPeriodBox" title="Klik untuk memilih Bulan & Tahun">
+                    <i class="fa-solid fa-calendar-days period-icon"></i>
+                    <input type="text" id="headerMonthPicker" class="period-flatpickr-input" readonly placeholder="Pilih Periode...">
+                    <i class="fa-solid fa-angle-down period-caret"></i>
+                </div>
+
                 <div class="clock-box">
                     <div class="clock-time" id="digitalClock">--:--:--</div>
                     <div class="clock-date" id="digitalDate">Memuat tanggal...</div>
@@ -1347,11 +1360,11 @@
                             <div class="prod-date-picker-group">
                                 <div class="prod-date-input-wrap">
                                     <span>Dari:</span>
-                                    <input type="date" id="subconDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleSubconDateChange('start')">
+                                    <input type="text" id="subconDateStart" class="prod-date-input flatpickr-date" readonly title="Tanggal Awal" onchange="handleSubconDateChange('start')" autocomplete="off">
                                 </div>
                                 <div class="prod-date-input-wrap">
                                     <span>s/d:</span>
-                                    <input type="date" id="subconDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleSubconDateChange('end')">
+                                    <input type="text" id="subconDateEnd" class="prod-date-input flatpickr-date" readonly title="Tanggal Akhir" onchange="handleSubconDateChange('end')" autocomplete="off">
                                 </div>
                             </div>
 
@@ -1564,11 +1577,11 @@
                             <div class="prod-date-picker-group">
                                 <div class="prod-date-input-wrap">
                                     <span>Dari:</span>
-                                    <input type="date" id="purchasingDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handlePurchasingDateChange('start')">
+                                    <input type="text" id="purchasingDateStart" class="prod-date-input flatpickr-date" readonly title="Tanggal Awal" onchange="handlePurchasingDateChange('start')" autocomplete="off">
                                 </div>
                                 <div class="prod-date-input-wrap">
                                     <span>s/d:</span>
-                                    <input type="date" id="purchasingDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handlePurchasingDateChange('end')">
+                                    <input type="text" id="purchasingDateEnd" class="prod-date-input flatpickr-date" readonly title="Tanggal Akhir" onchange="handlePurchasingDateChange('end')" autocomplete="off">
                                 </div>
                             </div>
 
@@ -1942,11 +1955,11 @@
                             <div class="prod-date-picker-group">
                                 <div class="prod-date-input-wrap">
                                     <span>Dari:</span>
-                                    <input type="date" id="qaDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleQaDateChange('start')">
+                                    <input type="text" id="qaDateStart" class="prod-date-input flatpickr-date" readonly title="Tanggal Awal" onchange="handleQaDateChange('start')" autocomplete="off">
                                 </div>
                                 <div class="prod-date-input-wrap">
                                     <span>s/d:</span>
-                                    <input type="date" id="qaDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleQaDateChange('end')">
+                                    <input type="text" id="qaDateEnd" class="prod-date-input flatpickr-date" readonly title="Tanggal Akhir" onchange="handleQaDateChange('end')" autocomplete="off">
                                 </div>
                             </div>
 
@@ -2311,11 +2324,11 @@
                             <div class="prod-date-picker-group">
                                 <div class="prod-date-input-wrap">
                                     <span>Dari:</span>
-                                    <input type="date" id="pbfDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handlePbfDateChange('start')">
+                                    <input type="text" id="pbfDateStart" class="prod-date-input flatpickr-date" readonly title="Tanggal Awal" onchange="handlePbfDateChange('start')" autocomplete="off">
                                 </div>
                                 <div class="prod-date-input-wrap">
                                     <span>s/d:</span>
-                                    <input type="date" id="pbfDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handlePbfDateChange('end')">
+                                    <input type="text" id="pbfDateEnd" class="prod-date-input flatpickr-date" readonly title="Tanggal Akhir" onchange="handlePbfDateChange('end')" autocomplete="off">
                                 </div>
                             </div>
 
@@ -2531,11 +2544,11 @@
                             <div class="prod-date-picker-group">
                                 <div class="prod-date-input-wrap">
                                     <span>Dari:</span>
-                                    <input type="date" id="prodDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleProduksiDateChange('start')">
+                                    <input type="text" id="prodDateStart" class="prod-date-input flatpickr-date" readonly title="Tanggal Awal" onchange="handleProduksiDateChange('start')" autocomplete="off">
                                 </div>
                                 <div class="prod-date-input-wrap">
                                     <span>s/d:</span>
-                                    <input type="date" id="prodDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleProduksiDateChange('end')">
+                                    <input type="text" id="prodDateEnd" class="prod-date-input flatpickr-date" readonly title="Tanggal Akhir" onchange="handleProduksiDateChange('end')" autocomplete="off">
                                 </div>
                             </div>
 
@@ -2764,11 +2777,11 @@
                             <div class="prod-date-picker-group">
                                 <div class="prod-date-input-wrap">
                                     <span>Dari:</span>
-                                    <input type="date" id="logistikDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleLogistikDateChange('start')">
+                                    <input type="text" id="logistikDateStart" class="prod-date-input flatpickr-date" readonly title="Tanggal Awal" onchange="handleLogistikDateChange('start')" autocomplete="off">
                                 </div>
                                 <div class="prod-date-input-wrap">
                                     <span>s/d:</span>
-                                    <input type="date" id="logistikDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleLogistikDateChange('end')">
+                                    <input type="text" id="logistikDateEnd" class="prod-date-input flatpickr-date" readonly title="Tanggal Akhir" onchange="handleLogistikDateChange('end')" autocomplete="off">
                                 </div>
                             </div>
 
@@ -3082,11 +3095,11 @@
                             <div class="prod-date-picker-group">
                                 <div class="prod-date-input-wrap">
                                     <span>Dari:</span>
-                                    <input type="date" id="whFgDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleWhFgDateChange('start')">
+                                    <input type="text" id="whFgDateStart" class="prod-date-input flatpickr-date" readonly title="Tanggal Awal" onchange="handleWhFgDateChange('start')" autocomplete="off">
                                 </div>
                                 <div class="prod-date-input-wrap">
                                     <span>s/d:</span>
-                                    <input type="date" id="whFgDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleWhFgDateChange('end')">
+                                    <input type="text" id="whFgDateEnd" class="prod-date-input flatpickr-date" readonly title="Tanggal Akhir" onchange="handleWhFgDateChange('end')" autocomplete="off">
                                 </div>
                             </div>
 
@@ -3347,11 +3360,11 @@
                             <div class="prod-date-picker-group">
                                 <div class="prod-date-input-wrap">
                                     <span>Dari:</span>
-                                    <input type="date" id="whMatDateStart" class="prod-date-input" title="Tanggal Awal" onchange="handleWhMatDateChange('start')">
+                                    <input type="text" id="whMatDateStart" class="prod-date-input flatpickr-date" readonly title="Tanggal Awal" onchange="handleWhMatDateChange('start')" autocomplete="off">
                                 </div>
                                 <div class="prod-date-input-wrap">
                                     <span>s/d:</span>
-                                    <input type="date" id="whMatDateEnd" class="prod-date-input" title="Tanggal Akhir" onchange="handleWhMatDateChange('end')">
+                                    <input type="text" id="whMatDateEnd" class="prod-date-input flatpickr-date" readonly title="Tanggal Akhir" onchange="handleWhMatDateChange('end')" autocomplete="off">
                                 </div>
                             </div>
 
@@ -3700,8 +3713,13 @@
     <!-- Chart.js Library untuk Visualisasi Grafik Tren -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+    <!-- Flatpickr Library + Indonesian Locale + MonthSelect Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
+
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=2.6.0"></script>
+    <script src="/js/app.js?v=2.8.0"></script>
 </body>
 
 </html>

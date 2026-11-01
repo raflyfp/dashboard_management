@@ -22,9 +22,9 @@ const whFgService = require('../services/whFgService');
 const whMatService = require('../services/whMatService');
 const pbfService = require('../services/pbfService');
 
-// In-memory cache sederhana untuk efisiensi beban server
 const cache = {
     stats: { data: null, timestamp: 0 },
+    statsMap: new Map(), // key: YYYY_MM -> { data, timestamp }
     tickets: new Map(),
 };
 const CACHE_TTL_MS = config.cacheTtlSeconds * 1000;
@@ -76,27 +76,54 @@ router.get('/stats', async (req, res) => {
     const now = Date.now();
     const forceRefresh = req.query.force === 'true';
 
-    // 1. Cek Cache internal
-    if (!forceRefresh && cache.stats.data && (now - cache.stats.timestamp < CACHE_TTL_MS)) {
-        return res.json({
-            ...cache.stats.data,
-            _cached: true,
-            _cache_age_seconds: Math.round((now - cache.stats.timestamp) / 1000)
-        });
+    // Parse bulan & tahun dari query jika ada
+    const queryMonth = req.query.bulan || req.query.month;
+    const queryYear = req.query.tahun || req.query.year;
+
+    const nowObj = new Date();
+    const selectedYear = queryYear ? parseInt(queryYear, 10) : nowObj.getFullYear();
+    const selectedMonth = queryMonth ? parseInt(queryMonth, 10) : (nowObj.getMonth() + 1);
+    const monthStr = String(selectedMonth).padStart(2, '0');
+    const isCurrentMonth = (selectedYear === nowObj.getFullYear() && selectedMonth === (nowObj.getMonth() + 1));
+    const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    const endDay = isCurrentMonth ? String(nowObj.getDate()).padStart(2, '0') : String(lastDayOfMonth).padStart(2, '0');
+
+    const customDates = {
+        bulan: selectedMonth,
+        tahun: selectedYear,
+        nama_bulan: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][selectedMonth - 1],
+        tglawal: `${selectedYear}-${monthStr}-01`,
+        tglakhir: `${selectedYear}-${monthStr}-${endDay}`,
+        tglakhirFull: `${selectedYear}-${monthStr}-${String(lastDayOfMonth).padStart(2, '0')}`,
+        isCurrentMonth
+    };
+
+    const cacheKey = `${selectedYear}_${monthStr}`;
+
+    // 1. Cek Cache internal per periode bulan & tahun
+    if (!forceRefresh && cache.statsMap?.has(cacheKey)) {
+        const cachedItem = cache.statsMap.get(cacheKey);
+        if (now - cachedItem.timestamp < CACHE_TTL_MS) {
+            return res.json({
+                ...cachedItem.data,
+                _cached: true,
+                _cache_age_seconds: Math.round((now - cachedItem.timestamp) / 1000)
+            });
+        }
     }
 
     try {
         // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi, Logistik, QA, WH FG & WH Mat secara paralel
         const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled, pbfSettled] = await Promise.allSettled([
-            ticketingService.getSummary(forceRefresh),
-            subconService.getMonitoringToday(forceRefresh),
-            purchasingService.getSummary(forceRefresh),
-            produksiService.getRingkasanAll(forceRefresh),
-            logistikService.getSummary(forceRefresh),
-            qaService.getSummary(forceRefresh),
-            whFgService.getSummary(forceRefresh),
-            whMatService.getSummary(forceRefresh),
-            pbfService.getSummary(forceRefresh)
+            ticketingService.getSummary(forceRefresh, customDates),
+            subconService.getMonitoringToday(forceRefresh, customDates),
+            purchasingService.getSummary(forceRefresh, customDates),
+            produksiService.getRingkasanAll(forceRefresh, customDates),
+            logistikService.getSummary(forceRefresh, customDates),
+            qaService.getSummary(forceRefresh, customDates),
+            whFgService.getSummary(forceRefresh, customDates),
+            whMatService.getSummary(forceRefresh, customDates),
+            pbfService.getSummary(forceRefresh, customDates)
         ]);
 
         let apiData = null;
@@ -862,9 +889,11 @@ router.get('/stats', async (req, res) => {
             kpi_wh_mat: whMatKpi,
             layanan: servicesResult,
             perlu_perhatian: sanitizedPerluPerhatian,
+            periode: customDates,
         };
 
         // Simpan ke Cache
+        cache.statsMap.set(cacheKey, { data: result, timestamp: now });
         cache.stats.data = result;
         cache.stats.timestamp = now;
 

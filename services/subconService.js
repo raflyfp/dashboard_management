@@ -80,17 +80,26 @@ const subconService = {
     /**
      * Mengambil ringkasan hari ini untuk kartu utama dashboard
      */
-    async getMonitoringToday(force = false) {
+    async getMonitoringToday(force = false, customDates = null) {
         const now = Date.now();
-        if (!force && cache.today.data && (now - cache.today.timestamp < CACHE_TTL_MS)) {
+        const todayStr = formatDate(new Date());
+        const tglMulai = customDates?.tglawal || todayStr;
+        const tglAkhir = customDates?.tglakhir || todayStr;
+        const cacheKey = `subcon_${tglMulai}_${tglAkhir}`;
+
+        if (!force && cache.range?.has(cacheKey)) {
+            const c = cache.range.get(cacheKey);
+            if (now - c.timestamp < CACHE_TTL_MS) {
+                return c.data;
+            }
+        } else if (!force && !customDates && cache.today.data && (now - cache.today.timestamp < CACHE_TTL_MS)) {
             return cache.today.data;
         }
 
-        const todayStr = formatDate(new Date());
         const targetUrl = buildSubconUrl({
-            tanggal: todayStr,
-            tanggal_mulai: todayStr,
-            tanggal_akhir: todayStr,
+            tanggal: tglAkhir,
+            tanggal_mulai: tglMulai,
+            tanggal_akhir: tglAkhir,
         });
 
         const response = await httpClient.get(targetUrl);
@@ -100,6 +109,7 @@ const subconService = {
             throw new Error(json?.message || 'Gagal memuat data dari API Monitoring Subcon');
         }
 
+        if (cache.range) cache.range.set(cacheKey, { data: json, timestamp: now });
         cache.today.data = json;
         cache.today.timestamp = now;
         return json;
