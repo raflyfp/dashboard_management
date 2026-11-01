@@ -17,6 +17,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const ticketingService = require('./services/ticketingService');
 const subconService = require('./services/subconService');
 const purchasingService = require('./services/purchasingService');
+const apiHealthService = require('./services/apiHealthService');
 
 const app = express();
 
@@ -42,45 +43,16 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // Pasang rute API Dashboard
 app.use('/api/dashboard', dashboardRoutes);
 
-// Health check endpoint (General System Status)
+// Health check endpoint (General System & API Health Status)
 app.get('/api/health', async (req, res) => {
-    let ticketingOk = false;
-    let subconOk = false;
-    let purchasingOk = false;
-
-    try {
-        const pingTicket = await ticketingService.ping();
-        ticketingOk = pingTicket?.status === 'online';
-    } catch {
-        ticketingOk = false;
-    }
-
-    try {
-        const pingSubcon = await subconService.ping();
-        subconOk = pingSubcon?.status === 'online';
-    } catch {
-        subconOk = false;
-    }
-
-    try {
-        const pingPurchasing = await purchasingService.ping();
-        purchasingOk = pingPurchasing?.status === 'online';
-    } catch {
-        purchasingOk = false;
-    }
-
-    const isOperational = ticketingOk && subconOk && purchasingOk;
-    const isDegraded = ticketingOk || subconOk || purchasingOk;
+    const summary = apiHealthService.getStatusSummary();
+    const isOperational = summary.atena.status === 'online' && summary.ticketing.status === 'online' && summary.subcon.status === 'online';
 
     res.json({
-        status: isOperational ? 'operational' : (isDegraded ? 'partially_degraded' : 'degraded'),
-        services: {
-            ticketing: ticketingOk ? 'online' : 'offline',
-            subcon: subconOk ? 'online' : 'offline',
-            purchasing: purchasingOk ? 'online' : 'offline',
-        },
+        status: isOperational ? 'operational' : 'degraded',
         uptime_seconds: Math.floor(process.uptime()),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        apis: summary
     });
 });
 
@@ -91,7 +63,7 @@ app.listen(config.port, '0.0.0.0', async () => {
     console.log(`📡 URL Lokal      : http://localhost:${config.port}`);
     console.log(`🔗 API Ticketing  : ${config.ticketing.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
     console.log(`🔗 API Subcon     : ${config.subcon.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
-    console.log(`🔗 ERP Purchasing : ${config.purchasing?.url ? 'Terkonfigurasi (Atena ERP)' : 'Belum diisi'}`);
+    console.log(`🔗 API Atena ERP  : ${config.atenaApi?.baseUrl ? 'Terkonfigurasi (REST API)' : 'Belum diisi'}`);
     console.log('----------------------------------------------------');
     console.log('⏳ Memeriksa status koneksi ke API Eksternal...');
 
@@ -119,14 +91,17 @@ app.listen(config.port, '0.0.0.0', async () => {
     }
 
     try {
-        const startTimePurchasing = Date.now();
-        const pingPurchasing = await purchasingService.ping();
-        const durationPurchasing = Date.now() - startTimePurchasing;
-        console.log('✅ [ATENA PURCHASING BERHASIL]: Terhubung ke sistem Atena ERP Laporan PR!');
-        console.log(`   • Status Server : ${pingPurchasing?.status || 'online'}`);
-        console.log(`   • Kecepatan     : ${durationPurchasing} ms`);
+        const pingAtena = await apiHealthService.pingAtena();
+        if (pingAtena.success) {
+            console.log('✅ [ATENA ERP REST API BERHASIL]: Terhubung ke sistem Atena ERP!');
+            console.log(`   • Status Server : ${pingAtena.status} (${pingAtena.httpStatus})`);
+            console.log(`   • Kecepatan     : ${pingAtena.latencyMs} ms`);
+        } else {
+            console.error('⚠️ [ATENA ERP REST API]: Gagal login ke Atena ERP API (menggunakan data cadangan lokal)');
+            console.error(`   • Pesan         : ${pingAtena.message}`);
+        }
     } catch (err) {
-        console.error('⚠️ [ATENA PURCHASING]: Tidak dapat terhubung langsung ke Atena ERP (menggunakan data cadangan lokal)');
+        console.error('⚠️ [ATENA ERP REST API]: Tidak dapat terhubung langsung ke Atena ERP');
         console.error(`   • Error         : ${err.message}`);
     }
     console.log('====================================================');

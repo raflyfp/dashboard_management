@@ -605,6 +605,28 @@ class PurchasingService {
         const data = await this.fetchData(force, dateParams);
         return data;
     }
+
+    /**
+     * Memeriksa konektivitas langsung ke API Atena ERP Purchasing
+     */
+    async ping() {
+        const start = Date.now();
+        try {
+            await this.getToken();
+            const latency = Date.now() - start;
+            return {
+                status: 'online',
+                latencyMs: latency,
+                message: 'Atena ERP Purchasing API terhubung normal'
+            };
+        } catch (error) {
+            return {
+                status: 'offline',
+                latencyMs: Date.now() - start,
+                message: error.message
+            };
+        }
+    }
 }
 
 module.exports = new PurchasingService();

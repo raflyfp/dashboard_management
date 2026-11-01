@@ -21,6 +21,7 @@ const qaService = require('../services/qaService');
 const whFgService = require('../services/whFgService');
 const whMatService = require('../services/whMatService');
 const pbfService = require('../services/pbfService');
+const apiHealthService = require('../services/apiHealthService');
 
 const cache = {
     stats: { data: null, timestamp: 0 },
@@ -60,6 +61,33 @@ function sanitasiKategori(kategori) {
  * GET /api/dashboard/config
  * Mengirim konfigurasi dasar ke frontend
  */
+
+/**
+ * GET /api/dashboard/api-status
+ * Status realtime koneksi API Atena ERP, Ticketing, dan Subcon
+ */
+router.get('/api-status', async (req, res) => {
+    if (req.query.ping === 'true') {
+        const pingResults = await apiHealthService.pingAll();
+        return res.json({ success: true, ...pingResults });
+    }
+    return res.json({ success: true, ...apiHealthService.getStatusSummary() });
+});
+
+/**
+ * POST /api/dashboard/api-status/ping
+ * Trigger tes ping koneksi langsung ke seluruh API (terutama Atena ERP)
+ */
+router.post('/api-status/ping', async (req, res) => {
+    const target = req.body?.target || req.query?.target;
+    if (target === 'atena') {
+        const atenaPing = await apiHealthService.pingAtena();
+        return res.json({ success: atenaPing.success, data: atenaPing });
+    }
+    const pingResults = await apiHealthService.pingAll();
+    return res.json({ success: true, ...pingResults });
+});
+
 router.get('/config', (req, res) => {
     res.json({
         success: true,
@@ -125,6 +153,15 @@ router.get('/stats', async (req, res) => {
             whMatService.getSummary(forceRefresh, customDates),
             pbfService.getSummary(forceRefresh, customDates)
         ]);
+
+                // Update live API health status
+        apiHealthService.updateModuleStatus('purchasing', purchasingSettled.status === 'fulfilled' && purchasingSettled.value?.success !== false, 0, purchasingSettled.reason?.message);
+        apiHealthService.updateModuleStatus('produksi', produksiSettled.status === 'fulfilled', 0, produksiSettled.reason?.message);
+        apiHealthService.updateModuleStatus('logistik', logistikSettled.status === 'fulfilled', 0, logistikSettled.reason?.message);
+        apiHealthService.updateModuleStatus('qa', qaSettled.status === 'fulfilled', 0, qaSettled.reason?.message);
+        apiHealthService.updateModuleStatus('whFg', whFgSettled.status === 'fulfilled', 0, whFgSettled.reason?.message);
+        apiHealthService.updateModuleStatus('whMat', whMatSettled.status === 'fulfilled', 0, whMatSettled.reason?.message);
+        apiHealthService.updateModuleStatus('pbf', pbfSettled && pbfSettled.status === 'fulfilled', 0, pbfSettled?.reason?.message);
 
         let apiData = null;
         if (ticketingSettled.status === 'fulfilled') {
@@ -890,6 +927,7 @@ router.get('/stats', async (req, res) => {
             layanan: servicesResult,
             perlu_perhatian: sanitizedPerluPerhatian,
             periode: customDates,
+            api_status: apiHealthService.getStatusSummary(),
         };
 
         // Simpan ke Cache

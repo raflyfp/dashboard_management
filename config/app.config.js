@@ -37,14 +37,7 @@ module.exports = {
         timeoutMs: 10000,
     },
 
-    // Konfigurasi Atena ERP Purchasing (Laporan Purchase Request)
-    purchasing: {
-        url: (process.env.ATENA_PR_URL || 'https://erpsna.atena.id/Laporan/LaporanPembelian/LaporanPR/laporan?kode=LPRS1').trim(),
-        sessionCookie: (process.env.ATENA_SESSION_COOKIE || 'ci_session=dv26ne8pa0orpc1gqnfbs001bmic31fi').trim(),
-        timeoutMs: 25000,
-    },
-
-    // Konfigurasi REST API Dashboard Atena ERP (Produksi, QA, Logistik, Purchasing)
+    // Konfigurasi REST API Dashboard Atena ERP (Produksi, QA, Logistik, Purchasing, Gudang, PBF)
     atenaApi: {
         baseUrl: (process.env.ATENA_API_BASE_URL || 'https://erpsna.atena.id/API/Dashboard/').trim().replace(/\/?$/, '/'),
         username: (process.env.ATENA_API_USERNAME || 'SNATEST@EMAIL.COM').trim(),
@@ -58,4 +51,3 @@ module.exports = {
     // Interval auto-refresh data di frontend (detik)
     refreshIntervalSeconds: parseInt(process.env.REFRESH_INTERVAL_SECONDS, 10) || 15,
 };
-
