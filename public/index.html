@@ -951,36 +951,32 @@
                     </div>
 
                     <div class="card-body">
-                        <!-- Percent Hero: Pengisian Subcon Bulan Ini s/d Hari Ini -->
-                        <div class="percent-hero">
-                            <div class="percent-number-row">
-                                <span class="percent-val kpi-color-green" id="percentSUBCON">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                        <!-- Hero Jumlah Hasil Produksi Besar (PCS) -->
+                        <div class="subcon-hero">
+                            <div class="subcon-hero-number-row">
+                                <span class="subcon-val" id="totalPcsSUBCON">0</span>
+                                <span class="subcon-unit">PCS</span>
                             </div>
-                            <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-green" id="barFillSUBCON" style="width: 0%"></div>
+                            <div class="subcon-hero-sub" id="subconHeroSub">
+                                <i class="fa-solid fa-industry"></i> Hasil Produksi (Hari Ini)
                             </div>
                         </div>
 
-                        <!-- 3 Metrik Inti: Hasil Produksi PCS, Jumlah Mitra, Karyawan -->
+                        <!-- 2 Metrik Inti: Jumlah Subcon, Jumlah Karyawan -->
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Hasil Produksi</span>
-                                <span class="m-val" id="totalPcsSUBCON">0 PCS</span>
+                                <span class="m-lbl">Jumlah Subcon</span>
+                                <span class="m-val" id="subconJumlahSubcon">1</span>
                             </div>
                             <div class="metric-box m-info">
-                                <span class="m-lbl">Jumlah Mitra</span>
-                                <span class="m-val text-primary" id="subconJumlahSubcon">1</span>
-                            </div>
-                            <div class="metric-box m-success">
-                                <span class="m-lbl">Karyawan</span>
-                                <span class="m-val text-success" id="subconJumlahKaryawan">0</span>
+                                <span class="m-lbl">Jumlah Karyawan</span>
+                                <span class="m-val text-primary" id="subconJumlahKaryawan">26</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail" onclick="openSubconModal()">
+                        <button class="btn-detail subcon-btn" onclick="openSubconModal()">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -1033,7 +1029,7 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail" onclick="openHrModal()">
+                        <button class="btn-detail hr-btn" onclick="openHrModal()">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -2710,11 +2706,11 @@
                             Halaman 1 dari 1
                         </div>
                         <div style="display: flex; gap: 5px;">
-                            <button class="pagination-btn" id="btnPrevHrPage" onclick="changeHrPage(-1)" disabled>
-                                <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+                            <button class="filter-pill" id="btnPrevHrPage" onclick="changeHrPage(-1)">
+                                <i class="fa-solid fa-chevron-left"></i> Prev
                             </button>
-                            <button class="pagination-btn" id="btnNextHrPage" onclick="changeHrPage(1)" disabled>
-                                Berikutnya <i class="fa-solid fa-chevron-right"></i>
+                            <button class="filter-pill" id="btnNextHrPage" onclick="changeHrPage(1)">
+                                Next <i class="fa-solid fa-chevron-right"></i>
                             </button>
                         </div>
                     </div>

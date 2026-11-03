@@ -591,11 +591,11 @@ html, body {
 }
 
 /* Penyeragaman Tombol Detail (Biru Tema SNA Medika untuk Semua Kartu Aktif) */
-.it-btn, .tk-btn, .ga-btn, .subcon-btn, .purchasing-btn, .produksi-btn, .logistik-btn, .qa-btn, .pbf-btn {
+.it-btn, .tk-btn, .ga-btn, .subcon-btn, .purchasing-btn, .produksi-btn, .logistik-btn, .qa-btn, .pbf-btn, .hr-btn {
     background: var(--sna-blue);
     color: #fff;
 }
-.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover, .purchasing-btn:hover, .produksi-btn:hover, .logistik-btn:hover, .qa-btn:hover, .pbf-btn:hover {
+.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover, .purchasing-btn:hover, .produksi-btn:hover, .logistik-btn:hover, .qa-btn:hover, .pbf-btn:hover, .hr-btn:hover {
     background: #0c4a86;
 }
 

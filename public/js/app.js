@@ -39,6 +39,8 @@ const state = {
     currentSubconTab: 'barang',
     subconRawData: null,
     subconSearchQuery: '',
+    subconCurrentPage: 1,
+    subconPageSize: 10,
 
     // State Khusus Modul Purchasing (Atena ERP)
     currentPurchasingRange: 'month',
@@ -691,11 +693,15 @@ function renderServiceCards(layanan) {
         const item = layanan[code];
         if (!item) return;
 
-        // Penanganan Modul Pengerjaan Subcon (Persentase Pengisian & Hasil Produksi PCS)
+        // Penanganan Modul Pengerjaan Subcon (Jumlah Hasil Produksi PCS)
         if (code === 'SUBCON') {
             const pcs = item.total_output_pcs || 0;
-            const pcsEl = document.getElementById('totalPcsSUBCON');
-            if (pcsEl) pcsEl.textContent = Number(pcs).toLocaleString('id-ID') + ' PCS';
+            animateCounter('totalPcsSUBCON', pcs);
+
+            const subHeroSub = document.getElementById('subconHeroSub');
+            if (subHeroSub) {
+                subHeroSub.innerHTML = `<i class="fa-solid fa-industry"></i> Hasil Produksi (${state.selectedMonthName || 'Bulan Ini'} ${state.selectedYear})`;
+            }
 
             const subconEl = document.getElementById('subconJumlahSubcon') || document.getElementById('totalSUBCON') || document.getElementById('subconJumlahMitra');
             if (subconEl) {
@@ -705,19 +711,6 @@ function renderServiceCards(layanan) {
             const karyawanEl = document.getElementById('subconJumlahKaryawan') || document.getElementById('karyawanSUBCON');
             if (karyawanEl) {
                 karyawanEl.textContent = String(item.total_karyawan || 0);
-            }
-
-            const percent = Number(item.persentase_selesai || item.persentase_pengisian || 0);
-            const percentEl = document.getElementById('percentSUBCON');
-            const barFill = document.getElementById('barFillSUBCON');
-            const kpi = getKpiClass(percent);
-            if (percentEl) {
-                percentEl.textContent = percent + '%';
-                percentEl.className = 'percent-val ' + kpi.text;
-            }
-            if (barFill) {
-                barFill.style.width = Math.min(Math.max(percent, 0), 100) + '%';
-                barFill.className = 'progress-bar-fill ' + kpi.fill;
             }
             return;
         }
@@ -7366,8 +7359,16 @@ function renderHrPagination(totalItems) {
     if (pageInfo) {
         pageInfo.textContent = `Halaman ${state.hrCurrentPage} dari ${totalPages} (${totalItems} Data)`;
     }
-    if (btnPrev) btnPrev.disabled = state.hrCurrentPage <= 1;
-    if (btnNext) btnNext.disabled = state.hrCurrentPage >= totalPages;
+    if (btnPrev) {
+        btnPrev.disabled = state.hrCurrentPage <= 1;
+        btnPrev.style.opacity = state.hrCurrentPage <= 1 ? '0.5' : '1';
+        btnPrev.style.cursor = state.hrCurrentPage <= 1 ? 'not-allowed' : 'pointer';
+    }
+    if (btnNext) {
+        btnNext.disabled = state.hrCurrentPage >= totalPages;
+        btnNext.style.opacity = state.hrCurrentPage >= totalPages ? '0.5' : '1';
+        btnNext.style.cursor = state.hrCurrentPage >= totalPages ? 'not-allowed' : 'pointer';
+    }
 }
 
 function changeHrPage(delta) {
