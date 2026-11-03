@@ -31,6 +31,7 @@ const healthState = {
             whFg: { status: 'unknown', lastSync: null },
             whMat: { status: 'unknown', lastSync: null },
             pbf: { status: 'unknown', lastSync: null },
+            hr: { status: 'unknown', lastSync: null },
         }
     },
     ticketing: {

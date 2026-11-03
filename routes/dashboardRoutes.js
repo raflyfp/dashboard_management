@@ -21,6 +21,7 @@ const qaService = require('../services/qaService');
 const whFgService = require('../services/whFgService');
 const whMatService = require('../services/whMatService');
 const pbfService = require('../services/pbfService');
+const hrService = require('../services/hrService');
 const apiHealthService = require('../services/apiHealthService');
 
 const cache = {
@@ -142,7 +143,7 @@ router.get('/stats', async (req, res) => {
 
     try {
         // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi, Logistik, QA, WH FG & WH Mat secara paralel
-        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled, pbfSettled] = await Promise.allSettled([
+        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled, pbfSettled, hrSettled] = await Promise.allSettled([
             ticketingService.getSummary(forceRefresh, customDates),
             subconService.getMonitoringToday(forceRefresh, customDates),
             purchasingService.getSummary(forceRefresh, customDates),
@@ -151,7 +152,8 @@ router.get('/stats', async (req, res) => {
             qaService.getSummary(forceRefresh, customDates),
             whFgService.getSummary(forceRefresh, customDates),
             whMatService.getSummary(forceRefresh, customDates),
-            pbfService.getSummary(forceRefresh, customDates)
+            pbfService.getSummary(forceRefresh, customDates),
+            hrService.getSummary(forceRefresh, customDates)
         ]);
 
                 // Update live API health status
@@ -162,6 +164,7 @@ router.get('/stats', async (req, res) => {
         apiHealthService.updateModuleStatus('whFg', whFgSettled.status === 'fulfilled', 0, whFgSettled.reason?.message);
         apiHealthService.updateModuleStatus('whMat', whMatSettled.status === 'fulfilled', 0, whMatSettled.reason?.message);
         apiHealthService.updateModuleStatus('pbf', pbfSettled && pbfSettled.status === 'fulfilled', 0, pbfSettled?.reason?.message);
+        apiHealthService.updateModuleStatus('hr', hrSettled && hrSettled.status === 'fulfilled', 0, hrSettled?.reason?.message);
 
         let apiData = null;
         if (ticketingSettled.status === 'fulfilled') {
@@ -238,6 +241,14 @@ router.get('/stats', async (req, res) => {
             console.error(`❌ [API PBF ERROR]: ${pbfSettled.reason?.message}`);
         }
         const pbfKpi = pbfData?.kpi || {};
+
+        let hrData = null;
+        if (hrSettled && hrSettled.status === 'fulfilled') {
+            hrData = hrSettled.value;
+        } else if (hrSettled && hrSettled.reason) {
+            console.error(`❌ [API HR ERROR]: ${hrSettled.reason?.message}`);
+        }
+        const hrKpi = hrData?.kpi || {};
 
         const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
@@ -817,7 +828,7 @@ router.get('/stats', async (req, res) => {
                 sudah_mengisi: subconKpi.sudah_mengisi ?? 0,
                 belum_mengisi: subconKpi.belum_mengisi ?? 0,
                 subcon_nama: subconFirst.nama_lokasi || 'SIMAN',
-                persentase_selesai: subconKpi.total_karyawan_aktif ? Number(((subconKpi.sudah_mengisi / subconKpi.total_karyawan_aktif) * 100).toFixed(1)) : 100,
+                persentase_selesai: subconKpi.persentase_pengisian ?? (subconKpi.total_karyawan_aktif ? Number(((subconKpi.sudah_mengisi / subconKpi.total_karyawan_aktif) * 100).toFixed(1)) : 0),
             },
 
             // ==============================================================
@@ -826,22 +837,27 @@ router.get('/stats', async (req, res) => {
             HR: {
                 no: 19,
                 kode: 'HR',
-                nama: 'HR (SDM)',
+                nama: 'Kehadiran Karyawan (HR)',
                 kategori: 'support_qa',
                 kategori_label: 'HR, Dokumen & Mutu',
-                data_ditampilkan: 'Kehadiran TK vs Jadwal',
-                sub_nama: 'Presensi Tenaga Kerja vs Roster',
-                sumber_data: 'Sistem Absensi HR & Jadwal Kerja',
-                sumber: 'Aplikasi Absensi HR',
-                catatan: 'Kehadiran Tenaga Kerja harian dibandingkan jadwal kerja',
+                data_ditampilkan: 'Presensi Kehadiran Karyawan vs Jadwal Plan',
+                sub_nama: 'TK SNA & Marketing (Non-SNAM)',
+                sumber_data: 'Atena ERP REST API (KehadiranTK)',
+                sumber: 'Atena ERP',
+                catatan: 'Kehadiran aktual karyawan dibandingkan jadwal kerja plan',
                 icon: 'users-line',
-                is_active: false,
-                metric_labels: { total: 'Jadwal TK', selesai: 'Hadir', belum: 'Absen' },
-                unit: 'Orang',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                is_active: true,
+                metric_labels: { total: 'Total Jadwal', selesai: 'Sesuai Plan', belum: 'Tidak Sesuai' },
+                unit: 'Jadwal',
+                total: hrKpi.total_jadwal || 0,
+                selesai: hrKpi.jadwal_sesuai || 0,
+                belum_selesai: hrKpi.jadwal_tidak_sesuai || 0,
+                total_karyawan: hrKpi.total_karyawan || 0,
+                persentase_selesai: hrKpi.persentase || 0,
+                sub_metrics: {
+                    tksna: hrKpi.tksna,
+                    marketing: hrKpi.marketing
+                }
             },
             DC: {
                 no: 20,
@@ -1110,8 +1126,8 @@ router.post('/purchasing/sync', async (req, res) => {
 router.get('/qa', async (req, res) => {
     try {
         const { bagian = 'grsmaterial', range = 'month', status = 'all', search = '', force = false } = req.query;
-        const tglawal = req.query.tglawal || req.query.startDate;
-        const tglakhir = req.query.tglakhir || req.query.endDate;
+        const tglawal = req.query.tglawal || req.query.startDate || req.query.tanggal_mulai;
+        const tglakhir = req.query.tglakhir || req.query.endDate || req.query.tanggal_akhir;
         const data = await qaService.getMonitoringData({
             bagian,
             range,
@@ -1143,8 +1159,8 @@ router.get('/qa', async (req, res) => {
 router.post('/qa/sync', async (req, res) => {
     try {
         const bagian = req.body.bagian || 'grsmaterial';
-        const tglawal = req.body.tglawal || req.body.startDate;
-        const tglakhir = req.body.tglakhir || req.body.endDate;
+        const tglawal = req.body.tglawal || req.body.startDate || req.body.tanggal_mulai;
+        const tglakhir = req.body.tglakhir || req.body.endDate || req.body.tanggal_akhir;
         const dates = (tglawal && tglakhir) ? { tglawal, tglakhir } : {};
         const rawData = await qaService.fetchData(bagian, true, dates);
         return res.json({
@@ -1422,6 +1438,70 @@ router.post('/pbf/sync', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Gagal sinkronisasi data PBF dari Atena ERP: ' + error.message
+        });
+    }
+});
+
+
+/**
+ * GET /api/dashboard/hr
+ * Mengambil data monitoring Kehadiran Karyawan (TK SNA & Marketing) dari Atena ERP
+ * Query params:
+ * - bagian: 'tksna' | 'marketing' (default: 'tksna')
+ * - range: 'all' | 'today' | 'week' | 'month' (default: 'month')
+ * - status: 'all' | 'sesuai' | 'tidak_sesuai' | 'alpha' | 'terlambat' | 'beda_shift'
+ * - search: kata kunci pencarian (nama, nkk, jabatan)
+ * - tglawal, tglakhir, force
+ */
+router.get('/hr', async (req, res) => {
+    try {
+        const { bagian = 'tksna', range = 'month', status = 'all', search = '', force = false } = req.query;
+        const tglawal = req.query.tglawal || req.query.startDate || req.query.tanggal_mulai;
+        const tglakhir = req.query.tglakhir || req.query.endDate || req.query.tanggal_akhir;
+        const data = await hrService.getMonitoringData({
+            bagian,
+            range,
+            status,
+            search,
+            force: force === 'true',
+            tglawal,
+            tglakhir,
+        });
+
+        return res.json({
+            success: true,
+            data: data
+        });
+    } catch (error) {
+        console.error('[API ERROR /hr]:', error.message);
+        return res.status(502).json({
+            success: false,
+            message: 'Gagal mengambil data monitoring Kehadiran Karyawan Atena ERP: ' + error.message,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/dashboard/hr/sync
+ * Memaksa sinkronisasi data HR terbaru dari Atena ERP
+ */
+router.post('/hr/sync', async (req, res) => {
+    try {
+        const bagian = req.body.bagian || 'tksna';
+        const tglawal = req.body.tglawal || req.body.startDate || req.body.tanggal_mulai;
+        const tglakhir = req.body.tglakhir || req.body.endDate || req.body.tanggal_akhir;
+        const dates = (tglawal && tglakhir) ? { tglawal, tglakhir } : {};
+        const rawData = await hrService.fetchData(bagian, true, dates);
+        return res.json({
+            success: true,
+            message: `Sinkronisasi data Kehadiran (${bagian.toUpperCase()}) dari Atena ERP berhasil`,
+            data: rawData
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Gagal sinkronisasi data Kehadiran dari Atena ERP: ' + error.message
         });
     }
 });

@@ -146,6 +146,19 @@ const state = {
         dr: { column: 'tgl_kirim', dir: 'desc' }
     },
 
+    // State Khusus Modul HR (Atena ERP Kehadiran TK)
+    currentHrBagian: 'tksna', // 'tksna' (TK SNA) | 'marketing' (Marketing/Non-SNAM)
+    currentHrRange: 'month',
+    hrDateStart: '',
+    hrDateEnd: '',
+    currentHrStatus: 'all', // 'all' | 'sesuai' | 'tidak_sesuai' | 'alpha' | 'terlambat' | 'beda_shift'
+    hrSearchQuery: '',
+    hrCurrentPage: 1,
+    hrPageSize: 25,
+    hrRawData: null,
+    hrCache: new Map(),
+    hrSort: { column: 'tanggal', dir: 'desc' },
+
     // Filter Periode Global Header (Bulan & Tahun)
     selectedMonth: new Date().getMonth() + 1,
     selectedYear: new Date().getFullYear(),
@@ -325,6 +338,9 @@ function refreshOpenModalOnPeriodChange() {
     if (document.getElementById('pbfModal')?.classList.contains('active') && typeof setPbfQuickDate === 'function') {
         setPbfQuickDate(state.currentPbfRange || 'month');
     }
+    if (document.getElementById('hrModal')?.classList.contains('active') && typeof setHrQuickDate === 'function') {
+        setHrQuickDate(state.currentHrRange || 'month');
+    }
 }
 
 // ====================================================================
@@ -335,6 +351,7 @@ function initModalDatePickers() {
 
     const dateInputIds = [
         'subconDateStart', 'subconDateEnd',
+        'hrDateStart', 'hrDateEnd',
         'purchasingDateStart', 'purchasingDateEnd',
         'qaDateStart', 'qaDateEnd',
         'pbfDateStart', 'pbfDateEnd',
@@ -674,26 +691,55 @@ function renderServiceCards(layanan) {
         const item = layanan[code];
         if (!item) return;
 
-        // Penanganan Khusus Modul Pengerjaan Subcon (Hasil Produksi PCS)
+        // Penanganan Modul Pengerjaan Subcon (Persentase Pengisian & Hasil Produksi PCS)
         if (code === 'SUBCON') {
             const pcs = item.total_output_pcs || 0;
-            animateCounter('totalPcsSUBCON', pcs);
-            animateCounter('percentSUBCON', pcs);
+            const pcsEl = document.getElementById('totalPcsSUBCON');
+            if (pcsEl) pcsEl.textContent = Number(pcs).toLocaleString('id-ID') + ' PCS';
 
             const subconEl = document.getElementById('subconJumlahSubcon') || document.getElementById('totalSUBCON') || document.getElementById('subconJumlahMitra');
             if (subconEl) {
-                const totalSubcon = item.total_subcon || 1;
-                subconEl.textContent = `${totalSubcon}`;
+                subconEl.textContent = String(item.total_subcon || 1);
             }
 
             const karyawanEl = document.getElementById('subconJumlahKaryawan') || document.getElementById('karyawanSUBCON');
             if (karyawanEl) {
-                const totalKaryawan = item.total_karyawan || 0;
-                karyawanEl.textContent = `${totalKaryawan}`;
+                karyawanEl.textContent = String(item.total_karyawan || 0);
             }
 
-            const durasiEl = document.getElementById('subconDurasi');
-            if (durasiEl) durasiEl.textContent = item.total_durasi || '0 Jam';
+            const percent = Number(item.persentase_selesai || item.persentase_pengisian || 0);
+            const percentEl = document.getElementById('percentSUBCON');
+            const barFill = document.getElementById('barFillSUBCON');
+            const kpi = getKpiClass(percent);
+            if (percentEl) {
+                percentEl.textContent = percent + '%';
+                percentEl.className = 'percent-val ' + kpi.text;
+            }
+            if (barFill) {
+                barFill.style.width = Math.min(Math.max(percent, 0), 100) + '%';
+                barFill.className = 'progress-bar-fill ' + kpi.fill;
+            }
+            return;
+        }
+
+        // Penanganan Modul Kehadiran Karyawan (HR)
+        if (code === 'HR') {
+            const percent = Number(item.persentase_selesai || 0);
+            const percentEl = document.getElementById('percentHR');
+            const barFill = document.getElementById('barFillHR');
+            const kpi = getKpiClass(percent);
+            if (percentEl) {
+                percentEl.textContent = percent + '%';
+                percentEl.className = 'percent-val ' + kpi.text;
+            }
+            if (barFill) {
+                barFill.style.width = Math.min(Math.max(percent, 0), 100) + '%';
+                barFill.className = 'progress-bar-fill ' + kpi.fill;
+            }
+
+            animateCounter('totalHR', item.total_tiket || item.total || 0);
+            animateCounter('selesaiHR', item.selesai || 0);
+            animateCounter('belumHR', item.belum_selesai || 0);
             return;
         }
 
@@ -716,6 +762,8 @@ function renderServiceCards(layanan) {
 
         // 2. Persentase & Progress Bar Fill (Standarisasi Warna Traffic Light KPI)
         let percent = item.persentase_selesai || 0;
+
+
         if (code === 'WH_MAT') {
             const pctMr = Number(item.persentase_mr ?? item.mr?.persentase_selesai ?? 0);
             const pctDr = Number(item.persentase_dr ?? item.dr?.persentase_selesai ?? 0);
@@ -1515,7 +1563,7 @@ function escapeHtml(str) {
 /**
  * Membuka Modal Monitoring Pengerjaan Subcon
  */
-function openSubconModal(range = 'today') {
+function openSubconModal(range = 'month') {
     const modal = document.getElementById('subconModal');
     if (!modal) return;
 
@@ -1552,7 +1600,7 @@ function formatSubconDate(d) {
 /**
  * Mengganti Rentang Waktu (Hari Ini / 7 Hari Terakhir / 30 Hari Terakhir)
  */
-async function switchSubconRange(range = 'today') {
+async function switchSubconRange(range = 'month') {
     state.currentSubconRange = range;
 
     const { startDate, endDate } = getActivePeriodDates(range);
@@ -1571,9 +1619,10 @@ async function switchSubconRange(range = 'today') {
     if (btnWeek) btnWeek.classList.toggle('active', range === 'week');
     if (btnMonth) btnMonth.classList.toggle('active', range === 'month');
 
-    // Cek cache lokal frontend agar instan tanpa loading
+    // Cek cache lokal frontend
+    const cacheKey = `subcon_${startDate}_${endDate}_${range}`;
     if (!state.subconCache) state.subconCache = new Map();
-    const cached = state.subconCache.get(range);
+    const cached = state.subconCache.get(cacheKey);
     if (cached) {
         state.subconRawData = cached.data;
         renderSubconModalData(cached.data);
@@ -1585,14 +1634,14 @@ async function switchSubconRange(range = 'today') {
     }
 
     try {
-        const response = await fetch(`/api/dashboard/subcon?range=${encodeURIComponent(range)}`);
+        const response = await fetch(`/api/dashboard/subcon?range=${encodeURIComponent(range)}&tanggal_mulai=${encodeURIComponent(startDate)}&tanggal_akhir=${encodeURIComponent(endDate)}`);
         const result = await response.json();
 
         if (!result.success) {
             throw new Error(result.message || 'Gagal mengambil data monitoring subcon');
         }
 
-        state.subconCache.set(range, { data: result.data, timestamp: Date.now() });
+        state.subconCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
         state.subconRawData = result.data;
         renderSubconModalData(result.data);
 
@@ -1711,7 +1760,7 @@ function resetSubconFilter() {
     if (searchInput) searchInput.value = '';
 
     switchSubconTab('barang');
-    switchSubconRange('today');
+    switchSubconRange('month');
 }
 
 /**
@@ -6933,4 +6982,439 @@ function sortPbf(column) {
     if (state.pbfRawData) {
         renderPbfModalData(state.pbfRawData);
     }
+}
+
+
+// ====================================================================
+// MODUL HR - MONITORING KEHADIRAN KARYAWAN (ATENA ERP REST API)
+// ====================================================================
+
+function openHrModal(range = 'month') {
+    const modal = document.getElementById('hrModal');
+    if (!modal) return;
+
+    modal.classList.add('active');
+    state.hrSearchQuery = '';
+
+    const searchInput = document.getElementById('hrSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    setHrQuickDate(range);
+}
+
+function closeHrModal() {
+    const modal = document.getElementById('hrModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function setHrQuickDate(preset = 'month') {
+    state.currentHrRange = preset;
+
+    const { startDate, endDate } = getActivePeriodDates(preset);
+    state.hrDateStart = startDate;
+    state.hrDateEnd = endDate;
+
+    setDateInputValue('hrDateStart', startDate);
+    setDateInputValue('hrDateEnd', endDate);
+
+    const btnMonth = document.getElementById('btnQuickHrMonth');
+    const btnWeek = document.getElementById('btnQuickHrWeek');
+    const btnToday = document.getElementById('btnQuickHrToday');
+    const btnAll = document.getElementById('btnQuickHrAll');
+
+    if (btnMonth) btnMonth.classList.toggle('active', preset === 'month');
+    if (btnWeek) btnWeek.classList.toggle('active', preset === 'week');
+    if (btnToday) btnToday.classList.toggle('active', preset === 'today');
+    if (btnAll) btnAll.classList.toggle('active', preset === 'all');
+
+    state.hrCurrentPage = 1;
+    loadHrData();
+}
+
+function handleHrDateChange(changedField) {
+    const startInput = document.getElementById('hrDateStart');
+    const endInput = document.getElementById('hrDateEnd');
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (changedField === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.hrDateStart = start;
+    state.hrDateEnd = end;
+    state.currentHrRange = 'custom';
+
+    const pills = document.querySelectorAll('.hr-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    state.hrCurrentPage = 1;
+    loadHrData();
+}
+
+function switchHrBagian(bagian) {
+    if (state.currentHrBagian === bagian) return;
+    state.currentHrBagian = bagian;
+
+    const btnTk = document.getElementById('btnTabHrTkSna');
+    const btnMkt = document.getElementById('btnTabHrMarketing');
+    if (btnTk) btnTk.classList.toggle('active', bagian === 'tksna');
+    if (btnMkt) btnMkt.classList.toggle('active', bagian === 'marketing');
+
+    state.hrCurrentPage = 1;
+    loadHrData();
+}
+
+function switchHrStatus(status) {
+    state.currentHrStatus = status;
+    const sel = document.getElementById('selectHrStatus');
+    if (sel && sel.value !== status) sel.value = status;
+
+    state.hrCurrentPage = 1;
+    if (state.hrRawData) {
+        renderHrModalData(state.hrRawData);
+    }
+}
+
+function resetHrFilter() {
+    state.hrSearchQuery = '';
+    const searchInput = document.getElementById('hrSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const sel = document.getElementById('selectHrStatus');
+    if (sel) sel.value = 'all';
+    state.currentHrStatus = 'all';
+
+    setHrQuickDate('month');
+}
+
+let hrSearchDebounce = null;
+function handleHrSearch(query) {
+    clearTimeout(hrSearchDebounce);
+    hrSearchDebounce = setTimeout(() => {
+        state.hrSearchQuery = (query || '').trim().toLowerCase();
+        state.hrCurrentPage = 1;
+        if (state.hrRawData) {
+            renderHrModalData(state.hrRawData);
+        }
+    }, 200);
+}
+
+async function syncHrData() {
+    const btnSync = document.getElementById('btnSyncHr');
+    const icon = btnSync?.querySelector('i');
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        renderHrTableLoading();
+        const res = await fetch('/api/dashboard/hr/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bagian: state.currentHrBagian || 'tksna',
+                tanggal_mulai: state.hrDateStart,
+                tanggal_akhir: state.hrDateEnd
+            })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || 'Gagal sinkronisasi data HR');
+
+        const cacheKey = `${state.currentHrBagian}_${state.hrDateStart}_${state.hrDateEnd}`;
+        if (!state.hrCache) state.hrCache = new Map();
+        state.hrCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+
+        state.hrRawData = result.data;
+        renderHrModalData(result.data);
+        showToast('Sinkronisasi Kehadiran Karyawan berhasil!', 'success');
+
+        const syncEl = document.getElementById('hrLastSyncTime');
+        if (syncEl) syncEl.textContent = `Sinkron: ${new Date().toLocaleTimeString('id-ID')}`;
+    } catch (err) {
+        console.error('Error sync HR:', err);
+        renderHrTableError(err.message);
+        showToast(`Sinkronisasi HR gagal: ${err.message}`, 'error');
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+    }
+}
+
+async function loadHrData(force = false) {
+    const bagian = state.currentHrBagian || 'tksna';
+    const start = state.hrDateStart;
+    const end = state.hrDateEnd;
+    const cacheKey = `${bagian}_${start}_${end}`;
+
+    if (!state.hrCache) state.hrCache = new Map();
+    const cached = state.hrCache.get(cacheKey);
+
+    if (cached && !force) {
+        state.hrRawData = cached.data;
+        renderHrModalData(cached.data);
+        if (Date.now() - cached.timestamp < 30000) return;
+    } else {
+        renderHrTableLoading();
+    }
+
+    try {
+        const url = `/api/dashboard/hr?bagian=${encodeURIComponent(bagian)}&tanggal_mulai=${encodeURIComponent(start)}&tanggal_akhir=${encodeURIComponent(end)}`;
+        const res = await fetch(url);
+        const result = await res.json();
+        if (!result.success) throw new Error(result.message || 'Gagal memuat data kehadiran');
+
+        state.hrCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
+        state.hrRawData = result.data;
+        renderHrModalData(result.data);
+
+        const syncEl = document.getElementById('hrLastSyncTime');
+        if (syncEl) syncEl.textContent = `Update: ${new Date().toLocaleTimeString('id-ID')}`;
+    } catch (err) {
+        console.error('Error memuat data HR:', err);
+        renderHrTableError(err.message);
+    }
+}
+
+function renderHrModalData(data) {
+    if (!data) return;
+
+    const kpi = data.kpi || {};
+    const totalJadwal = kpi.total_jadwal || 0;
+    const sesuai = kpi.sesuai || 0;
+    const tidakSesuai = kpi.tidak_sesuai || 0;
+    const totalKaryawan = kpi.total_karyawan || 0;
+
+    const elTotalJadwal = document.getElementById('hrModalKpiTotalJadwal');
+    const elSesuai = document.getElementById('hrModalKpiSesuai');
+    const elTidakSesuai = document.getElementById('hrModalKpiTidakSesuai');
+    const elTotalKaryawan = document.getElementById('hrModalKpiTotalKaryawan');
+
+    if (elTotalJadwal) elTotalJadwal.textContent = totalJadwal.toLocaleString('id-ID');
+    if (elSesuai) elSesuai.textContent = sesuai.toLocaleString('id-ID');
+    if (elTidakSesuai) elTidakSesuai.textContent = tidakSesuai.toLocaleString('id-ID');
+    if (elTotalKaryawan) elTotalKaryawan.textContent = totalKaryawan.toLocaleString('id-ID');
+
+    const elPercent = document.getElementById('hrModalKpiPercent');
+    if (elPercent) elPercent.textContent = `${kpi.persentase || 0}%`;
+
+    // Update badge tab count
+    const countTk = document.getElementById('countHrTkSna');
+    const countMkt = document.getElementById('countHrMarketing');
+    if (state.currentHrBagian === 'tksna' && countTk) {
+        countTk.textContent = totalJadwal.toLocaleString('id-ID');
+    } else if (state.currentHrBagian === 'marketing' && countMkt) {
+        countMkt.textContent = totalJadwal.toLocaleString('id-ID');
+    }
+
+    // Filter items
+    const rawItems = Array.isArray(data.items) ? data.items : [];
+    const filterStatus = state.currentHrStatus || 'all';
+    const q = state.hrSearchQuery;
+
+    let filtered = rawItems.filter(item => {
+        if (filterStatus === 'sesuai' && !item.is_sesuai) return false;
+        if (filterStatus === 'tidak_sesuai' && item.is_sesuai) return false;
+        if (filterStatus === 'alpha' && !item.is_alpha) return false;
+        if (filterStatus === 'terlambat' && !item.terlambat) return false;
+        if (filterStatus === 'beda_shift' && (item.is_sesuai || item.is_alpha || item.plan === 'OFF')) return false;
+
+        if (q) {
+            const matchNama = (item.nama_karyawan || '').toLowerCase().includes(q);
+            const matchNkk = (item.nkk || '').toLowerCase().includes(q);
+            const matchJabatan = (item.jabatan || '').toLowerCase().includes(q);
+            const matchPlan = (item.plan || '').toLowerCase().includes(q);
+            const matchAktual = (item.aktual || '').toLowerCase().includes(q);
+            const matchAlasan = (item.alasan || '').toLowerCase().includes(q);
+            const matchTgl = (item.tanggal || '').toLowerCase().includes(q);
+            if (!matchNama && !matchNkk && !matchJabatan && !matchPlan && !matchAktual && !matchAlasan && !matchTgl) {
+                return false;
+            }
+        }
+        return true;
+    });
+
+    // Sorting
+    const sort = state.hrSort || { column: 'tanggal', dir: 'desc' };
+    filtered.sort((a, b) => {
+        let valA = a[sort.column] ?? '';
+        let valB = b[sort.column] ?? '';
+        const cmp = typeof valA === 'number' ? valA - valB : String(valA).localeCompare(String(valB));
+        return sort.dir === 'asc' ? cmp : -cmp;
+    });
+
+    renderHrTable(filtered);
+    renderHrPagination(filtered.length);
+}
+
+function getShiftBadge(shiftStr, isPlan = false) {
+    if (!shiftStr || shiftStr === '-' || shiftStr === '') {
+        return '<span style="color: #94a3b8; font-weight: 500;">-</span>';
+    }
+    const s = String(shiftStr).trim().toUpperCase();
+    if (s.startsWith('S1')) {
+        const isLate = s.includes('.');
+        return `<span class="badge-satuan" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-weight: 700;">${s}${isLate ? ' • Telat' : ''}</span>`;
+    }
+    if (s.startsWith('S2')) {
+        const isLate = s.includes('.');
+        return `<span class="badge-satuan" style="background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-weight: 700;">${s}${isLate ? ' • Telat' : ''}</span>`;
+    }
+    if (s.startsWith('S3')) {
+        const isLate = s.includes('.');
+        return `<span class="badge-satuan" style="background: #fce7f3; color: #be185d; border: 1px solid #fbcfe8; font-weight: 700;">${s}${isLate ? ' • Telat' : ''}</span>`;
+    }
+    if (s === 'OFF' || s === 'LIBUR') {
+        return `<span class="badge-satuan" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 600;">LIBUR (OFF)</span>`;
+    }
+    if (s === 'A' || s === 'ALPHA') {
+        return `<span class="badge-satuan" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 700;">ALPHA</span>`;
+    }
+    if (s === 'IK') {
+        return `<span class="badge-satuan" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 700;">IZIN (IK)</span>`;
+    }
+    if (s === 'C' || s === 'CUTI') {
+        return `<span class="badge-satuan" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 600;">CUTI</span>`;
+    }
+    if (s === 'S' || s === 'SAKIT') {
+        return `<span class="badge-satuan" style="background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; font-weight: 600;">SAKIT</span>`;
+    }
+    return `<span class="badge-satuan" style="background: #f8fafc; color: #334155; border: 1px solid #e2e8f0;">${s}</span>`;
+}
+
+function renderHrTable(list) {
+    const tbody = document.getElementById('hrTableBody');
+    const footerStats = document.getElementById('hrModalFooterStats');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="11" class="subcon-empty-row">
+                    <i class="fa-solid fa-user-check" style="font-size: 2rem; color: #cbd5e1;"></i>
+                    <div style="margin-top: 8px;">Tidak ada data kehadiran yang sesuai dengan filter</div>
+                </td>
+            </tr>
+        `;
+        if (footerStats) footerStats.textContent = 'Menampilkan 0 Data Kehadiran';
+        return;
+    }
+
+    const pageSize = state.hrPageSize || 25;
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (state.hrCurrentPage > totalPages) state.hrCurrentPage = totalPages;
+    if (state.hrCurrentPage < 1) state.hrCurrentPage = 1;
+
+    const startIdx = (state.hrCurrentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const paged = list.slice(startIdx, endIdx);
+
+    let html = '';
+    paged.forEach((item, idx) => {
+        const isSesuai = item.is_sesuai;
+        const statusBadge = isSesuai
+            ? '<span class="service-status-pill status-live"><i class="fa-solid fa-check"></i> SESUAI</span>'
+            : '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;"><i class="fa-solid fa-triangle-exclamation"></i> TIDAK SESUAI</span>';
+
+        const planBadge = getShiftBadge(item.plan, true);
+        const aktualBadge = getShiftBadge(item.aktual, false);
+
+        let alasanColor = isSesuai ? '#16a34a' : '#d97706';
+        if (item.is_alpha) alasanColor = '#dc2626';
+
+        html += `
+            <tr>
+                <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
+                <td class="text-center font-mono" style="font-size: 0.82rem; font-weight: 600;">${item.tanggal_label || item.tanggal}</td>
+                <td class="font-mono" style="font-size: 0.82rem; color: #0284c7; font-weight: 600;">${item.nkk || '-'}</td>
+                <td><strong style="color: #0f172a;">${item.nama_karyawan}</strong></td>
+                <td style="font-size: 0.8rem; color: #64748b;">${item.jabatan || '-'}</td>
+                <td class="text-center">${planBadge}</td>
+                <td class="text-center">${aktualBadge}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem; color: ${item.jam_scan ? '#0f172a' : '#94a3b8'};">${item.jam_scan || '-'}</td>
+                <td class="text-center font-mono" style="font-size: 0.8rem; color: #64748b;">${item.jenis_scan || '-'}</td>
+                <td class="text-center">${statusBadge}</td>
+                <td>
+                    <span style="font-size: 0.8rem; color: ${alasanColor}; font-weight: 600;">
+                        ${item.alasan || (isSesuai ? 'Hadir Sesuai Shift Plan' : 'Penyimpangan Jadwal')}
+                    </span>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} Data Kehadiran (${state.currentHrBagian === 'tksna' ? 'TK SNA' : 'Marketing / Non-SNAM'})`;
+    }
+}
+
+function renderHrPagination(totalItems) {
+    const pageInfo = document.getElementById('hrPageInfo');
+    const btnPrev = document.getElementById('btnPrevHrPage');
+    const btnNext = document.getElementById('btnNextHrPage');
+
+    const pageSize = state.hrPageSize || 25;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+    if (pageInfo) {
+        pageInfo.textContent = `Halaman ${state.hrCurrentPage} dari ${totalPages} (${totalItems} Data)`;
+    }
+    if (btnPrev) btnPrev.disabled = state.hrCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = state.hrCurrentPage >= totalPages;
+}
+
+function changeHrPage(delta) {
+    state.hrCurrentPage = (state.hrCurrentPage || 1) + delta;
+    if (state.hrRawData) {
+        renderHrModalData(state.hrRawData);
+    }
+}
+
+function sortHr(column) {
+    if (!state.hrSort) {
+        state.hrSort = { column: 'tanggal', dir: 'desc' };
+    }
+    if (state.hrSort.column === column) {
+        state.hrSort.dir = state.hrSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.hrSort.column = column;
+        state.hrSort.dir = ['tanggal', 'nkk'].includes(column) ? 'desc' : 'asc';
+    }
+    if (state.hrRawData) {
+        renderHrModalData(state.hrRawData);
+    }
+}
+
+function renderHrTableLoading() {
+    const tbody = document.getElementById('hrTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = `
+        <tr class="skeleton-row">
+            <td colspan="11" class="text-center" style="padding: 30px;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #0284c7; margin-bottom: 8px;"></i>
+                <div style="font-weight: 500; color: #64748b;">Mengambil data kehadiran karyawan dari Atena ERP...</div>
+            </td>
+        </tr>
+    `;
+}
+
+function renderHrTableError(message) {
+    const tbody = document.getElementById('hrTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="11" class="subcon-empty-row" style="padding: 25px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; color: #ef4444; margin-bottom: 8px;"></i>
+                <div style="font-weight: 600; color: #b91c1c;">Gagal Memuat Data Kehadiran Karyawan</div>
+                <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">${message}</div>
+            </td>
+        </tr>
+    `;
 }

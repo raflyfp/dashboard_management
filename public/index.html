@@ -943,37 +943,44 @@
                     <div class="card-header">
                         <div class="card-title-group">
                             <div class="service-icon-box subcon-theme"><i class="fa-solid fa-boxes-packing"></i></div>
-                            <h2>Pengerjaan Subcon</h2>
+                            <div>
+                                <h2>Pengerjaan Subcon</h2>
+                                <span class="card-sub-title">Monitoring Output Mitra Subcon</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="card-body">
-                        <!-- Hero Jumlah Hasil Produksi Besar (Tanpa Persentase) -->
-                        <div class="subcon-hero">
-                            <div class="subcon-hero-number-row">
-                                <span class="subcon-val" id="totalPcsSUBCON">0</span>
-                                <span class="subcon-unit">PCS</span>
+                        <!-- Percent Hero: Pengisian Subcon Bulan Ini s/d Hari Ini -->
+                        <div class="percent-hero">
+                            <div class="percent-number-row">
+                                <span class="percent-val kpi-color-green" id="percentSUBCON">0%</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
-                            <div class="subcon-hero-sub">
-                                <i class="fa-solid fa-industry"></i> Hasil Produksi (Hari Ini)
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill kpi-fill-green" id="barFillSUBCON" style="width: 0%"></div>
                             </div>
                         </div>
 
-                        <!-- 2 Metrik Inti: Jumlah Subcon, Jumlah Karyawan -->
+                        <!-- 3 Metrik Inti: Hasil Produksi PCS, Jumlah Mitra, Karyawan -->
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Jumlah Subcon</span>
-                                <span class="m-val" id="subconJumlahSubcon">1</span>
+                                <span class="m-lbl">Hasil Produksi</span>
+                                <span class="m-val" id="totalPcsSUBCON">0 PCS</span>
                             </div>
                             <div class="metric-box m-info">
-                                <span class="m-lbl">Jumlah Karyawan</span>
-                                <span class="m-val text-primary" id="subconJumlahKaryawan">26</span>
+                                <span class="m-lbl">Jumlah Mitra</span>
+                                <span class="m-val text-primary" id="subconJumlahSubcon">1</span>
+                            </div>
+                            <div class="metric-box m-success">
+                                <span class="m-lbl">Karyawan</span>
+                                <span class="m-val text-success" id="subconJumlahKaryawan">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail subcon-btn" onclick="openSubconModal()">
+                        <button class="btn-detail" onclick="openSubconModal()">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -984,45 +991,49 @@
                 <!-- MODUL STANDBY / BELUM TERHUBUNG (DILETAKKAN DI PALING BAWAH) -->
                 <!-- ============================================================ -->
 
-                <!-- CARD: HR (STANDBY) -->
+                <!-- CARD: HR (LIVE ATENA ERP) -->
                 <section class="service-card" id="card-HR">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="service-icon-box ext-theme"><i class="fa-solid fa-users"></i></div>
-                            <h2>HR</h2>
+                            <div class="service-icon-box hr-theme"><i class="fa-solid fa-users"></i></div>
+                            <div>
+                                <h2>Kehadiran Karyawan (HR)</h2>
+                                <span class="card-sub-title">Kehadiran Aktual vs Jadwal Plan</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="card-body">
+                        <!-- Percent Hero: Kesesuaian Kehadiran Bulan Ini s/d Hari Ini -->
                         <div class="percent-hero">
                             <div class="percent-number-row">
-                                <span class="percent-val kpi-color-red" id="percentHR">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-val kpi-color-green" id="percentHR">0%</span>
+                                <span class="percent-lbl">Bulan Ini</span>
                             </div>
                             <div class="progress-bar-track">
-                                <div class="progress-bar-fill kpi-fill-red" id="barFillHR" style="width: 0%"></div>
+                                <div class="progress-bar-fill kpi-fill-green" id="barFillHR" style="width: 0%"></div>
                             </div>
                         </div>
 
+                        <!-- 3 Metrik Inti: Total Jadwal, Sesuai Plan, Tidak Sesuai -->
                         <div class="metrics-row">
                             <div class="metric-box">
-                                <span class="m-lbl">Total</span>
+                                <span class="m-lbl">Total Jadwal</span>
                                 <span class="m-val" id="totalHR">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Selesai</span>
+                                <span class="m-lbl">Sesuai Plan</span>
                                 <span class="m-val text-success" id="selesaiHR">0</span>
                             </div>
                             <div class="metric-box m-warning">
-                                <span class="m-lbl">Belum</span>
+                                <span class="m-lbl">Tidak Sesuai</span>
                                 <span class="m-val text-warning" id="belumHR">0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail ext-btn"
-                            onclick="openAppModal('Detail', 'Modul belum terhubung dengan Endpoint API.')">
+                        <button class="btn-detail" onclick="openHrModal()">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -1369,13 +1380,13 @@
                             </div>
 
                             <div class="filter-pills subcon-range-pills" style="margin: 0;">
-                                <button class="filter-pill active" id="btnRangeToday" onclick="switchSubconRange('today')">
+                                <button class="filter-pill" id="btnRangeToday" onclick="switchSubconRange('today')">
                                     <i class="fa-solid fa-clock"></i> Hari Ini
                                 </button>
                                 <button class="filter-pill" id="btnRangeWeek" onclick="switchSubconRange('week')">
                                     <i class="fa-solid fa-calendar-week"></i> 7 Hari
                                 </button>
-                                <button class="filter-pill" id="btnRangeMonth" onclick="switchSubconRange('month')">
+                                <button class="filter-pill active" id="btnRangeMonth" onclick="switchSubconRange('month')">
                                     <i class="fa-solid fa-calendar-days"></i> Bulan Ini
                                 </button>
                             </div>
@@ -2249,6 +2260,7 @@
                                             Jumlah <i class="fa-solid fa-sort sort-icon"></i>
                                         </th>
                                         <th style="width: 80px;">User Entry</th>
+                                        <th style="width: 120px;" class="text-center">Accept Oleh / Tgl</th>
                                         <th style="width: 120px;" class="text-center">Status BR</th>
                                     </tr>
                                 </thead>
@@ -2507,6 +2519,216 @@
                     <span id="pbfLastSyncTime" style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
                 </div>
                 <button class="btn-secondary" onclick="closePbfModal()">Tutup</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 9. MODAL MONITORING KEHADIRAN KARYAWAN HR (ATENA ERP)        -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="hrModal" aria-hidden="true">
+        <div class="modal-card modal-card-xl">
+
+            <div class="modal-header modal-header-stacked">
+                <div class="modal-header-top">
+                    <div class="modal-title-group">
+                        <div class="modal-icon hr-theme"><i class="fa-solid fa-users"></i></div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h3 id="hrModalTitle">Monitoring Kehadiran Karyawan (HR)</h3>
+                                <span class="service-status-pill status-live" style="font-size: 0.72rem;">Live Atena</span>
+                            </div>
+                            <p id="hrModalSubtitle">Presensi Aktual Tenaga Kerja &amp; Marketing terhadap Jadwal Roster Plan (Shift, Libur, Alpha, Terlambat)</p>
+                        </div>
+                    </div>
+                    <!-- Close Button Pinned at Top Right -->
+                    <button class="modal-close-btn" onclick="closeHrModal()" title="Tutup">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Bar Filter: Date Range Picker, Presets, Reset, Search & Sync -->
+                <div class="subcon-filter-bar" style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="text" id="hrDateStart" class="prod-date-input flatpickr-date" readonly title="Tanggal Awal" onchange="handleHrDateChange('start')" autocomplete="off">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="text" id="hrDateEnd" class="prod-date-input flatpickr-date" readonly title="Tanggal Akhir" onchange="handleHrDateChange('end')" autocomplete="off">
+                                </div>
+                            </div>
+
+                            <!-- Shortcut Presets Cepat -->
+                            <div class="filter-pills hr-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnQuickHrMonth" onclick="setHrQuickDate('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickHrWeek" onclick="setHrQuickDate('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnQuickHrToday" onclick="setHrQuickDate('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickHrAll" onclick="setHrQuickDate('all')">
+                                    <i class="fa-solid fa-layer-group"></i> Semua
+                                </button>
+                            </div>
+
+                            <!-- Tombol Reset Filter -->
+                            <button class="filter-reset-btn" id="btnResetHrFilter" onclick="resetHrFilter()" title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Right Group: Search Box + Sync Atena -->
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="hrSearchInput" placeholder="Cari Nama, NKK, Jabatan..." oninput="handleHrSearch(this.value)">
+                            </div>
+
+                            <button class="modal-refresh-btn" id="btnSyncHr" onclick="syncHrData()" title="Sinkronkan dengan Atena ERP">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Modal HR -->
+            <div class="modal-body subcon-modal-body">
+                <!-- 4 KPI Mini Summary HR -->
+                <div class="subcon-kpi-grid hr-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-calendar-check"></i></div>
+                        <div>
+                            <div class="kpi-num" id="hrModalKpiTotalJadwal">0</div>
+                            <div class="kpi-label">Total Jadwal</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
+                        <div>
+                            <div class="kpi-num text-success" id="hrModalKpiSesuai">0</div>
+                            <div class="kpi-label">Sesuai Plan (<span id="hrModalKpiPercent">0%</span>)</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini text-warning"><i class="fa-solid fa-circle-xmark"></i></div>
+                        <div>
+                            <div class="kpi-num text-warning" id="hrModalKpiTidakSesuai">0</div>
+                            <div class="kpi-label">Tidak Sesuai Plan</div>
+                        </div>
+                    </div>
+                    <div class="subcon-kpi-card">
+                        <div class="kpi-icon-mini" style="color: #8b5cf6;"><i class="fa-solid fa-users"></i></div>
+                        <div>
+                            <div class="kpi-num" style="color: #8b5cf6;" id="hrModalKpiTotalKaryawan">0</div>
+                            <div class="kpi-label">Total Karyawan Aktif</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bagian Tabs: TK SNA vs Marketing + Filter Status -->
+                <div class="subcon-detail-section" style="margin-top: 0.8rem;">
+                    <div class="modal-tab-nav-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 0.4rem;">
+                        <div class="subcon-tabs-nav" style="border: none; padding: 0; margin: 0;">
+                            <button class="subcon-tab-btn active" id="btnTabHrTkSna" onclick="switchHrBagian('tksna')">
+                                <i class="fa-solid fa-user-gear"></i> TK SNA (<span id="countHrTkSna">0</span>)
+                            </button>
+                            <button class="subcon-tab-btn" id="btnTabHrMarketing" onclick="switchHrBagian('marketing')">
+                                <i class="fa-solid fa-bullhorn"></i> Marketing / Non-SNAM (<span id="countHrMarketing">0</span>)
+                            </button>
+                        </div>
+
+                        <div class="tab-group-right" style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Filter Status:</span>
+                            <select id="selectHrStatus" class="purchasing-select" onchange="switchHrStatus(this.value)">
+                                <option value="all">Semua Status</option>
+                                <option value="sesuai">Sesuai Plan Saja</option>
+                                <option value="tidak_sesuai">Tidak Sesuai Plan Saja</option>
+                                <option value="alpha">Alpha (Tidak Hadir) Saja</option>
+                                <option value="terlambat">Terlambat Masuk Saja</option>
+                                <option value="beda_shift">Beda Shift Saja</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Panduan Kode Atena -->
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 0.5rem; padding: 6px 12px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.74rem;">
+                        <span style="font-weight: 700; color: #475569;"><i class="fa-solid fa-circle-info"></i> Panduan Kode Atena:</span>
+                        <span><b style="color: #4338ca;">S1 / S2 / S3</b>: Shift Kerja</span>
+                        <span><b style="color: #64748b;">OFF</b>: Libur Roster</span>
+                        <span><b style="color: #b45309;">S1. / S2.</b>: Terlambat Masuk</span>
+                        <span><b style="color: #dc2626;">A</b>: Alpha (Mangkir)</span>
+                        <span><b style="color: #854d0e;">IK</b>: Izin Keluar</span>
+                        <span><b style="color: #0e7490;">C / S</b>: Cuti / Sakit</span>
+                    </div>
+
+                    <!-- Table Container -->
+                    <div class="table-responsive" style="margin-top: 0.6rem;">
+                        <table class="tickets-table subcon-table" id="tableHrKehadiran">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45px;" class="text-center">No</th>
+                                    <th style="width: 95px;" class="text-center sortable-th" onclick="sortHr('tanggal')">
+                                        Tanggal <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 120px;" class="sortable-th" onclick="sortHr('nkk')">
+                                        NKK <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th class="sortable-th" onclick="sortHr('nama')">
+                                        Nama Karyawan <i class="fa-solid fa-sort sort-icon"></i>
+                                    </th>
+                                    <th style="width: 130px;">Jabatan</th>
+                                    <th style="width: 80px;" class="text-center">Plan</th>
+                                    <th style="width: 80px;" class="text-center">Aktual</th>
+                                    <th style="width: 85px;" class="text-center">Jam Scan</th>
+                                    <th style="width: 85px;" class="text-center">Jenis Scan</th>
+                                    <th style="width: 110px;" class="text-center">Status</th>
+                                    <th style="width: 200px;">Keterangan &amp; Alasan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hrTableBody">
+                                <tr class="skeleton-row">
+                                    <td colspan="11" class="text-center">Memuat data kehadiran karyawan...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Controls HR -->
+                    <div class="purchasing-pagination-bar" id="hrPaginationBar"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                        <div style="font-size: 0.8rem; color: var(--text-muted);" id="hrPageInfo">
+                            Halaman 1 dari 1
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="pagination-btn" id="btnPrevHrPage" onclick="changeHrPage(-1)" disabled>
+                                <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+                            </button>
+                            <button class="pagination-btn" id="btnNextHrPage" onclick="changeHrPage(1)" disabled>
+                                Berikutnya <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div class="modal-stats" id="hrModalFooterStats">
+                        Menampilkan data monitoring Kehadiran Karyawan vs Plan Atena ERP
+                    </div>
+                    <span id="hrLastSyncTime" style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
+                </div>
+                <button class="btn-secondary" onclick="closeHrModal()">Tutup</button>
             </div>
 
         </div>

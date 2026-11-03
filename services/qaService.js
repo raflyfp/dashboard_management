@@ -182,6 +182,9 @@ class QaService {
      */
     async fetchRingkasan(bagian = 'grsmaterial', dates = {}) {
         const body = { bagian };
+        if (bagian === 'acceptbr') {
+            body.status = 'semua';
+        }
         if (dates.tglawal && dates.tglakhir) {
             body.tglawal = dates.tglawal;
             body.tglakhir = dates.tglakhir;
@@ -250,6 +253,9 @@ class QaService {
      */
     async fetchDetails(bagian = 'grsmaterial', dates = {}) {
         const body = { bagian };
+        if (bagian === 'acceptbr') {
+            body.status = 'semua';
+        }
         if (dates.tglawal && dates.tglakhir) {
             body.tglawal = dates.tglawal;
             body.tglakhir = dates.tglakhir;
@@ -365,6 +371,11 @@ class QaService {
                 });
             } else if (bagian === 'acceptbr') {
                 return rawRows.map((r, idx) => {
+                    const statusRaw = String(r.status || '').trim().toUpperCase();
+                    const isSudahAccept = statusRaw.includes('SUDAH');
+                    const statusCode = isSudahAccept ? 'terpenuhi' : 'belum';
+                    const statusLabel = isSudahAccept ? 'Sudah Accept BR' : 'Belum Accept BR';
+
                     return {
                         no: idx + 1,
                         no_prh: r.no_prh || '-',
@@ -379,8 +390,12 @@ class QaService {
                         batch: r.batch || '-',
                         jumlah: Number(r.jumlah || 0),
                         user_entry: r.user_entry || '-',
-                        status: 'Belum Batch Record',
-                        status_code: 'belum',
+                        status: statusLabel,
+                        status_code: statusCode,
+                        is_accept: isSudahAccept,
+                        user_accept: r.user_accept || '-',
+                        tgl_accept: r.tgl_accept || '-',
+                        tgl_accept_label: formatShortDate(r.tgl_accept)
                     };
                 });
             }
@@ -534,10 +549,12 @@ class QaService {
                 }
             };
         } else if (bagian === 'acceptbr') {
-            const totalBr = ringkasanKpi.total_br || 0;
-            const brBelum = ringkasanKpi.br_belum || items.length;
-            const brSudah = ringkasanKpi.br_sudah || Math.max(0, totalBr - brBelum);
-            const persentase = ringkasanKpi.persentase ?? (totalBr > 0 ? Number(((brSudah / totalBr) * 100).toFixed(1)) : 0);
+            const countSudah = items.filter(i => i.status_code === 'terpenuhi').length;
+            const countBelum = items.filter(i => i.status_code === 'belum').length;
+            const totalBr = ringkasanKpi.total_br || items.length;
+            const brSudah = ringkasanKpi.br_sudah || countSudah;
+            const brBelum = ringkasanKpi.br_belum || countBelum;
+            const persentase = totalBr > 0 ? Number(((brSudah / totalBr) * 100).toFixed(1)) : 0;
 
             return {
                 success: true,
