@@ -374,7 +374,7 @@ html, body {
 .status-standby { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
 /* Penyeragaman Icon Background Themes */
-.it-theme, .tk-theme, .ga-theme, .subcon-theme, .purchasing-theme, .produksi-theme, .logistik-theme, .qa-theme, .pbf-theme, .hr-theme {
+.it-theme, .tk-theme, .ga-theme, .subcon-theme, .purchasing-theme, .produksi-theme, .logistik-theme, .qa-theme, .pbf-theme, .hr-theme, .dev-theme, .dc-theme {
     background: var(--sna-blue-light);
     color: var(--sna-blue);
 }
@@ -591,11 +591,11 @@ html, body {
 }
 
 /* Penyeragaman Tombol Detail (Biru Tema SNA Medika untuk Semua Kartu Aktif) */
-.it-btn, .tk-btn, .ga-btn, .subcon-btn, .purchasing-btn, .produksi-btn, .logistik-btn, .qa-btn, .pbf-btn, .hr-btn {
+.it-btn, .tk-btn, .ga-btn, .subcon-btn, .purchasing-btn, .produksi-btn, .logistik-btn, .qa-btn, .pbf-btn, .hr-btn, .dev-btn, .dc-btn {
     background: var(--sna-blue);
     color: #fff;
 }
-.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover, .purchasing-btn:hover, .produksi-btn:hover, .logistik-btn:hover, .qa-btn:hover, .pbf-btn:hover, .hr-btn:hover {
+.it-btn:hover, .tk-btn:hover, .ga-btn:hover, .subcon-btn:hover, .purchasing-btn:hover, .produksi-btn:hover, .logistik-btn:hover, .qa-btn:hover, .pbf-btn:hover, .hr-btn:hover, .dev-btn:hover, .dc-btn:hover {
     background: #0c4a86;
 }
 
@@ -646,7 +646,10 @@ html, body {
     align-items: center;
     gap: 2.2rem;
     white-space: nowrap;
-    animation: tickerScroll 45s linear infinite;
+    width: max-content;
+    min-width: 100%;
+    will-change: transform;
+    animation: tickerScroll 65s linear infinite;
 }
 
 .ticker-items:hover {
@@ -2551,4 +2554,76 @@ html, body {
 .hr-theme {
     background: rgba(37, 99, 235, 0.12);
     color: #2563eb;
+}
+
+
+/* Penjelasan Ambang Batas Status KPI di Navbar */
+.kpi-status-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: 0.85rem;
+    padding: 0.2rem 0.5rem;
+    background: #f8fafc;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 20px;
+}
+
+.legend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.15rem 0.55rem;
+    border-radius: 12px;
+    letter-spacing: 0.1px;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.legend-chip .legend-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-chip.chip-green {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.legend-chip.chip-green .legend-dot {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+}
+
+.legend-chip.chip-yellow {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.legend-chip.chip-yellow .legend-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+}
+
+.legend-chip.chip-red {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.legend-chip.chip-red .legend-dot {
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.7);
+}
+
+@media (max-width: 992px) {
+    .kpi-status-legend {
+        display: none;
+    }
 }

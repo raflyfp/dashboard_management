@@ -167,9 +167,70 @@ const state = {
 };
 
 // ====================================================================
+// KONFIGURASI URUTAN TAMPILAN CARD DASHBOARD (1 - 21)
+// ====================================================================
+// Silakan ubah angka (1 sampai 21) di bawah ini untuk mengatur urutan
+// kartu dashboard sesuai preferensi Anda kapan saja.
+// ====================================================================
+window.CARD_DISPLAY_ORDER = {
+    'card-IT': 1,                       // 1. Layanan IT
+    'card-TK': 2,                       // 2. Layanan Teknik
+    'card-GA': 3,                       // 3. Layanan General Affair (GA)
+    'card-PROD_FINISHING': 4,           // 4. Produksi Finishing
+    'card-PROD_ANTISEPTIK': 5,          // 5. Produksi Antiseptik
+    'card-PROD_CW': 6,                  // 6. Produksi Cotton Wadding (CW)
+    'card-PROD_SIZING': 7,              // 7. Produksi Sizing
+    'card-PROD_POLIGYP': 8,             // 8. Produksi Poligyp
+    'card-PROD_IRONING': 9,             // 9. Produksi Ironing
+    'card-PROD_SURGICAL_MESIN': 10,     // 10. Produksi Surgical Mesin
+    'card-PROD_SURGICAL_PACKING': 11,   // 11. Produksi Surgical Packing
+    'card-PURCHASING': 12,              // 12. Purchasing
+    'card-QA': 13,                      // 13. Quality Assurance (QA)
+    'card-LOGISTIK': 14,                // 14. Logistik
+    'card-WH_FG': 15,                   // 15. Gudang Jadi (WH FG)
+    'card-WH_MAT': 16,                  // 16. Gudang Bahan (WH MAT)
+    'card-PBF': 17,                     // 17. PBF Distribusi
+    'card-HR': 18,                      // 18. Kehadiran Karyawan (HR)
+    'card-DC': 19,                      // 19. Document Control (DC Paperless)
+    'card-DEVELOPMENT': 20,             // 20. R&D Development
+    'card-SUBCON': 21                   // 21. Monitoring Subcon (Paling Bawah)
+};
+
+/**
+ * Menerapkan urutan tampilan kartu dashboard ke elemen DOM
+ */
+function applyCardDisplayOrder() {
+    try {
+        const orderConfig = window.CARD_DISPLAY_ORDER;
+        const grid = document.querySelector('.cards-grid-10');
+        if (!orderConfig || !grid) return;
+
+        const cards = Array.from(grid.querySelectorAll('.service-card'));
+        cards.forEach(card => {
+            const cardId = card.id;
+            const orderNum = orderConfig[cardId] !== undefined ? orderConfig[cardId] : 999;
+            card.style.order = orderNum;
+            card.setAttribute('data-card-order', orderNum);
+        });
+
+        // Urutkan juga child elements di dalam container grid DOM
+        cards.sort((a, b) => {
+            const orderA = orderConfig[a.id] !== undefined ? orderConfig[a.id] : 999;
+            const orderB = orderConfig[b.id] !== undefined ? orderConfig[b.id] : 999;
+            return orderA - orderB;
+        });
+
+        cards.forEach(card => grid.appendChild(card));
+    } catch (err) {
+        console.warn('⚠️ [applyCardDisplayOrder Error]:', err);
+    }
+}
+
+// ====================================================================
 // 1. INISIALISASI SAAT HALAMAN SELESAI DIMUAT
 // ====================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    applyCardDisplayOrder();
     initClock();
     initPeriodSelector();
     initModalDatePickers();
@@ -343,6 +404,12 @@ function refreshOpenModalOnPeriodChange() {
     if (document.getElementById('hrModal')?.classList.contains('active') && typeof setHrQuickDate === 'function') {
         setHrQuickDate(state.currentHrRange || 'month');
     }
+    if (document.getElementById('devModal')?.classList.contains('active') && typeof setDevQuickDate === 'function') {
+        setDevQuickDate(state.currentDevRange || 'month');
+    }
+    if (document.getElementById('dcModal')?.classList.contains('active') && typeof setDcQuickDate === 'function') {
+        setDcQuickDate(state.currentDcRange || 'month');
+    }
 }
 
 // ====================================================================
@@ -360,7 +427,9 @@ function initModalDatePickers() {
         'prodDateStart', 'prodDateEnd',
         'logistikDateStart', 'logistikDateEnd',
         'whFgDateStart', 'whFgDateEnd',
-        'whMatDateStart', 'whMatDateEnd'
+        'whMatDateStart', 'whMatDateEnd',
+        'devDateStart', 'devDateEnd',
+        'dcDateStart', 'dcDateEnd'
     ];
 
     dateInputIds.forEach(id => {
@@ -628,10 +697,11 @@ async function fetchDashboardStats(force = false) {
         // Simpan data layanan ke state lokal
         state.servicesData = data.layanan;
 
-        // Render Data ke Tampilan
-        renderGlobalKPI(data.kpi_global);
-        renderServiceCards(data.layanan);
-        renderKpiTrackerTicker(data);
+        // Render Data ke Tampilan (Terisolasi try/catch agar satu modul tidak memblokir yang lain)
+        try { renderGlobalKPI(data.kpi_global); } catch (e) { console.error('Error renderGlobalKPI:', e); }
+        try { renderServiceCards(data.layanan); } catch (e) { console.error('Error renderServiceCards:', e); }
+        try { renderKpiTrackerTicker(data); } catch (e) { console.error('Error renderKpiTrackerTicker:', e); }
+        try { applyCardDisplayOrder(); } catch (e) { console.error('Error applyCardDisplayOrder:', e); }
         updateSystemStatus(true, Boolean(data._cached));
 
         // Reset hitung mundur normal setelah fetch sukses
@@ -677,6 +747,13 @@ function renderGlobalKPI(kpi) {
 // ====================================================================
 // 7. RENDER KARTU MONITORING (IT, TEKNIK, GA, SUBCON, DLL)
 // ====================================================================
+function getKpiClass(val) {
+    const v = Number(val || 0);
+    if (v > 85) return { text: 'kpi-color-green', fill: 'kpi-fill-green' };
+    if (v >= 75) return { text: 'kpi-color-yellow', fill: 'kpi-fill-yellow' };
+    return { text: 'kpi-color-red', fill: 'kpi-fill-red' };
+}
+
 function renderServiceCards(layanan) {
     if (!layanan) return;
 
@@ -721,18 +798,69 @@ function renderServiceCards(layanan) {
             return;
         }
 
-        // Penanganan Modul Kehadiran Karyawan (HR)
+        // Penanganan Modul Kehadiran Karyawan (HR) - Dual Hero: TK SNA & Marketing
         if (code === 'HR') {
             const now = new Date();
             const isCurrent = (state.selectedYear == now.getFullYear() && state.selectedMonth == (now.getMonth() + 1));
-            const lblHrPeriod = document.getElementById('lblHrPeriod');
-            if (lblHrPeriod) {
-                lblHrPeriod.textContent = isCurrent ? 'Hari Ini' : (state.selectedMonthName || 'Bulan Ini');
+            const periodLabel = isCurrent ? 'Hari Ini' : (state.selectedMonthName || 'Bulan Ini');
+
+            const lblTk = document.getElementById('lblHrPeriodTkSna');
+            const lblMkt = document.getElementById('lblHrPeriodMarketing');
+            if (lblTk) lblTk.textContent = periodLabel;
+            if (lblMkt) lblMkt.textContent = periodLabel;
+
+            const tksna = item.sub_metrics?.tksna || {};
+            const mkt = item.sub_metrics?.marketing || {};
+
+            const percentTk = Number(tksna.persentase || 0);
+            const percentMkt = Number(mkt.persentase || 0);
+
+            const elTk = document.getElementById('percentHrTkSna');
+            const barTk = document.getElementById('barFillHrTkSna');
+            if (elTk) {
+                const kpiTk = getKpiClass(percentTk);
+                elTk.textContent = percentTk + '%';
+                elTk.className = 'percent-val ' + kpiTk.text;
+                if (barTk) {
+                    barTk.style.width = Math.min(Math.max(percentTk, 0), 100) + '%';
+                    barTk.className = 'progress-bar-fill ' + kpiTk.fill;
+                }
+            }
+
+            const elMkt = document.getElementById('percentHrMarketing');
+            const barMkt = document.getElementById('barFillHrMarketing');
+            if (elMkt) {
+                const kpiMkt = getKpiClass(percentMkt);
+                elMkt.textContent = percentMkt + '%';
+                elMkt.className = 'percent-val ' + kpiMkt.text;
+                if (barMkt) {
+                    barMkt.style.width = Math.min(Math.max(percentMkt, 0), 100) + '%';
+                    barMkt.className = 'progress-bar-fill ' + kpiMkt.fill;
+                }
+            }
+
+            // Fallback hidden element
+            const percentEl = document.getElementById('percentHR');
+            if (percentEl) percentEl.textContent = (item.persentase_selesai || 0) + '%';
+
+            animateCounter('totalHR', item.total_tiket || item.total || 0);
+            animateCounter('selesaiHR', item.selesai || 0);
+            animateCounter('belumHR', item.belum_selesai || 0);
+            return;
+        }
+
+        // Penanganan Modul Document Control (DC)
+        if (code === 'DC') {
+            const now = new Date();
+            const isCurrent = (state.selectedYear == now.getFullYear() && state.selectedMonth == (now.getMonth() + 1));
+            const lblDc = document.getElementById('lblDcPeriod');
+            if (lblDc) {
+                lblDc.textContent = isCurrent ? (state.selectedMonthName || 'Bulan Ini') : `${state.selectedMonthName} ${state.selectedYear}`;
             }
 
             const percent = Number(item.persentase_selesai || 0);
-            const percentEl = document.getElementById('percentHR');
-            const barFill = document.getElementById('barFillHR');
+            const percentEl = document.getElementById('percentDC');
+            const barFill = document.getElementById('barFillDC');
             const kpi = getKpiClass(percent);
             if (percentEl) {
                 percentEl.textContent = percent + '%';
@@ -743,9 +871,37 @@ function renderServiceCards(layanan) {
                 barFill.className = 'progress-bar-fill ' + kpi.fill;
             }
 
-            animateCounter('totalHR', item.total_tiket || item.total || 0);
-            animateCounter('selesaiHR', item.selesai || 0);
-            animateCounter('belumHR', item.belum_selesai || 0);
+            animateCounter('totalDC', item.total_tiket || item.total || 0);
+            animateCounter('selesaiDC', item.selesai || 0);
+            animateCounter('belumDC', item.belum_selesai || 0);
+            return;
+        }
+
+        // Penanganan Modul Development (R&D)
+        if (code === 'DEVELOPMENT') {
+            const now = new Date();
+            const isCurrent = (state.selectedYear == now.getFullYear() && state.selectedMonth == (now.getMonth() + 1));
+            const lblDev = document.getElementById('lblDevPeriod');
+            if (lblDev) {
+                lblDev.textContent = isCurrent ? (state.selectedMonthName || 'Bulan Ini') : `${state.selectedMonthName} ${state.selectedYear}`;
+            }
+
+            const percent = Number(item.persentase_selesai || 0);
+            const percentEl = document.getElementById('percentDEVELOPMENT');
+            const barFill = document.getElementById('barFillDEVELOPMENT');
+            const kpi = getKpiClass(percent);
+            if (percentEl) {
+                percentEl.textContent = percent + '%';
+                percentEl.className = 'percent-val ' + kpi.text;
+            }
+            if (barFill) {
+                barFill.style.width = Math.min(Math.max(percent, 0), 100) + '%';
+                barFill.className = 'progress-bar-fill ' + kpi.fill;
+            }
+
+            animateCounter('totalDEVELOPMENT', item.total_tiket || item.total || 0);
+            animateCounter('selesaiDEVELOPMENT', item.selesai || 0);
+            animateCounter('belumDEVELOPMENT', item.belum_selesai || 0);
             return;
         }
 
@@ -811,11 +967,6 @@ function renderServiceCards(layanan) {
         }
 
         // 3. Update Status Badge (Live vs Standby) & Dual/Triple Hero secara dinamis
-        const getKpiClass = (val) => {
-            if (val > 85) return { text: 'kpi-color-green', fill: 'kpi-fill-green' };
-            if (val >= 75) return { text: 'kpi-color-yellow', fill: 'kpi-fill-yellow' };
-            return { text: 'kpi-color-red', fill: 'kpi-fill-red' };
-        };
 
         if (code === 'PURCHASING') {
             const matPct = Number(item.persentase_material ?? item.material?.persentase ?? 0);
@@ -929,141 +1080,179 @@ function renderKpiTrackerTicker(data) {
         return;
     }
 
-    const kpi = data.kpi_global || {};
-    const layanan = data.layanan || {};
-    const subcon = layanan.SUBCON || {};
+    try {
+        const kpi = data.kpi_global || {};
+        const layanan = data.layanan || {};
+        const subcon = layanan.SUBCON || {};
 
-    const items = [];
+        const items = [];
 
-    // 1. Capaian Produksi Subcon
-    const totalPcs = Number(subcon.total_output_pcs || 0).toLocaleString('id-ID');
-    const namaSubcon = subcon.subcon_nama || 'SIMAN';
-    const totalKaryawan = subcon.total_karyawan || 26;
-    items.push(`
-        <span class="ticker-item">
-            <i class="fa-solid fa-boxes-packing" style="color: #6366f1;"></i>
-            <span>Produksi Subcon:</span>
-            <b style="color: #6366f1;">${totalPcs} PCS</b>
-            <span class="ticker-kpi-sub">(Mitra ${namaSubcon} • ${totalKaryawan} Tenaga Kerja)</span>
-        </span>
-    `);
-
-    // 2. Capaian Tiket Operasional Selesai
-    const selesaiTiket = kpi.total_selesai || 0;
-    const totalTiket = kpi.total_efektif || kpi.total_tiket || 0;
-    items.push(`
-        <span class="ticker-item">
-            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i>
-            <span>Tiket Selesai:</span>
-            <b style="color: #10b981;">${selesaiTiket} Tiket</b>
-            <span class="ticker-kpi-sub">(dari total ${totalTiket} tiket)</span>
-        </span>
-    `);
-
-    // 3. Tingkat Respon / Efektivitas Layanan
-    // const persentase = kpi.persentase_selesai || 0;
-    // items.push(`
-    //     <span class="ticker-item">
-    //         <i class="fa-solid fa-bullseye" style="color: #0284c7;"></i>
-    //         <span>Tingkat Respon Layanan:</span>
-    //         <b style="color: #0284c7;">${persentase}%</b>
-    //     </span>
-    // `);
-
-    // 4. Tiket Dalam Proses
-    const pendingTiket = kpi.total_belum_selesai || 0;
-    items.push(`
-        <span class="ticker-item">
-            <i class="fa-solid fa-clock-rotate-left" style="color: #f59e0b;"></i>
-            <span>Tiket Dalam Proses:</span>
-            <b style="color: #d97706;">${pendingTiket} Tiket</b>
-        </span>
-    `);
-
-    // 5. Realisasi Per Divisi Operasional (IT, TK, GA)
-    if (layanan.IT) {
+        // 1. Capaian Produksi Subcon
+        const totalPcs = Number(subcon.total_output_pcs || 0).toLocaleString('id-ID');
+        const namaSubcon = subcon.subcon_nama || 'SIMAN';
+        const totalKaryawan = subcon.total_karyawan || 27;
         items.push(`
             <span class="ticker-item">
-                <span class="tag tag-it">IT</span>
-                <b>${layanan.IT.selesai}/${layanan.IT.total_tiket} Selesai</b>
-                <span class="ticker-kpi-sub">(${layanan.IT.persentase_selesai}%)</span>
+                <i class="fa-solid fa-boxes-packing" style="color: #6366f1;"></i>
+                <span>Produksi Subcon:</span>
+                <b style="color: #6366f1;">${totalPcs} PCS</b>
+                <span class="ticker-kpi-sub">(Mitra ${namaSubcon} • ${totalKaryawan} Tenaga Kerja)</span>
             </span>
         `);
-    }
-    if (layanan.TK) {
-        items.push(`
-            <span class="ticker-item">
-                <span class="tag tag-tk">TK</span>
-                <b>${layanan.TK.selesai}/${layanan.TK.total_tiket} Selesai</b>
-                <span class="ticker-kpi-sub">(${layanan.TK.persentase_selesai}%)</span>
-            </span>
-        `);
-    }
-    if (layanan.GA) {
-        items.push(`
-            <span class="ticker-item">
-                <span class="tag tag-ga">GA</span>
-                <b>${layanan.GA.selesai}/${layanan.GA.total_tiket} Selesai</b>
-                <span class="ticker-kpi-sub">(${layanan.GA.persentase_selesai}%)</span>
-            </span>
-        `);
-    }
 
-    // 6. Realisasi Penyelesaian PP Produksi (Atena ERP)
-    if (data.kpi_produksi && data.kpi_produksi.total_pp > 0) {
-        const prodKpi = data.kpi_produksi;
+        // 2. Capaian Tiket Operasional Selesai
+        const selesaiTiket = kpi.total_selesai || 0;
+        const totalTiket = kpi.total_efektif || kpi.total_tiket || 0;
         items.push(`
             <span class="ticker-item">
-                <i class="fa-solid fa-industry" style="color: #2563eb;"></i>
-                <span>Penyelesaian PP Produksi:</span>
-                <b style="color: #2563eb;">${prodKpi.total_memenuhi}/${prodKpi.total_pp} PP</b>
-                <span class="ticker-kpi-sub">(${prodKpi.persentase}% • Live Atena ERP)</span>
+                <i class="fa-solid fa-circle-check" style="color: #10b981;"></i>
+                <span>Tiket Selesai:</span>
+                <b style="color: #10b981;">${selesaiTiket} Tiket</b>
+                <span class="ticker-kpi-sub">(dari total ${totalTiket} tiket • ${kpi.persentase_selesai || 0}%)</span>
             </span>
         `);
-    }
 
-    // 7. Realisasi Pemenuhan PR Purchasing (Atena ERP)
-    if (layanan.PURCHASING && (layanan.PURCHASING.total_tiket > 0 || layanan.PURCHASING.is_active)) {
-        const pur = layanan.PURCHASING;
+        // 3. Tiket Dalam Proses
+        const pendingTiket = kpi.total_belum_selesai || 0;
         items.push(`
             <span class="ticker-item">
-                <i class="fa-solid fa-cart-shopping" style="color: #0284c7;"></i>
-                <span>Pemenuhan PR Purchasing:</span>
-                <b style="color: #0284c7;">${pur.selesai}/${pur.total_tiket} PR</b>
-                <span class="ticker-kpi-sub">(${pur.persentase_selesai}% • Live Atena ERP)</span>
+                <i class="fa-solid fa-clock-rotate-left" style="color: #f59e0b;"></i>
+                <span>Tiket Dalam Proses:</span>
+                <b style="color: #d97706;">${pendingTiket} Tiket</b>
             </span>
         `);
-    }
 
-    // 8. Realisasi Pemenuhan Order Logistik (Atena ERP)
-    if (layanan.LOGISTIK && (layanan.LOGISTIK.total_tiket > 0 || layanan.LOGISTIK.is_active)) {
-        const log = layanan.LOGISTIK;
-        items.push(`
-            <span class="ticker-item">
-                <i class="fa-solid fa-truck-fast" style="color: #10b981;"></i>
-                <span>Pemenuhan Order Logistik:</span>
-                <b style="color: #10b981;">${log.selesai}/${log.total_tiket} Order</b>
-                <span class="ticker-kpi-sub">(${log.persentase_selesai}% • Live Atena ERP)</span>
-            </span>
-        `);
-    }
+        // 4. Realisasi Per Divisi Operasional (IT, TK, GA)
+        if (layanan.IT) {
+            items.push(`
+                <span class="ticker-item">
+                    <span class="tag tag-it">IT</span>
+                    <b>${layanan.IT.selesai}/${layanan.IT.total_tiket} Selesai</b>
+                    <span class="ticker-kpi-sub">(${layanan.IT.persentase_selesai}%)</span>
+                </span>
+            `);
+        }
+        if (layanan.TK) {
+            items.push(`
+                <span class="ticker-item">
+                    <span class="tag tag-tk">TK</span>
+                    <b>${layanan.TK.selesai}/${layanan.TK.total_tiket} Selesai</b>
+                    <span class="ticker-kpi-sub">(${layanan.TK.persentase_selesai}%)</span>
+                </span>
+            `);
+        }
+        if (layanan.GA) {
+            items.push(`
+                <span class="ticker-item">
+                    <span class="tag tag-ga">GA</span>
+                    <b>${layanan.GA.selesai}/${layanan.GA.total_tiket} Selesai</b>
+                    <span class="ticker-kpi-sub">(${layanan.GA.persentase_selesai}%)</span>
+                </span>
+            `);
+        }
 
-    // 9. Realisasi Release Material QA (GRS Atena ERP)
-    if (layanan.QA && (layanan.QA.total_tiket > 0 || layanan.QA.is_active)) {
-        const qa = layanan.QA;
-        items.push(`
-            <span class="ticker-item">
-                <i class="fa-solid fa-clipboard-check" style="color: #8b5cf6;"></i>
-                <span>Release Material QA (GRS):</span>
-                <b style="color: #8b5cf6;">${qa.selesai}/${qa.total_tiket} GRS</b>
-                <span class="ticker-kpi-sub">(${qa.persentase_selesai}% • Live GRS)</span>
-            </span>
-        `);
-    }
+        // 5. Realisasi Penyelesaian PP Produksi (Atena ERP)
+        if (data.kpi_produksi && data.kpi_produksi.total_pp > 0) {
+            const prodKpi = data.kpi_produksi;
+            items.push(`
+                <span class="ticker-item">
+                    <i class="fa-solid fa-industry" style="color: #2563eb;"></i>
+                    <span>Penyelesaian PP Produksi:</span>
+                    <b style="color: #2563eb;">${prodKpi.total_memenuhi}/${prodKpi.total_pp} PP</b>
+                    <span class="ticker-kpi-sub">(${prodKpi.persentase}% • Live Atena ERP)</span>
+                </span>
+            `);
+        }
 
-    const itemsHtml = items.join(' &bull; ');
-    // Gandakan konten agar animasi marquee meluncur mulus tanpa terputus
-    listEl.innerHTML = itemsHtml + ' &bull; ' + itemsHtml;
+        // 6. Realisasi Pemenuhan PR Purchasing (Atena ERP)
+        if (layanan.PURCHASING && (layanan.PURCHASING.total_tiket > 0 || layanan.PURCHASING.is_active)) {
+            const pur = layanan.PURCHASING;
+            items.push(`
+                <span class="ticker-item">
+                    <i class="fa-solid fa-cart-shopping" style="color: #0284c7;"></i>
+                    <span>Pemenuhan PR Purchasing:</span>
+                    <b style="color: #0284c7;">${pur.selesai}/${pur.total_tiket} PR</b>
+                    <span class="ticker-kpi-sub">(${pur.persentase_selesai}% • Live Atena ERP)</span>
+                </span>
+            `);
+        }
+
+        // 7. Realisasi Pemenuhan Order Logistik (Atena ERP)
+        if (layanan.LOGISTIK && (layanan.LOGISTIK.total_tiket > 0 || layanan.LOGISTIK.is_active)) {
+            const log = layanan.LOGISTIK;
+            items.push(`
+                <span class="ticker-item">
+                    <i class="fa-solid fa-truck-fast" style="color: #10b981;"></i>
+                    <span>Pemenuhan Order Logistik:</span>
+                    <b style="color: #10b981;">${log.selesai}/${log.total_tiket} Order</b>
+                    <span class="ticker-kpi-sub">(${log.persentase_selesai}% • Live Atena ERP)</span>
+                </span>
+            `);
+        }
+
+        // 8. Realisasi Release Material QA (GRS Atena ERP)
+        if (layanan.QA && (layanan.QA.total_tiket > 0 || layanan.QA.is_active)) {
+            const qa = layanan.QA;
+            items.push(`
+                <span class="ticker-item">
+                    <i class="fa-solid fa-clipboard-check" style="color: #8b5cf6;"></i>
+                    <span>Release Material QA (GRS):</span>
+                    <b style="color: #8b5cf6;">${qa.selesai}/${qa.total_tiket} GRS</b>
+                    <span class="ticker-kpi-sub">(${qa.persentase_selesai}% • Live GRS)</span>
+                </span>
+            `);
+        }
+
+        // 9. Kehadiran Karyawan (HR)
+        if (layanan.HR && layanan.HR.sub_metrics) {
+            const tk = layanan.HR.sub_metrics.tksna?.persentase ?? 0;
+            const mkt = layanan.HR.sub_metrics.marketing?.persentase ?? 0;
+            items.push(`
+                <span class="ticker-item">
+                    <i class="fa-solid fa-users" style="color: #0284c7;"></i>
+                    <span>Kehadiran HR Hari Ini:</span>
+                    <b style="color: #0284c7;">TK SNA ${tk}%</b> &bull; <b style="color: #0284c7;">Marketing ${mkt}%</b>
+                </span>
+            `);
+        }
+
+        // 10. Document Control (DC Paperless)
+        if (layanan.DC) {
+            items.push(`
+                <span class="ticker-item">
+                    <i class="fa-solid fa-file-signature" style="color: #9333ea;"></i>
+                    <span>DC Paperless:</span>
+                    <b style="color: #9333ea;">${layanan.DC.selesai}/${layanan.DC.total} Dokumen</b>
+                    <span class="ticker-kpi-sub">(${layanan.DC.persentase_selesai}%)</span>
+                </span>
+            `);
+        }
+
+        // 11. Development (R&D Permintaan BOM)
+        if (layanan.DEVELOPMENT) {
+            items.push(`
+                <span class="ticker-item">
+                    <i class="fa-solid fa-compass-drafting" style="color: #ea580c;"></i>
+                    <span>Development (R&D):</span>
+                    <b style="color: #ea580c;">${layanan.DEVELOPMENT.selesai}/${layanan.DEVELOPMENT.total} BOM Selesai</b>
+                    <span class="ticker-kpi-sub">(${layanan.DEVELOPMENT.persentase_selesai}%)</span>
+                </span>
+            `);
+        }
+
+        const itemsHtml = items.join(' &bull; ');
+
+        // Cegah animasi mereset lompat ke awal jika konten ticker sama dengan putaran sebelumnya
+        if (state.lastTickerContent === itemsHtml) {
+            return;
+        }
+        state.lastTickerContent = itemsHtml;
+
+        // Gandakan konten agar animasi marquee meluncur mulus tanpa jeda terputus
+        listEl.innerHTML = itemsHtml + ' &bull; ' + itemsHtml;
+    } catch (err) {
+        console.error('Error renderKpiTrackerTicker:', err);
+    }
 }
 
 // Fallback alias jika masih ada pemanggilan lama
@@ -7475,6 +7664,642 @@ function renderHrTableError(message) {
             <td colspan="11" class="subcon-empty-row" style="padding: 25px;">
                 <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; color: #ef4444; margin-bottom: 8px;"></i>
                 <div style="font-weight: 600; color: #b91c1c;">Gagal Memuat Data Kehadiran Karyawan</div>
+                <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">${message}</div>
+            </td>
+        </tr>
+    `;
+}
+
+
+// ====================================================================
+// 10. MODUL DEVELOPMENT (R&D PERMINTAAN BOM) - GOOGLE SPREADSHEET
+// ====================================================================
+
+function openDevModal(range = 'month') {
+    const modal = document.getElementById('devModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    state.devSearchQuery = '';
+    state.devJenis = 'all';
+    state.devStatus = 'all';
+    state.devCurrentPage = 1;
+    state.devPageSize = 15;
+
+    const searchInput = document.getElementById('devSearchInput');
+    if (searchInput) searchInput.value = '';
+    const selJenis = document.getElementById('selectDevJenis');
+    if (selJenis) selJenis.value = 'all';
+    const selStatus = document.getElementById('selectDevStatus');
+    if (selStatus) selStatus.value = 'all';
+
+    setDevQuickDate(range);
+}
+
+function closeDevModal() {
+    const modal = document.getElementById('devModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+}
+
+function setDevQuickDate(preset = 'month') {
+    state.currentDevRange = preset;
+
+    const { startDate, endDate } = getActivePeriodDates(preset);
+    state.devDateStart = startDate;
+    state.devDateEnd = endDate;
+
+    setDateInputValue('devDateStart', startDate);
+    setDateInputValue('devDateEnd', endDate);
+
+    const btnMonth = document.getElementById('btnQuickDevMonth');
+    const btnToday = document.getElementById('btnQuickDevToday');
+    const btnAll = document.getElementById('btnQuickDevAll');
+
+    if (btnMonth) btnMonth.classList.toggle('active', preset === 'month');
+    if (btnToday) btnToday.classList.toggle('active', preset === 'today');
+    if (btnAll) btnAll.classList.toggle('active', preset === 'all');
+
+    state.devCurrentPage = 1;
+    loadDevData();
+}
+
+function handleDevDateChange(changedField) {
+    const startInput = document.getElementById('devDateStart');
+    const endInput = document.getElementById('devDateEnd');
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (changedField === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.devDateStart = start;
+    state.devDateEnd = end;
+    state.currentDevRange = 'custom';
+
+    const pills = document.querySelectorAll('.dev-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    state.devCurrentPage = 1;
+    loadDevData();
+}
+
+function resetDevFilter() {
+    state.devSearchQuery = '';
+    const searchInput = document.getElementById('devSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selJenis = document.getElementById('selectDevJenis');
+    if (selJenis) selJenis.value = 'all';
+    state.devJenis = 'all';
+
+    const selStatus = document.getElementById('selectDevStatus');
+    if (selStatus) selStatus.value = 'all';
+    state.devStatus = 'all';
+
+    setDevQuickDate('month');
+}
+
+function switchDevJenis(jenis) {
+    state.devJenis = jenis;
+    state.devCurrentPage = 1;
+    filterAndRenderDevTable();
+}
+
+function switchDevStatus(status) {
+    state.devStatus = status;
+    state.devCurrentPage = 1;
+    filterAndRenderDevTable();
+}
+
+function handleDevSearch(val) {
+    state.devSearchQuery = val ? val.trim().toLowerCase() : '';
+    state.devCurrentPage = 1;
+    filterAndRenderDevTable();
+}
+
+async function loadDevData(force = false) {
+    renderDevTableLoading();
+    try {
+        const range = state.currentDevRange || 'month';
+        const bulan = state.selectedMonth || (new Date().getMonth() + 1);
+        const tahun = state.selectedYear || new Date().getFullYear();
+        const start = state.devDateStart || '';
+        const end = state.devDateEnd || '';
+
+        let url = `/api/dashboard/development?range=${range}&bulan=${bulan}&tahun=${tahun}`;
+        if (range === 'custom' && start && end) {
+            url += `&tglawal=${start}&tglakhir=${end}`;
+        }
+        if (force) url += '&force=true';
+
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (!json || !json.success) {
+            throw new Error(json?.message || 'Gagal memuat data Development');
+        }
+
+        state.devRawData = json.data;
+        renderDevModalData(json.data);
+    } catch (err) {
+        console.error('Error loadDevData:', err);
+        renderDevTableError(err.message);
+    }
+}
+
+function renderDevModalData(data) {
+    if (!data) return;
+    const kpi = data.kpi || {};
+
+    const elTotal = document.getElementById('devKpiTotal');
+    const elSelesai = document.getElementById('devKpiSelesai');
+    const elPercent = document.getElementById('devKpiPercent');
+    const elProgress = document.getElementById('devKpiProgress');
+    const elBlocked = document.getElementById('devKpiBlocked');
+
+    if (elTotal) elTotal.textContent = Number(kpi.total || 0).toLocaleString('id-ID');
+    if (elSelesai) elSelesai.textContent = Number(kpi.selesai || 0).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = (kpi.persentase || 0) + '%';
+    if (elProgress) elProgress.textContent = Number(kpi.on_progress_count || 0).toLocaleString('id-ID');
+    if (elBlocked) elBlocked.textContent = Number(kpi.blocked_count || 0).toLocaleString('id-ID');
+
+    filterAndRenderDevTable();
+}
+
+function filterAndRenderDevTable() {
+    if (!state.devRawData || !Array.isArray(state.devRawData.items)) return;
+    let items = state.devRawData.items;
+
+    // Filter jenis
+    if (state.devJenis === 'baru') items = items.filter(it => it.is_baru);
+    else if (state.devJenis === 'perubahan') items = items.filter(it => it.is_perubahan);
+
+    // Filter status
+    if (state.devStatus === 'complete') items = items.filter(it => it.is_selesai);
+    else if (state.devStatus === 'progress') items = items.filter(it => it.is_on_progress);
+    else if (state.devStatus === 'blocked') items = items.filter(it => it.is_blocked);
+
+    // Filter search
+    if (state.devSearchQuery) {
+        const q = state.devSearchQuery;
+        items = items.filter(it =>
+            (it.kode_produk && it.kode_produk.toLowerCase().includes(q)) ||
+            (it.nama_bom && it.nama_bom.toLowerCase().includes(q)) ||
+            (it.kode_bom && it.kode_bom.toLowerCase().includes(q)) ||
+            (it.detail_permintaan && it.detail_permintaan.toLowerCase().includes(q)) ||
+            (it.pic_input && it.pic_input.toLowerCase().includes(q)) ||
+            (it.tanggal_raw && it.tanggal_raw.toLowerCase().includes(q))
+        );
+    }
+
+    renderDevTable(items);
+}
+
+function renderDevTable(items) {
+    const tbody = document.getElementById('devTableBody');
+    if (!tbody) return;
+
+    if (!items || items.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="11" class="loading-state" style="padding: 25px; color: var(--text-muted); text-align: center;">
+                    <i class="fa-solid fa-box-open" style="font-size: 1.5rem; margin-bottom: 8px; display: block; color: #0284c7;"></i>
+                    Tidak ada data permintaan BOM yang sesuai filter.
+                </td>
+            </tr>
+        `;
+        renderDevPagination(0);
+        return;
+    }
+
+    const pageSize = state.devPageSize || 15;
+    const totalPages = Math.ceil(items.length / pageSize) || 1;
+    if ((state.devCurrentPage || 1) > totalPages) state.devCurrentPage = totalPages;
+    const page = state.devCurrentPage || 1;
+    const startIdx = (page - 1) * pageSize;
+    const pageItems = items.slice(startIdx, startIdx + pageSize);
+
+    tbody.innerHTML = pageItems.map((r, idx) => {
+        const isComplete = r.is_selesai;
+        const isBlocked = r.is_blocked;
+        const statusBadge = isComplete
+            ? '<span class="badge-status badge-closed" style="background:#dcfce7;color:#15803d;font-weight:700;"><i class="fa-solid fa-circle-check"></i> Complete</span>'
+            : isBlocked
+                ? '<span class="badge-status" style="background:#fee2e2;color:#b91c1c;font-weight:700;"><i class="fa-solid fa-ban"></i> Blocked</span>'
+                : '<span class="badge-status badge-process" style="background:#fef3c7;color:#b45309;font-weight:700;"><i class="fa-solid fa-hourglass-half"></i> On Progress</span>';
+
+        const priorityBadge = r.is_urgent
+            ? '<span class="badge-status" style="background:#fee2e2;color:#dc2626;font-weight:800;font-size:0.68rem;"><i class="fa-solid fa-fire"></i> URGENT</span>'
+            : '<span style="color:#64748b;font-size:0.75rem;">Normal</span>';
+
+        const jenisBadge = r.is_baru
+            ? '<span style="font-size:0.75rem;font-weight:700;color:#0284c7;background:#e0f2fe;padding:2px 6px;border-radius:4px;">BARU</span>'
+            : '<span style="font-size:0.75rem;font-weight:700;color:#9333ea;background:#f3e8ff;padding:2px 6px;border-radius:4px;">PERUBAHAN</span>';
+
+        const lamaProsesStr = r.lama_proses_hari !== null
+            ? `<b style="color:${r.lama_proses_hari <= 2 ? '#16a34a' : '#dc2626'};">${r.lama_proses_hari} Hari</b>`
+            : '<span style="color:#94a3b8;">-</span>';
+
+        return `
+            <tr>
+                <td class="text-center" style="font-weight:600;color:var(--text-secondary);">${startIdx + idx + 1}</td>
+                <td class="text-center" style="font-weight:600;white-space:nowrap;">${escapeHtml(r.tanggal_raw || '-')}</td>
+                <td><span class="ticket-number">${escapeHtml(r.kode_produk || '-')}</span></td>
+                <td class="text-center">${priorityBadge}</td>
+                <td class="text-center">${jenisBadge}</td>
+                <td style="font-weight:600;color:var(--text-primary);max-width:220px;">${escapeHtml(r.nama_bom || '-')}</td>
+                <td><code style="font-size:0.75rem;background:#f1f5f9;padding:2px 5px;border-radius:4px;">${escapeHtml(r.kode_bom || '-')}</code></td>
+                <td style="font-size:0.75rem;color:var(--text-secondary);max-width:260px;">${escapeHtml(r.detail_permintaan || r.detail_perubahan || '-')}</td>
+                <td style="font-weight:600;color:#0284c7;">${escapeHtml(r.pic_input || '-')}</td>
+                <td class="text-center">${statusBadge}</td>
+                <td class="text-center" style="font-size:0.75rem;">${lamaProsesStr}</td>
+            </tr>
+        `;
+    }).join('');
+
+    renderDevPagination(items.length);
+}
+
+function renderDevPagination(totalItems) {
+    const pageInfo = document.getElementById('devPageInfo');
+    const btnPrev = document.getElementById('btnDevPrevPage');
+    const btnNext = document.getElementById('btnDevNextPage');
+    if (!pageInfo && !btnPrev && !btnNext) return;
+
+    const pageSize = state.devPageSize || 15;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const currentPage = state.devCurrentPage || 1;
+
+    if (pageInfo) {
+        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+    }
+    if (btnPrev) btnPrev.disabled = currentPage <= 1;
+    if (btnNext) btnNext.disabled = currentPage >= totalPages;
+}
+
+function changeDevPage(delta) {
+    state.devCurrentPage = (state.devCurrentPage || 1) + delta;
+    filterAndRenderDevTable();
+}
+
+async function syncDevData() {
+    const btn = document.getElementById('btnSyncDev');
+    if (btn) btn.classList.add('rotating');
+    try {
+        await loadDevData(true);
+        const syncEl = document.getElementById('devLastSyncTime');
+        if (syncEl) syncEl.textContent = `Sinkron: ${new Date().toLocaleTimeString('id-ID')}`;
+        showToast('Data Development berhasil disinkronkan dari Google Spreadsheet', 'success');
+    } catch (err) {
+        showToast('Gagal sinkronisasi data Development: ' + err.message, 'error');
+    } finally {
+        if (btn) btn.classList.remove('rotating');
+    }
+}
+
+function renderDevTableLoading() {
+    const tbody = document.getElementById('devTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = `
+        <tr class="skeleton-row">
+            <td colspan="11" class="text-center" style="padding: 30px;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #0284c7; margin-bottom: 8px;"></i>
+                <div style="font-weight: 500; color: #64748b;">Mengambil data Permintaan BOM dari Google Spreadsheet...</div>
+            </td>
+        </tr>
+    `;
+}
+
+function renderDevTableError(message) {
+    const tbody = document.getElementById('devTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="11" class="subcon-empty-row" style="padding: 25px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; color: #ef4444; margin-bottom: 8px;"></i>
+                <div style="font-weight: 600; color: #b91c1c;">Gagal Memuat Data Development</div>
+                <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">${message}</div>
+            </td>
+        </tr>
+    `;
+}
+
+
+// ====================================================================
+// 11. MODUL DOCUMENT CONTROL (DC) - REST API PAPERLESS
+// ====================================================================
+
+function openDcModal(range = 'month') {
+    const modal = document.getElementById('dcModal');
+    if (!modal) return;
+    modal.classList.add('active');
+
+    state.dcSearchQuery = '';
+    state.dcStatus = 'all';
+    state.dcJenis = 'all';
+    state.dcCurrentPage = 1;
+    state.dcPageSize = 15;
+
+    const searchInput = document.getElementById('dcSearchInput');
+    if (searchInput) searchInput.value = '';
+    const selStatus = document.getElementById('selectDcStatus');
+    if (selStatus) selStatus.value = 'all';
+    const selJenis = document.getElementById('selectDcJenis');
+    if (selJenis) selJenis.value = 'all';
+
+    setDcQuickDate(range);
+}
+
+function closeDcModal() {
+    const modal = document.getElementById('dcModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+}
+
+function setDcQuickDate(preset = 'month') {
+    state.currentDcRange = preset;
+
+    const { startDate, endDate } = getActivePeriodDates(preset);
+    state.dcDateStart = startDate;
+    state.dcDateEnd = endDate;
+
+    setDateInputValue('dcDateStart', startDate);
+    setDateInputValue('dcDateEnd', endDate);
+
+    const btnMonth = document.getElementById('btnQuickDcMonth');
+    const btnToday = document.getElementById('btnQuickDcToday');
+    const btnAll = document.getElementById('btnQuickDcAll');
+
+    if (btnMonth) btnMonth.classList.toggle('active', preset === 'month');
+    if (btnToday) btnToday.classList.toggle('active', preset === 'today');
+    if (btnAll) btnAll.classList.toggle('active', preset === 'all');
+
+    state.dcCurrentPage = 1;
+    loadDcData();
+}
+
+function handleDcDateChange(changedField) {
+    const startInput = document.getElementById('dcDateStart');
+    const endInput = document.getElementById('dcDateEnd');
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (changedField === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.dcDateStart = start;
+    state.dcDateEnd = end;
+    state.currentDcRange = 'custom';
+
+    const pills = document.querySelectorAll('.dc-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    state.dcCurrentPage = 1;
+    loadDcData();
+}
+
+function resetDcFilter() {
+    state.dcSearchQuery = '';
+    const searchInput = document.getElementById('dcSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const selStatus = document.getElementById('selectDcStatus');
+    if (selStatus) selStatus.value = 'all';
+    state.dcStatus = 'all';
+
+    const selJenis = document.getElementById('selectDcJenis');
+    if (selJenis) selJenis.value = 'all';
+    state.dcJenis = 'all';
+
+    setDcQuickDate('month');
+}
+
+function switchDcStatus(status) {
+    state.dcStatus = status;
+    state.dcCurrentPage = 1;
+    filterAndRenderDcTable();
+}
+
+function switchDcJenis(jenis) {
+    state.dcJenis = jenis;
+    state.dcCurrentPage = 1;
+    filterAndRenderDcTable();
+}
+
+function handleDcSearch(val) {
+    state.dcSearchQuery = val ? val.trim().toLowerCase() : '';
+    state.dcCurrentPage = 1;
+    filterAndRenderDcTable();
+}
+
+async function loadDcData(force = false) {
+    renderDcTableLoading();
+    try {
+        const range = state.currentDcRange || 'month';
+        const bulan = state.selectedMonth || (new Date().getMonth() + 1);
+        const tahun = state.selectedYear || new Date().getFullYear();
+        const start = state.dcDateStart || '';
+        const end = state.dcDateEnd || '';
+
+        let url = `/api/dashboard/dc?range=${range}&bulan=${bulan}&tahun=${tahun}`;
+        if (range === 'custom' && start && end) {
+            url += `&tglawal=${start}&tglakhir=${end}`;
+        }
+        if (force) url += '&force=true';
+
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (!json || !json.success) {
+            throw new Error(json?.message || 'Gagal memuat data DC dari Paperless');
+        }
+
+        state.dcRawData = json.data;
+        renderDcModalData(json.data);
+    } catch (err) {
+        console.error('Error loadDcData:', err);
+        renderDcTableError(err.message);
+    }
+}
+
+function renderDcModalData(data) {
+    if (!data) return;
+    const kpi = data.kpi || {};
+
+    const elTotal = document.getElementById('dcKpiTotal');
+    const elSelesai = document.getElementById('dcKpiSelesai');
+    const elPercent = document.getElementById('dcKpiPercent');
+    const elProgress = document.getElementById('dcKpiProgress');
+
+    if (elTotal) elTotal.textContent = Number(kpi.total || 0).toLocaleString('id-ID');
+    if (elSelesai) elSelesai.textContent = Number(kpi.selesai || 0).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = (kpi.persentase || 0) + '%';
+    if (elProgress) elProgress.textContent = Number(kpi.belum || 0).toLocaleString('id-ID');
+
+    filterAndRenderDcTable();
+}
+
+function filterAndRenderDcTable() {
+    if (!state.dcRawData || !Array.isArray(state.dcRawData.items)) return;
+    let items = state.dcRawData.items;
+
+    // Filter status
+    if (state.dcStatus === 'selesai') {
+        items = items.filter(it => it.is_selesai || it.status === 'SELESAI');
+    } else if (state.dcStatus === 'belum') {
+        items = items.filter(it => !it.is_selesai && it.status !== 'SELESAI');
+    }
+
+    // Filter jenis dokumen
+    if (state.dcJenis && state.dcJenis !== 'all') {
+        const j = state.dcJenis.toLowerCase();
+        items = items.filter(it => (it.jenis_dokumen || '').toLowerCase().includes(j));
+    }
+
+    // Filter search
+    if (state.dcSearchQuery) {
+        const q = state.dcSearchQuery;
+        items = items.filter(it =>
+            (it.nama_dokumen && it.nama_dokumen.toLowerCase().includes(q)) ||
+            (it.nomor_klausul && it.nomor_klausul.toLowerCase().includes(q)) ||
+            (it.bagian && it.bagian.toLowerCase().includes(q)) ||
+            (it.tahap && it.tahap.toLowerCase().includes(q)) ||
+            (it.jenis_dokumen && it.jenis_dokumen.toLowerCase().includes(q)) ||
+            (it.tgl_permohonan && it.tgl_permohonan.toLowerCase().includes(q))
+        );
+    }
+
+    renderDcTable(items);
+}
+
+function renderDcTable(items) {
+    const tbody = document.getElementById('dcTableBody');
+    if (!tbody) return;
+
+    if (!items || items.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="loading-state" style="padding: 25px; color: var(--text-muted); text-align: center;">
+                    <i class="fa-solid fa-file-signature" style="font-size: 1.5rem; margin-bottom: 8px; display: block; color: #9333ea;"></i>
+                    Tidak ada data pengerjaan dokumen yang sesuai filter.
+                </td>
+            </tr>
+        `;
+        renderDcPagination(0);
+        return;
+    }
+
+    const pageSize = state.dcPageSize || 15;
+    const totalPages = Math.ceil(items.length / pageSize) || 1;
+    if ((state.dcCurrentPage || 1) > totalPages) state.dcCurrentPage = totalPages;
+    const page = state.dcCurrentPage || 1;
+    const startIdx = (page - 1) * pageSize;
+    const pageItems = items.slice(startIdx, startIdx + pageSize);
+
+    tbody.innerHTML = pageItems.map((r, idx) => {
+        const isSelesai = r.is_selesai || r.status === 'SELESAI';
+        const statusBadge = isSelesai
+            ? '<span class="badge-status badge-closed" style="background:#dcfce7;color:#15803d;font-weight:700;"><i class="fa-solid fa-stamp"></i> Selesai</span>'
+            : '<span class="badge-status badge-process" style="background:#fef3c7;color:#b45309;font-weight:700;"><i class="fa-solid fa-hourglass-half"></i> Belum Selesai</span>';
+
+        return `
+            <tr>
+                <td class="text-center" style="font-weight:600;color:var(--text-secondary);">${startIdx + idx + 1}</td>
+                <td class="text-center" style="font-weight:600;white-space:nowrap;">${escapeHtml(r.tgl_permohonan || '-')}</td>
+                <td><span style="font-weight:700;color:#0284c7;background:#e0f2fe;padding:2px 8px;border-radius:4px;font-size:0.75rem;">${escapeHtml(r.bagian || '-')}</span></td>
+                <td><span style="font-weight:600;color:#7e22ce;font-size:0.78rem;">${escapeHtml(r.jenis_dokumen || '-')}</span></td>
+                <td><code style="font-size:0.75rem;background:#f1f5f9;padding:2px 6px;border-radius:4px;font-weight:600;">${escapeHtml(r.nomor_klausul || '-')}</code></td>
+                <td style="font-weight:600;color:var(--text-primary);max-width:240px;">${escapeHtml(r.nama_dokumen || '-')}</td>
+                <td class="text-center" style="font-weight:600;color:#64748b;">${escapeHtml(String(r.nomor_revisi ?? '-'))}</td>
+                <td style="font-size:0.78rem;color:var(--text-secondary);max-width:240px;">${escapeHtml(r.tahap || '-')}</td>
+                <td class="text-center">${statusBadge}</td>
+            </tr>
+        `;
+    }).join('');
+
+    renderDcPagination(items.length);
+}
+
+function renderDcPagination(totalItems) {
+    const pageInfo = document.getElementById('dcPageInfo');
+    const btnPrev = document.getElementById('btnDcPrevPage');
+    const btnNext = document.getElementById('btnDcNextPage');
+    if (!pageInfo && !btnPrev && !btnNext) return;
+
+    const pageSize = state.dcPageSize || 15;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const currentPage = state.dcCurrentPage || 1;
+
+    if (pageInfo) {
+        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+    }
+    if (btnPrev) btnPrev.disabled = currentPage <= 1;
+    if (btnNext) btnNext.disabled = currentPage >= totalPages;
+}
+
+function changeDcPage(delta) {
+    state.dcCurrentPage = (state.dcCurrentPage || 1) + delta;
+    filterAndRenderDcTable();
+}
+
+async function syncDcData() {
+    const btn = document.getElementById('btnSyncDc');
+    if (btn) btn.classList.add('rotating');
+    try {
+        await loadDcData(true);
+        const syncEl = document.getElementById('dcLastSyncTime');
+        if (syncEl) syncEl.textContent = `Sinkron: ${new Date().toLocaleTimeString('id-ID')}`;
+        showToast('Data Document Control berhasil disinkronkan dari REST API Paperless', 'success');
+    } catch (err) {
+        showToast('Gagal sinkronisasi data DC: ' + err.message, 'error');
+    } finally {
+        if (btn) btn.classList.remove('rotating');
+    }
+}
+
+function renderDcTableLoading() {
+    const tbody = document.getElementById('dcTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = `
+        <tr class="skeleton-row">
+            <td colspan="9" class="text-center" style="padding: 30px;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #9333ea; margin-bottom: 8px;"></i>
+                <div style="font-weight: 500; color: #64748b;">Mengambil data Pengerjaan Dokumen dari REST API Paperless...</div>
+            </td>
+        </tr>
+    `;
+}
+
+function renderDcTableError(message) {
+    const tbody = document.getElementById('dcTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="9" class="subcon-empty-row" style="padding: 25px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; color: #ef4444; margin-bottom: 8px;"></i>
+                <div style="font-weight: 600; color: #b91c1c;">Gagal Memuat Data Document Control (Paperless)</div>
                 <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">${message}</div>
             </td>
         </tr>

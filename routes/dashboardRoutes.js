@@ -22,6 +22,8 @@ const whFgService = require('../services/whFgService');
 const whMatService = require('../services/whMatService');
 const pbfService = require('../services/pbfService');
 const hrService = require('../services/hrService');
+const developmentService = require('../services/developmentService');
+const dcService = require('../services/dcService');
 const apiHealthService = require('../services/apiHealthService');
 
 const cache = {
@@ -143,7 +145,7 @@ router.get('/stats', async (req, res) => {
 
     try {
         // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi, Logistik, QA, WH FG & WH Mat secara paralel
-        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled, pbfSettled, hrSettled] = await Promise.allSettled([
+        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled, pbfSettled, hrSettled, devSettled, dcSettled] = await Promise.allSettled([
             ticketingService.getSummary(forceRefresh, customDates),
             subconService.getMonitoringToday(forceRefresh, customDates),
             purchasingService.getSummary(forceRefresh, customDates),
@@ -153,7 +155,9 @@ router.get('/stats', async (req, res) => {
             whFgService.getSummary(forceRefresh, customDates),
             whMatService.getSummary(forceRefresh, customDates),
             pbfService.getSummary(forceRefresh, customDates),
-            hrService.getSummary(forceRefresh, customDates)
+            hrService.getSummary(forceRefresh, customDates),
+            developmentService.getSummary(forceRefresh, customDates),
+            dcService.getSummary(forceRefresh, customDates)
         ]);
 
                 // Update live API health status
@@ -249,6 +253,22 @@ router.get('/stats', async (req, res) => {
             console.error(`❌ [API HR ERROR]: ${hrSettled.reason?.message}`);
         }
         const hrKpi = hrData?.kpi || {};
+
+        let devData = null;
+        if (devSettled && devSettled.status === 'fulfilled') {
+            devData = devSettled.value;
+        } else if (devSettled && devSettled.reason) {
+            console.error(`❌ [DEV SERVICE ERROR]: ${devSettled.reason?.message}`);
+        }
+        const devKpi = devData?.kpi || {};
+
+        let dcData = null;
+        if (dcSettled && dcSettled.status === 'fulfilled') {
+            dcData = dcSettled.value;
+        } else if (dcSettled && dcSettled.reason) {
+            console.error(`❌ [DC SERVICE ERROR]: ${dcSettled.reason?.message}`);
+        }
+        const dcKpi = dcData?.kpi || {};
 
         const summaryData = apiData?.data || {};
         const rawCards = summaryData.layanan_monitoring || {};
@@ -869,18 +889,23 @@ router.get('/stats', async (req, res) => {
                 kategori: 'support_qa',
                 kategori_label: 'HR, Dokumen & Mutu',
                 data_ditampilkan: 'Penyelesaian Pengerjaan Dokumen',
-                sub_nama: 'Menu Pengajuan vs Pengesahan',
-                sumber_data: 'Aplikasi Paperless (total masuk menu pengajuan vs total selesai menu pengesahan)',
-                sumber: 'Aplikasi Paperless',
-                catatan: 'Total masuk (menu pengajuan) vs total selesai dikerjakan (menu pengesahan)',
+                sub_nama: 'Aplikasi Paperless (Pengajuan vs Pengesahan)',
+                sumber_data: 'REST API Paperless (PenyelesaianDokumen)',
+                sumber: 'Paperless',
+                catatan: 'Penyelesaian pengerjaan pengajuan dan pengesahan dokumen Paperless',
                 icon: 'file-signature',
-                is_active: false,
-                metric_labels: { total: 'Pengajuan', selesai: 'Disahkan', belum: 'Proses' },
+                is_active: true,
+                metric_labels: { total: 'Total Masuk', selesai: 'Disahkan', belum: 'Proses' },
                 unit: 'Dokumen',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                total: dcData?.total ?? dcKpi.total ?? 0,
+                total_tiket: dcData?.total ?? dcKpi.total ?? 0,
+                selesai: dcData?.selesai ?? dcKpi.selesai ?? 0,
+                belum_selesai: dcData?.belum ?? dcKpi.belum ?? 0,
+                persentase_selesai: dcData?.persentase ?? dcKpi.persentase ?? 0,
+                tglawal: dcData?.tglawal,
+                tglakhir: dcData?.tglakhir,
+                kpi: dcKpi,
+                meta: dcData,
             },
             DEVELOPMENT: {
                 no: 21,
@@ -890,17 +915,26 @@ router.get('/stats', async (req, res) => {
                 kategori_label: 'Supply Chain & Gudang',
                 data_ditampilkan: 'Penyelesaian BOM H+2 dari Permintaan',
                 sub_nama: 'SLA Pembuatan BOM Maks H+2',
-                sumber_data: 'Sistem R&D / Development Atena',
-                sumber: 'Sistem R&D Atena',
+                sumber_data: 'Google Spreadsheet (List Permintaan BOM)',
+                sumber: 'Google Spreadsheet',
                 catatan: 'Penyelesaian Bill of Materials (BOM) paling lambat H+2 setelah permintaan masuk',
                 icon: 'compass-drafting',
-                is_active: false,
-                metric_labels: { total: 'Req BOM', selesai: 'On-Time H+2', belum: 'Overdue' },
+                is_active: true,
+                metric_labels: { total: 'Req BOM', selesai: 'Selesai', belum: 'Belum' },
                 unit: 'Item BOM',
-                total_tiket: 0,
-                selesai: 0,
-                belum_selesai: 0,
-                persentase_selesai: 0,
+                total: devKpi.total ?? 0,
+                total_tiket: devKpi.total ?? 0,
+                selesai: devKpi.selesai ?? 0,
+                belum_selesai: devKpi.belum ?? 0,
+                persentase_selesai: devKpi.persentase ?? 0,
+                baru_count: devKpi.baru_count ?? 0,
+                perubahan_count: devKpi.perubahan_count ?? 0,
+                urgent_count: devKpi.urgent_count ?? 0,
+                on_time_count: devKpi.on_time_count ?? 0,
+                overdue_count: devKpi.overdue_count ?? 0,
+                today: devKpi.today || {},
+                month: devKpi.month || {},
+                kpi: devKpi,
             }
         };
 
@@ -1509,6 +1543,59 @@ router.post('/hr/sync', async (req, res) => {
     }
 });
 
+
+/**
+ * GET /api/dashboard/development
+ * Data monitoring Development (R&D) dari Google Spreadsheet
+ */
+router.get('/development', async (req, res) => {
+    try {
+        const forceRefresh = req.query.force === 'true';
+        const data = await developmentService.getModalData({
+            module: 'development',
+            range: req.query.range || 'month',
+            status: req.query.status || 'all',
+            jenis: req.query.jenis || 'all',
+            search: req.query.search || '',
+            bulan: req.query.bulan || req.query.month,
+            tahun: req.query.tahun || req.query.year,
+            tglawal: req.query.tglawal,
+            tglakhir: req.query.tglakhir,
+            force: forceRefresh
+        });
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+/**
+ * GET /api/dashboard/dc
+ * Data monitoring Document Control (DC) dari Google Spreadsheet
+ */
+router.get('/dc', async (req, res) => {
+    try {
+        const forceRefresh = req.query.force === 'true';
+        const data = await dcService.getModalData({
+            range: req.query.range || 'month',
+            status: req.query.status || 'all',
+            jenis: req.query.jenis || 'all',
+            search: req.query.search || '',
+            bulan: req.query.bulan || req.query.month,
+            tahun: req.query.tahun || req.query.year,
+            tglawal: req.query.tglawal,
+            tglakhir: req.query.tglakhir,
+            page: req.query.page || 1,
+            pageSize: req.query.pageSize || 15,
+            force: forceRefresh
+        });
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 module.exports = router;
+
 
 

@@ -45,6 +45,21 @@ module.exports = {
         timeoutMs: 15000,
     },
 
+    // Konfigurasi REST API Paperless Document Control (DC)
+    paperlessApi: {
+        baseUrl: (process.env.PAPERLESS_API_BASE_URL || 'http://alpha_sna_medika_paperless.test/API/Dashboard/').trim().replace(/\/?$/, '/'),
+        username: (process.env.PAPERLESS_API_USERNAME || 'ADMINDC@YOPMAIL.COM').trim(),
+        password: (process.env.PAPERLESS_API_PASSWORD || '12345678').trim(),
+        timeoutMs: 10000,
+    },
+
+    // Konfigurasi Google Spreadsheet Monitoring (Development / R&D)
+    development: {
+        spreadsheetUrl: (process.env.DEVELOPMENT_SPREADSHEET_URL || 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtFe47B-ncyoQP_1X6ol4L0dvyp0b_z2GXroVTo5TSK-phM4CaLYhqqRPw6tCxPgNI_eoIgJJuhTiJ/pub?gid=0&single=true&output=csv').trim(),
+        htmlUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtFe47B-ncyoQP_1X6ol4L0dvyp0b_z2GXroVTo5TSK-phM4CaLYhqqRPw6tCxPgNI_eoIgJJuhTiJ/pubhtml?gid=0&single=true',
+        timeoutMs: 15000,
+    },
+
     // Cache internal Express (detik)
     cacheTtlSeconds: parseInt(process.env.CACHE_TTL_SECONDS, 10) || 5,
 
