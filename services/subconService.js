@@ -83,8 +83,9 @@ const subconService = {
     async getMonitoringToday(force = false, customDates = null) {
         const now = Date.now();
         const todayStr = formatDate(new Date());
-        const tglMulai = customDates?.tglawal || todayStr;
-        const tglAkhir = customDates?.tglakhir || todayStr;
+        const isCurrent = !customDates || customDates.isCurrentMonth !== false;
+        const tglMulai = isCurrent ? todayStr : (customDates?.tglawal || todayStr);
+        const tglAkhir = isCurrent ? todayStr : (customDates?.tglakhirFull || customDates?.tglakhir || todayStr);
         const cacheKey = `subcon_${tglMulai}_${tglAkhir}`;
 
         if (!force && cache.range?.has(cacheKey)) {

@@ -2514,3 +2514,41 @@ html, body {
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+
+/* ====================================================================
+   PENYERAGAMAN PAGINATION BUTTONS & TEMA MODAL (HR, SUBCON, QA, DLL)
+   ==================================================================== */
+.purchasing-pagination-bar .filter-pill {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: var(--text-primary);
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.purchasing-pagination-bar .filter-pill:hover:not(:disabled) {
+    background: var(--sna-blue);
+    border-color: var(--sna-blue);
+    color: #ffffff;
+}
+
+.purchasing-pagination-bar .filter-pill:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #94a3b8;
+}
+
+.hr-theme {
+    background: rgba(37, 99, 235, 0.12);
+    color: #2563eb;
+}

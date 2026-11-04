@@ -447,52 +447,77 @@ class HrService {
             : (customDates && (customDates.bulan || customDates.tahun))
                 ? getDateParams(customDates.bulan, customDates.tahun)
                 : getDateParams();
-        const dateParams = { tglawal: monthStart, tglakhir: today };
+
+        const isCurrentMonth = customDates ? customDates.isCurrentMonth !== false : true;
+        const todayParams = { tglawal: today, tglakhir: today };
+        const monthParams = { tglawal: monthStart, tglakhir: today };
 
         try {
-            const [tkSummary, mktSummary] = await Promise.all([
-                this.fetchRingkasan('tksna', dateParams),
-                this.fetchRingkasan('marketing', dateParams)
+            // Ambil data Hari Ini dan Bulan Ini secara paralel dari Atena ERP
+            const [todayTk, todayMkt, monthTk, monthMkt] = await Promise.all([
+                this.fetchRingkasan('tksna', todayParams),
+                this.fetchRingkasan('marketing', todayParams),
+                this.fetchRingkasan('tksna', monthParams),
+                this.fetchRingkasan('marketing', monthParams)
             ]);
 
-            const totalJadwal = (tkSummary.total_jadwal || 0) + (mktSummary.total_jadwal || 0);
-            const jadwalSesuai = (tkSummary.jadwal_sesuai || 0) + (mktSummary.jadwal_sesuai || 0);
-            const jadwalTidakSesuai = (tkSummary.jadwal_tidak_sesuai || 0) + (mktSummary.jadwal_tidak_sesuai || 0);
-            const totalKaryawan = (tkSummary.total_karyawan || 0) + (mktSummary.total_karyawan || 0);
-            const combinedPersen = totalJadwal > 0 ? Number(((jadwalSesuai / totalJadwal) * 100).toFixed(1)) : 0;
+            // Metrik Hari Ini (Today)
+            const todayTotalJadwal = (todayTk.total_jadwal || 0) + (todayMkt.total_jadwal || 0);
+            const todayJadwalSesuai = (todayTk.jadwal_sesuai || 0) + (todayMkt.jadwal_sesuai || 0);
+            const todayJadwalTidakSesuai = (todayTk.jadwal_tidak_sesuai || 0) + (todayMkt.jadwal_tidak_sesuai || 0);
+            const todayTotalKaryawan = (todayTk.total_karyawan || 0) + (todayMkt.total_karyawan || 0);
+            const todayPersen = todayTotalJadwal > 0 ? Number(((todayJadwalSesuai / todayTotalJadwal) * 100).toFixed(1)) : 0;
+
+            // Metrik Bulan Ini (Month)
+            const monthTotalJadwal = (monthTk.total_jadwal || 0) + (monthMkt.total_jadwal || 0);
+            const monthJadwalSesuai = (monthTk.jadwal_sesuai || 0) + (monthMkt.jadwal_sesuai || 0);
+            const monthJadwalTidakSesuai = (monthTk.jadwal_tidak_sesuai || 0) + (monthMkt.jadwal_tidak_sesuai || 0);
+            const monthTotalKaryawan = (monthTk.total_karyawan || 0) + (monthMkt.total_karyawan || 0);
+            const monthPersen = monthTotalJadwal > 0 ? Number(((monthJadwalSesuai / monthTotalJadwal) * 100).toFixed(1)) : 0;
+
+            // Jika periode aktif adalah bulan berjalan, tampilkan data HARI INI pada card utama
+            const activeTotal = isCurrentMonth ? todayTotalJadwal : monthTotalJadwal;
+            const activeSesuai = isCurrentMonth ? todayJadwalSesuai : monthJadwalSesuai;
+            const activeTidakSesuai = isCurrentMonth ? todayJadwalTidakSesuai : monthJadwalTidakSesuai;
+            const activeKaryawan = isCurrentMonth ? todayTotalKaryawan : monthTotalKaryawan;
+            const activePersen = isCurrentMonth ? todayPersen : monthPersen;
 
             const summaryPayload = {
                 success: true,
                 kpi: {
-                    total_jadwal: totalJadwal,
-                    jadwal_sesuai: jadwalSesuai,
-                    jadwal_tidak_sesuai: jadwalTidakSesuai,
-                    total_karyawan: totalKaryawan,
-                    persentase: combinedPersen,
-                    persentase_selesai: combinedPersen,
+                    total_jadwal: activeTotal,
+                    jadwal_sesuai: activeSesuai,
+                    jadwal_tidak_sesuai: activeTidakSesuai,
+                    total_karyawan: activeKaryawan,
+                    persentase: activePersen,
+                    persentase_selesai: activePersen,
 
-                    tksna: {
-                        bagian: 'tksna',
-                        judul: 'TK SNA',
-                        total_karyawan: tkSummary.total_karyawan || 0,
-                        total_jadwal: tkSummary.total_jadwal || 0,
-                        jadwal_sesuai: tkSummary.jadwal_sesuai || 0,
-                        jadwal_tidak_sesuai: tkSummary.jadwal_tidak_sesuai || 0,
-                        persentase: tkSummary.persentase || 0,
+                    today: {
+                        total_jadwal: todayTotalJadwal,
+                        jadwal_sesuai: todayJadwalSesuai,
+                        jadwal_tidak_sesuai: todayJadwalTidakSesuai,
+                        total_karyawan: todayTotalKaryawan,
+                        persentase: todayPersen,
+                        tksna: todayTk,
+                        marketing: todayMkt
                     },
-                    marketing: {
-                        bagian: 'marketing',
-                        judul: 'Marketing (Non-SNAM)',
-                        total_karyawan: mktSummary.total_karyawan || 0,
-                        total_jadwal: mktSummary.total_jadwal || 0,
-                        jadwal_sesuai: mktSummary.jadwal_sesuai || 0,
-                        jadwal_tidak_sesuai: mktSummary.jadwal_tidak_sesuai || 0,
-                        persentase: mktSummary.persentase || 0,
-                    }
+                    month: {
+                        total_jadwal: monthTotalJadwal,
+                        jadwal_sesuai: monthJadwalSesuai,
+                        jadwal_tidak_sesuai: monthJadwalTidakSesuai,
+                        total_karyawan: monthTotalKaryawan,
+                        persentase: monthPersen,
+                        tksna: monthTk,
+                        marketing: monthMkt
+                    },
+
+                    tksna: isCurrentMonth ? todayTk : monthTk,
+                    marketing: isCurrentMonth ? todayMkt : monthMkt
                 },
                 meta: {
-                    tglawal: monthStart,
+                    tglawal: isCurrentMonth ? today : monthStart,
                     tglakhir: today,
+                    is_today: isCurrentMonth,
                     last_updated: new Date().toISOString()
                 },
                 lastFetchedAt: new Date().toISOString()

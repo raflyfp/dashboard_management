@@ -57,7 +57,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Jalankan Server
-app.listen(config.port, '0.0.0.0', async () => {
+const serverInstance = app.listen(config.port, '0.0.0.0', async () => {
     console.log('====================================================');
     console.log('🚀 SNA MEDIKA - MANAGEMENT MONITORING DASHBOARD');
     console.log(`📡 URL Lokal      : http://localhost:${config.port}`);
@@ -106,3 +106,7 @@ app.listen(config.port, '0.0.0.0', async () => {
     }
     console.log('====================================================');
 });
+
+serverInstance.on('close', () => console.log('⚠️ [SERVER]: Server ditutup!'));
+serverInstance.on('error', err => console.error('❌ [SERVER ERROR]:', err));
+

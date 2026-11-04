@@ -850,10 +850,13 @@ router.get('/stats', async (req, res) => {
                 metric_labels: { total: 'Total Jadwal', selesai: 'Sesuai Plan', belum: 'Tidak Sesuai' },
                 unit: 'Jadwal',
                 total: hrKpi.total_jadwal || 0,
+                total_tiket: hrKpi.total_jadwal || 0,
                 selesai: hrKpi.jadwal_sesuai || 0,
                 belum_selesai: hrKpi.jadwal_tidak_sesuai || 0,
                 total_karyawan: hrKpi.total_karyawan || 0,
                 persentase_selesai: hrKpi.persentase || 0,
+                today: hrKpi.today || {},
+                month: hrKpi.month || {},
                 sub_metrics: {
                     tksna: hrKpi.tksna,
                     marketing: hrKpi.marketing

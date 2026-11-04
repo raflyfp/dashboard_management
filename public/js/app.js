@@ -700,7 +700,13 @@ function renderServiceCards(layanan) {
 
             const subHeroSub = document.getElementById('subconHeroSub');
             if (subHeroSub) {
-                subHeroSub.innerHTML = `<i class="fa-solid fa-industry"></i> Hasil Produksi (${state.selectedMonthName || 'Bulan Ini'} ${state.selectedYear})`;
+                const now = new Date();
+                const isCurrent = (state.selectedYear == now.getFullYear() && state.selectedMonth == (now.getMonth() + 1));
+                if (isCurrent) {
+                    subHeroSub.innerHTML = '<i class="fa-solid fa-industry"></i> Hasil Produksi (Hari Ini)';
+                } else {
+                    subHeroSub.innerHTML = `<i class="fa-solid fa-industry"></i> Hasil Produksi (${state.selectedMonthName || 'Bulan Ini'} ${state.selectedYear})`;
+                }
             }
 
             const subconEl = document.getElementById('subconJumlahSubcon') || document.getElementById('totalSUBCON') || document.getElementById('subconJumlahMitra');
@@ -717,6 +723,13 @@ function renderServiceCards(layanan) {
 
         // Penanganan Modul Kehadiran Karyawan (HR)
         if (code === 'HR') {
+            const now = new Date();
+            const isCurrent = (state.selectedYear == now.getFullYear() && state.selectedMonth == (now.getMonth() + 1));
+            const lblHrPeriod = document.getElementById('lblHrPeriod');
+            if (lblHrPeriod) {
+                lblHrPeriod.textContent = isCurrent ? 'Hari Ini' : (state.selectedMonthName || 'Bulan Ini');
+            }
+
             const percent = Number(item.persentase_selesai || 0);
             const percentEl = document.getElementById('percentHR');
             const barFill = document.getElementById('barFillHR');
@@ -1556,7 +1569,7 @@ function escapeHtml(str) {
 /**
  * Membuka Modal Monitoring Pengerjaan Subcon
  */
-function openSubconModal(range = 'month') {
+function openSubconModal(range = 'today') {
     const modal = document.getElementById('subconModal');
     if (!modal) return;
 
@@ -1593,8 +1606,9 @@ function formatSubconDate(d) {
 /**
  * Mengganti Rentang Waktu (Hari Ini / 7 Hari Terakhir / 30 Hari Terakhir)
  */
-async function switchSubconRange(range = 'month') {
+async function switchSubconRange(range = 'today') {
     state.currentSubconRange = range;
+    state.subconCurrentPage = 1;
 
     const { startDate, endDate } = getActivePeriodDates(range);
     state.subconDateStart = startDate;
@@ -1950,10 +1964,20 @@ function renderSubconBarangTable(items) {
                 </td>
             </tr>
         `;
+        renderSubconPagination(0);
         return;
     }
 
-    tbody.innerHTML = items.map(b => `
+    const pageSize = state.subconPageSize || 10;
+    const totalPages = Math.ceil(items.length / pageSize) || 1;
+    if ((state.subconCurrentPage || 1) > totalPages) {
+        state.subconCurrentPage = totalPages;
+    }
+    const page = state.subconCurrentPage || 1;
+    const startIdx = (page - 1) * pageSize;
+    const paginatedItems = items.slice(startIdx, startIdx + pageSize);
+
+    tbody.innerHTML = paginatedItems.map(b => `
         <tr>
             <td><span class="ticket-number">${escapeHtml(b.kode_barang)}</span></td>
             <td style="max-width: 320px; font-weight: 600; color: var(--text-primary);">${escapeHtml(b.nama_barang)}</td>
@@ -1971,6 +1995,48 @@ function renderSubconBarangTable(items) {
             </td>
         </tr>
     `).join('');
+
+    renderSubconPagination(items.length);
+}
+
+function renderSubconPagination(totalItems) {
+    const pageInfo = document.getElementById('subconPageInfo');
+    const btnPrev = document.getElementById('btnSubconPrevPage');
+    const btnNext = document.getElementById('btnSubconNextPage');
+    if (!pageInfo && !btnPrev && !btnNext) return;
+
+    const pageSize = state.subconPageSize || 10;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const currentPage = state.subconCurrentPage || 1;
+
+    if (pageInfo) {
+        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+    }
+    if (btnPrev) btnPrev.disabled = currentPage <= 1;
+    if (btnNext) btnNext.disabled = currentPage >= totalPages;
+}
+
+function changeSubconPage(delta) {
+    state.subconCurrentPage = (state.subconCurrentPage || 1) + delta;
+    renderSubconFilteredTables();
+}
+
+async function syncSubconData() {
+    const btn = document.getElementById('btnSyncSubcon');
+    if (btn) btn.classList.add('rotating');
+    try {
+        if (state.subconCache) state.subconCache.clear();
+        await switchSubconRange(state.currentSubconRange || 'today');
+        const syncEl = document.getElementById('subconLastSyncTime');
+        if (syncEl) syncEl.textContent = `Sinkron: ${new Date().toLocaleTimeString('id-ID')}`;
+        showToast('Data Subcon berhasil disinkronkan', 'success');
+    } catch (err) {
+        showToast('Gagal menyinkronkan data Subcon: ' + err.message, 'error');
+    } finally {
+        if (btn) btn.classList.remove('rotating');
+    }
 }
 
 /**
@@ -6982,7 +7048,7 @@ function sortPbf(column) {
 // MODUL HR - MONITORING KEHADIRAN KARYAWAN (ATENA ERP REST API)
 // ====================================================================
 
-function openHrModal(range = 'month') {
+function openHrModal(range = 'today') {
     const modal = document.getElementById('hrModal');
     if (!modal) return;
 
@@ -7355,20 +7421,15 @@ function renderHrPagination(totalItems) {
 
     const pageSize = state.hrPageSize || 25;
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const currentPage = state.hrCurrentPage || 1;
 
     if (pageInfo) {
-        pageInfo.textContent = `Halaman ${state.hrCurrentPage} dari ${totalPages} (${totalItems} Data)`;
+        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
     }
-    if (btnPrev) {
-        btnPrev.disabled = state.hrCurrentPage <= 1;
-        btnPrev.style.opacity = state.hrCurrentPage <= 1 ? '0.5' : '1';
-        btnPrev.style.cursor = state.hrCurrentPage <= 1 ? 'not-allowed' : 'pointer';
-    }
-    if (btnNext) {
-        btnNext.disabled = state.hrCurrentPage >= totalPages;
-        btnNext.style.opacity = state.hrCurrentPage >= totalPages ? '0.5' : '1';
-        btnNext.style.cursor = state.hrCurrentPage >= totalPages ? 'not-allowed' : 'pointer';
-    }
+    if (btnPrev) btnPrev.disabled = currentPage <= 1;
+    if (btnNext) btnNext.disabled = currentPage >= totalPages;
 }
 
 function changeHrPage(delta) {

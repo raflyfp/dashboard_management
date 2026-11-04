@@ -976,7 +976,7 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail subcon-btn" onclick="openSubconModal()">
+                        <button class="btn-detail subcon-btn" onclick="openSubconModal('today')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -1004,7 +1004,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-green" id="percentHR">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl" id="lblHrPeriod">Hari Ini</span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-green" id="barFillHR" style="width: 0%"></div>
@@ -1029,7 +1029,7 @@
                     </div>
 
                     <div class="card-footer">
-                        <button class="btn-detail hr-btn" onclick="openHrModal()">
+                        <button class="btn-detail hr-btn" onclick="openHrModal('today')">
                             <span>Lihat Detail</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
@@ -1376,13 +1376,13 @@
                             </div>
 
                             <div class="filter-pills subcon-range-pills" style="margin: 0;">
-                                <button class="filter-pill" id="btnRangeToday" onclick="switchSubconRange('today')">
+                                <button class="filter-pill active" id="btnRangeToday" onclick="switchSubconRange('today')">
                                     <i class="fa-solid fa-clock"></i> Hari Ini
                                 </button>
                                 <button class="filter-pill" id="btnRangeWeek" onclick="switchSubconRange('week')">
                                     <i class="fa-solid fa-calendar-week"></i> 7 Hari
                                 </button>
-                                <button class="filter-pill active" id="btnRangeMonth" onclick="switchSubconRange('month')">
+                                <button class="filter-pill" id="btnRangeMonth" onclick="switchSubconRange('month')">
                                     <i class="fa-solid fa-calendar-days"></i> Bulan Ini
                                 </button>
                             </div>
@@ -1401,6 +1401,9 @@
                                 <input type="text" id="subconSearchInput" placeholder="Cari nama barang / subcon..."
                                     oninput="handleSubconSearch(this.value)">
                             </div>
+                            <button class="modal-refresh-btn" id="btnSyncSubcon" onclick="syncSubconData()" title="Sinkronkan Data E-Subcon">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1505,6 +1508,21 @@
                                 </tbody>
                             </table>
                         </div>
+                        <!-- Pagination Controls Subcon -->
+                        <div class="purchasing-pagination-bar" id="subconPaginationBar"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);" id="subconPageInfo">
+                                Halaman 1 dari 1
+                            </div>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="filter-pill" id="btnSubconPrevPage" onclick="changeSubconPage(-1)">
+                                    <i class="fa-solid fa-chevron-left"></i> Prev
+                                </button>
+                                <button class="filter-pill" id="btnSubconNextPage" onclick="changeSubconPage(1)">
+                                    Next <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Panel Tab 2: Mitra Subcon -->
@@ -1544,8 +1562,11 @@
             </div>
 
             <div class="modal-footer">
-                <div class="modal-stats" id="subconModalFooterStats">
-                    Menampilkan data monitoring e-subcon
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div class="modal-stats" id="subconModalFooterStats">
+                        Menampilkan data monitoring e-subcon
+                    </div>
+                    <span id="subconLastSyncTime" style="font-size: 0.75rem; color: #64748b; margin-left: 8px;"></span>
                 </div>
                 <button class="btn-secondary" onclick="closeSubconModal()">Tutup</button>
             </div>
@@ -2562,13 +2583,13 @@
 
                             <!-- Shortcut Presets Cepat -->
                             <div class="filter-pills hr-range-pills" style="margin: 0;">
-                                <button class="filter-pill active" id="btnQuickHrMonth" onclick="setHrQuickDate('month')">
+                                <button class="filter-pill" id="btnQuickHrMonth" onclick="setHrQuickDate('month')">
                                     <i class="fa-solid fa-calendar-days"></i> Bulan Ini
                                 </button>
                                 <button class="filter-pill" id="btnQuickHrWeek" onclick="setHrQuickDate('week')">
                                     <i class="fa-solid fa-calendar-week"></i> 7 Hari
                                 </button>
-                                <button class="filter-pill" id="btnQuickHrToday" onclick="setHrQuickDate('today')">
+                                <button class="filter-pill active" id="btnQuickHrToday" onclick="setHrQuickDate('today')">
                                     <i class="fa-solid fa-clock"></i> Hari Ini
                                 </button>
                                 <button class="filter-pill" id="btnQuickHrAll" onclick="setHrQuickDate('all')">
