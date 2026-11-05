@@ -1599,20 +1599,19 @@
                             </table>
                         </div>
                         <!-- Pagination Controls Subcon -->
-                        <div class="purchasing-pagination-bar" id="subconPaginationBar"
-                            style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
-                            <div style="font-size: 0.8rem; color: var(--text-muted);" id="subconPageInfo">
-                                Halaman 1 dari 1
-                            </div>
-                            <div style="display: flex; gap: 5px;">
-                                <button class="filter-pill" id="btnSubconPrevPage" onclick="changeSubconPage(-1)">
-                                    <i class="fa-solid fa-chevron-left"></i> Prev
-                                </button>
-                                <button class="filter-pill" id="btnSubconNextPage" onclick="changeSubconPage(1)">
-                                    Next <i class="fa-solid fa-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
+                        <div class="purchasing-pagination-bar" id="subconPaginationBar">
+                    <div class="pagination-info-text" id="subconPageInfo">
+                        Halaman 1 dari 1 (0 Data)
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnSubconPrevPage" onclick="changeSubconPage(-1)" disabled>
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button class="filter-pill" id="btnSubconNextPage" onclick="changeSubconPage(1)" disabled>
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
                     </div>
 
                     <!-- Panel Tab 2: Mitra Subcon -->
@@ -2017,20 +2016,19 @@
                     </div>
 
                     <!-- Pagination Controls -->
-                    <div class="purchasing-pagination-bar" id="purchasingPaginationBar"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
-                        <div style="font-size: 0.8rem; color: var(--text-muted);" id="purchasingPageInfo">
-                            Halaman 1 dari 1
-                        </div>
-                        <div style="display: flex; gap: 5px;">
-                            <button class="filter-pill" id="btnPurchasingPrevPage" onclick="changePurchasingPage(-1)">
-                                <i class="fa-solid fa-chevron-left"></i> Prev
-                            </button>
-                            <button class="filter-pill" id="btnPurchasingNextPage" onclick="changePurchasingPage(1)">
-                                Next <i class="fa-solid fa-chevron-right"></i>
-                            </button>
-                        </div>
+                    <div class="purchasing-pagination-bar" id="purchasingPaginationBar">
+                    <div class="pagination-info-text" id="purchasingPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnPurchasingPrevPage" onclick="changePurchasingPage(-1)" disabled>
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button class="filter-pill" id="btnPurchasingNextPage" onclick="changePurchasingPage(1)" disabled>
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
 
                 </div>
             </div>
@@ -2435,20 +2433,19 @@
                     </div>
 
                     <!-- Pagination Controls QA -->
-                    <div class="purchasing-pagination-bar" id="qaPaginationBar"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
-                        <div style="font-size: 0.8rem; color: var(--text-muted);" id="qaPageInfo">
-                            Halaman 1 dari 1
-                        </div>
-                        <div style="display: flex; gap: 5px;">
-                            <button class="filter-pill" id="btnQaPrevPage" onclick="changeQaPage(-1)">
-                                <i class="fa-solid fa-chevron-left"></i> Prev
-                            </button>
-                            <button class="filter-pill" id="btnQaNextPage" onclick="changeQaPage(1)">
-                                Next <i class="fa-solid fa-chevron-right"></i>
-                            </button>
-                        </div>
+                    <div class="purchasing-pagination-bar" id="qaPaginationBar">
+                    <div class="pagination-info-text" id="qaPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnQaPrevPage" onclick="changeQaPage(-1)" disabled>
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button class="filter-pill" id="btnQaNextPage" onclick="changeQaPage(1)" disabled>
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
 
                 </div>
             </div>
@@ -2681,20 +2678,19 @@
                     </div>
 
                     <!-- Pagination Bar PBF -->
-                    <div class="purchasing-pagination-bar" id="pbfPaginationBar"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
-                        <div style="font-size: 0.8rem; color: var(--text-muted);" id="pbfPageInfo">
-                            Halaman 1 dari 1
-                        </div>
-                        <div style="display: flex; gap: 5px;">
-                            <button class="filter-pill" id="btnPbfPrevPage" onclick="changePbfPage(-1)">
-                                <i class="fa-solid fa-chevron-left"></i> Prev
-                            </button>
-                            <button class="filter-pill" id="btnPbfNextPage" onclick="changePbfPage(1)">
-                                Next <i class="fa-solid fa-chevron-right"></i>
-                            </button>
-                        </div>
+                    <div class="purchasing-pagination-bar" id="pbfPaginationBar">
+                    <div class="pagination-info-text" id="pbfPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnPbfPrevPage" onclick="changePbfPage(-1)" disabled>
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button class="filter-pill" id="btnPbfNextPage" onclick="changePbfPage(1)" disabled>
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
 
                 </div>
             </div>
@@ -2909,20 +2905,19 @@
                     </div>
 
                     <!-- Pagination Controls HR -->
-                    <div class="purchasing-pagination-bar" id="hrPaginationBar"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
-                        <div style="font-size: 0.8rem; color: var(--text-muted);" id="hrPageInfo">
-                            Halaman 1 dari 1
-                        </div>
-                        <div style="display: flex; gap: 5px;">
-                            <button class="filter-pill" id="btnPrevHrPage" onclick="changeHrPage(-1)">
-                                <i class="fa-solid fa-chevron-left"></i> Prev
-                            </button>
-                            <button class="filter-pill" id="btnNextHrPage" onclick="changeHrPage(1)">
-                                Next <i class="fa-solid fa-chevron-right"></i>
-                            </button>
-                        </div>
+                    <div class="purchasing-pagination-bar" id="hrPaginationBar">
+                    <div class="pagination-info-text" id="hrPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnPrevHrPage" onclick="changeHrPage(-1)" disabled>
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button class="filter-pill" id="btnNextHrPage" onclick="changeHrPage(1)" disabled>
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
                 </div>
             </div>
 
@@ -3096,16 +3091,15 @@
                 </div>
 
                 <!-- Pagination Bar Development -->
-                <div class="purchasing-pagination-bar" id="devPaginationBar"
-                    style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
-                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="devPageInfo">
-                        Halaman 1 dari 1
+                <div class="purchasing-pagination-bar" id="devPaginationBar">
+                    <div class="pagination-info-text" id="devPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
-                    <div style="display: flex; gap: 5px;">
-                        <button class="filter-pill" id="btnDevPrevPage" onclick="changeDevPage(-1)">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnDevPrevPage" onclick="changeDevPage(-1)" disabled>
                             <i class="fa-solid fa-chevron-left"></i> Prev
                         </button>
-                        <button class="filter-pill" id="btnDevNextPage" onclick="changeDevPage(1)">
+                        <button class="filter-pill" id="btnDevNextPage" onclick="changeDevPage(1)" disabled>
                             Next <i class="fa-solid fa-chevron-right"></i>
                         </button>
                     </div>
@@ -3200,6 +3194,7 @@
                                 <option value="FORMULIR">Formulir</option>
                                 <option value="BATCH RECORD">Batch Record</option>
                                 <option value="QUALITY PROCEDURE">Quality Procedure</option>
+                                <option value="QUALITY MANUAL">Quality Manual</option>
                             </select>
                         </div>
 
@@ -3280,16 +3275,15 @@
                 </div>
 
                 <!-- Pagination Bar DC -->
-                <div class="purchasing-pagination-bar" id="dcPaginationBar"
-                    style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
-                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="dcPageInfo">
-                        Halaman 1 dari 1
+                <div class="purchasing-pagination-bar" id="dcPaginationBar">
+                    <div class="pagination-info-text" id="dcPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
-                    <div style="display: flex; gap: 5px;">
-                        <button class="filter-pill" id="btnDcPrevPage" onclick="changeDcPage(-1)">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnDcPrevPage" onclick="changeDcPage(-1)" disabled>
                             <i class="fa-solid fa-chevron-left"></i> Prev
                         </button>
-                        <button class="filter-pill" id="btnDcNextPage" onclick="changeDcPage(1)">
+                        <button class="filter-pill" id="btnDcNextPage" onclick="changeDcPage(1)" disabled>
                             Next <i class="fa-solid fa-chevron-right"></i>
                         </button>
                     </div>
@@ -3538,20 +3532,19 @@
                     </div>
 
                     <!-- Pagination Bar -->
-                    <div class="purchasing-pagination-bar" id="produksiPaginationBar"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
-                        <div style="font-size: 0.8rem; color: var(--text-muted);" id="produksiPageInfo">
-                            Halaman 1 dari 1
-                        </div>
-                        <div style="display: flex; gap: 5px;">
-                            <button class="filter-pill" id="btnProduksiPrevPage" onclick="changeProduksiPage(-1)">
-                                <i class="fa-solid fa-chevron-left"></i> Prev
-                            </button>
-                            <button class="filter-pill" id="btnProduksiNextPage" onclick="changeProduksiPage(1)">
-                                Next <i class="fa-solid fa-chevron-right"></i>
-                            </button>
-                        </div>
+                    <div class="purchasing-pagination-bar" id="produksiPaginationBar">
+                    <div class="pagination-info-text" id="produksiPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnProduksiPrevPage" onclick="changeProduksiPage(-1)" disabled>
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button class="filter-pill" id="btnProduksiNextPage" onclick="changeProduksiPage(1)" disabled>
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
 
                 </div>
             </div>
@@ -3894,16 +3887,15 @@
                 </div>
 
                 <!-- Baris Navigasi Pagination & Info Baris -->
-                <div class="purchasing-pagination-bar" id="logistikPaginationBar"
-                    style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.25rem;">
-                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="logistikPageInfo">
-                        Menampilkan 0 baris
+                <div class="purchasing-pagination-bar" id="logistikPaginationBar">
+                    <div class="pagination-info-text" id="logistikPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
-                    <div style="display: flex; gap: 5px;">
-                        <button class="filter-pill" id="btnLogistikPrevPage" onclick="changeLogistikPage(-1)">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnLogistikPrevPage" onclick="changeLogistikPage(-1)" disabled>
                             <i class="fa-solid fa-chevron-left"></i> Prev
                         </button>
-                        <button class="filter-pill" id="btnLogistikNextPage" onclick="changeLogistikPage(1)">
+                        <button class="filter-pill" id="btnLogistikNextPage" onclick="changeLogistikPage(1)" disabled>
                             Next <i class="fa-solid fa-chevron-right"></i>
                         </button>
                     </div>
@@ -4183,16 +4175,15 @@
                 </div>
 
                 <!-- Baris Navigasi Pagination -->
-                <div class="purchasing-pagination-bar" id="whFgPaginationBar"
-                    style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.25rem;">
-                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="whFgPageInfo">
-                        Menampilkan 0 baris
+                <div class="purchasing-pagination-bar" id="whFgPaginationBar">
+                    <div class="pagination-info-text" id="whFgPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
-                    <div style="display: flex; gap: 5px;">
-                        <button class="filter-pill" id="btnWhFgPrevPage" onclick="changeWhFgPage(-1)">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnWhFgPrevPage" onclick="changeWhFgPage(-1)" disabled>
                             <i class="fa-solid fa-chevron-left"></i> Prev
                         </button>
-                        <button class="filter-pill" id="btnWhFgNextPage" onclick="changeWhFgPage(1)">
+                        <button class="filter-pill" id="btnWhFgNextPage" onclick="changeWhFgPage(1)" disabled>
                             Next <i class="fa-solid fa-chevron-right"></i>
                         </button>
                     </div>
@@ -4615,16 +4606,15 @@
                 </div>
 
                 <!-- Baris Navigasi Pagination -->
-                <div class="purchasing-pagination-bar" id="whMatPaginationBar"
-                    style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.25rem;">
-                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="whMatPageInfo">
-                        Menampilkan 0 baris
+                <div class="purchasing-pagination-bar" id="whMatPaginationBar">
+                    <div class="pagination-info-text" id="whMatPageInfo">
+                        Halaman 1 dari 1 (0 Data)
                     </div>
-                    <div style="display: flex; gap: 5px;">
-                        <button class="filter-pill" id="btnWhMatPrevPage" onclick="changeWhMatPage(-1)">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnWhMatPrevPage" onclick="changeWhMatPage(-1)" disabled>
                             <i class="fa-solid fa-chevron-left"></i> Prev
                         </button>
-                        <button class="filter-pill" id="btnWhMatNextPage" onclick="changeWhMatPage(1)">
+                        <button class="filter-pill" id="btnWhMatNextPage" onclick="changeWhMatPage(1)" disabled>
                             Next <i class="fa-solid fa-chevron-right"></i>
                         </button>
                     </div>

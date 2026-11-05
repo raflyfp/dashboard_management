@@ -158,7 +158,7 @@ class HrService {
 
         try {
             const response = await axios.post(url, body, {
-                timeout: this.apiConfig.timeoutMs || 15000,
+                timeout: this.apiConfig.timeoutMs || 45000,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -434,6 +434,15 @@ class HrService {
             return result;
         } catch (err) {
             console.error(`[HR FETCH DATA ${bagian} ERROR]:`, err.message);
+            if (cache.detailCache.has(cacheKey)) {
+                console.warn(`[HR FETCH DATA ${bagian}]: Menggunakan cache in-memory yang ada karena koneksi bermasalah.`);
+                return cache.detailCache.get(cacheKey).data;
+            }
+            const persistent = loadPersistentCache();
+            if (persistent && persistent[bagian]) {
+                console.warn(`[HR FETCH DATA ${bagian}]: Menggunakan file cache cadangan.`);
+                return persistent[bagian];
+            }
             throw err;
         }
     }

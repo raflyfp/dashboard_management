@@ -64,6 +64,7 @@ const serverInstance = app.listen(config.port, '0.0.0.0', async () => {
     console.log(`🔗 API Ticketing  : ${config.ticketing.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
     console.log(`🔗 API Subcon     : ${config.subcon.url ? 'Terkonfigurasi' : 'Belum diisi'}`);
     console.log(`🔗 API Atena ERP  : ${config.atenaApi?.baseUrl ? 'Terkonfigurasi (REST API)' : 'Belum diisi'}`);
+    console.log(`🔗 API Paperless  : ${config.paperlessApi?.baseUrl ? 'Terkonfigurasi (REST API)' : 'Belum diisi'}`);
     console.log('----------------------------------------------------');
     console.log('⏳ Memeriksa status koneksi ke API Eksternal...');
 

@@ -1146,7 +1146,10 @@ html, body {
 .modal-card-xl {
     width: 95vw;
     max-width: 1360px;
-    max-height: 90vh;
+    height: 92vh;
+    max-height: 92vh;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 .subcon-modal-body {
@@ -2520,71 +2523,80 @@ html, body {
 
 
 /* ====================================================================
-   PENYERAGAMAN PAGINATION BUTTONS & BAR MODAL (PAKEM, TEGAS, SOLID)
+   PENYERAGAMAN PAGINATION BUTTONS & BAR MODAL (BERSIH, MENYATU & RAPI)
    ==================================================================== */
 .purchasing-pagination-bar {
-    background: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
-    padding: 0.45rem 0.85rem !important;
-    margin-top: 0.6rem !important;
+    background: #ffffff !important;
+    border: none !important;
+    border-top: 1px solid var(--border-color, #e2e8f0) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0.65rem 0.5rem 0.25rem 0.5rem !important;
+    margin-top: 0.45rem !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
     flex-shrink: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
-.purchasing-pagination-bar > div:first-child {
+.purchasing-pagination-bar > div:first-child,
+.purchasing-pagination-bar .pagination-info-text {
     font-size: 0.82rem !important;
-    font-weight: 600 !important;
+    font-weight: 500 !important;
     color: #475569 !important;
     letter-spacing: -0.01em !important;
+    display: flex !important;
+    align-items: center !important;
+    user-select: none !important;
 }
 
 .purchasing-pagination-bar .filter-pill,
 .purchasing-pagination-bar button {
     background: #ffffff !important;
-    border: 1.5px solid #cbd5e1 !important;
-    color: #0f172a !important;
-    padding: 0.42rem 0.95rem !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+    height: 32px !important;
+    padding: 0 14px !important;
     border-radius: 6px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 7px !important;
+    gap: 6px !important;
     font-size: 0.8rem !important;
-    font-weight: 700 !important;
+    font-weight: 600 !important;
     cursor: pointer !important;
     transition: all 0.15s ease-in-out !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
     user-select: none !important;
+    outline: none !important;
 }
 
 .purchasing-pagination-bar .filter-pill:hover:not(:disabled),
 .purchasing-pagination-bar button:hover:not(:disabled) {
-    background: #0284c7 !important;
+    background: #f8fafc !important;
     border-color: #0284c7 !important;
-    color: #ffffff !important;
-    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28) !important;
-    transform: translateY(-1px) !important;
+    color: #0284c7 !important;
+    box-shadow: 0 2px 4px rgba(2, 132, 199, 0.15) !important;
+    transform: none !important;
 }
 
 .purchasing-pagination-bar .filter-pill:active:not(:disabled),
 .purchasing-pagination-bar button:active:not(:disabled) {
-    transform: translateY(0) !important;
-    box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2) !important;
+    background: #f1f5f9 !important;
+    transform: none !important;
 }
 
 .purchasing-pagination-bar .filter-pill:disabled,
 .purchasing-pagination-bar button:disabled {
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
     border-color: #e2e8f0 !important;
-    color: #94a3b8 !important;
-    opacity: 0.65 !important;
+    color: #cbd5e1 !important;
     cursor: not-allowed !important;
     box-shadow: none !important;
     transform: none !important;
+    opacity: 0.8 !important;
 }
 
 .hr-theme {
@@ -2684,14 +2696,15 @@ html, body {
     flex-shrink: 0 !important;
 }
 
-/* Modal Body tidak boleh scroll, seluruh ruang diberikan ke tabel */
+/* Layout Modal & Responsif Tabel Scrollable (Produksi, HR, Purchasing, QA, Logistik, PBF) */
 .modal-body,
 .subcon-modal-body {
     flex: 1 1 auto !important;
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: hidden !important; /* Mencegah scrollbar ganda di luar tabel */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     padding: 0.75rem 1.15rem !important;
     gap: 0.4rem !important;
     background: #ffffff !important;
@@ -2702,6 +2715,8 @@ html, body {
 .qa-kpi-grid,
 .purchasing-kpi-grid,
 .logistik-kpi-grid,
+.hr-kpi-grid,
+.pbf-kpi-grid,
 .modal-tab-nav-row,
 .subcon-filter-bar,
 .subcon-tabs {
@@ -2709,31 +2724,43 @@ html, body {
     margin-bottom: 0.15rem !important;
 }
 
-/* Tab Panel aktif mengisi sisa ruang flex */
+/* Detail section & Tab Panel aktif mengisi ruang flex */
+.subcon-detail-section {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    gap: 0.4rem !important;
+}
+
 .subcon-tab-panel.active {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 1 auto !important;
     min-height: 0 !important;
-    overflow: hidden !important;
 }
 
-/* HANYA DI DALAM TABEL YANG BISA DI-SCROLL */
+/* Tabel di dalam modal dapat di-scroll secara vertikal & horizontal */
 .table-responsive,
 .modal-body .table-responsive,
 .subcon-modal-body .table-responsive,
+.subcon-detail-section .table-responsive,
 .subcon-tab-panel .table-responsive {
     flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;  /* Scrollbar vertikal HANYA ada di sini */
+    min-height: 220px !important;
+    max-height: 52vh !important;
+    overflow-y: auto !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
     border: 1px solid var(--border-color, #e2e8f0) !important;
     border-radius: var(--radius-sm, 6px) !important;
     background: #ffffff !important;
+    margin-bottom: 0.2rem !important;
+    isolation: isolate !important;
+    contain: paint;
 }
 
-/* Header tabel tetap kelihatan saat tabel di-scroll */
+/* Header tabel tetap melayang (sticky) saat scroll bar bergerak */
 .table-responsive thead th,
 .subcon-table thead th,
 .tickets-table thead th {
@@ -2744,17 +2771,76 @@ html, body {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Bar Pagination Prev / Next tetap diam di bawah tabel tanpa harus scroll */
+/* Bar Pagination Prev / Next rapi di bawah tabel (Layering aman) */
 .purchasing-pagination-bar {
-    flex-shrink: 0 !important;
-    position: static !important;
-    margin-top: 0.45rem !important;
-    padding: 0.45rem 0.85rem !important;
-    background: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
+    position: relative !important;
+    z-index: 10 !important;
+    background: #ffffff !important;
+}
+
+
+/* ====================================================================
+   KHUSUS MODAL LAYANAN TIKET (IT, TK, GA): FULL HEIGHT TANPA TERPOTONG
+   Khusus layanan ini menampilkan seluruh tiket (tanpa pagination)
+   dengan tabel full-height yang dapat di-scroll secara mulus.
+   ==================================================================== */
+#ticketModal .modal-card {
+    height: 90vh !important;
+    max-height: 90vh !important;
+    max-width: 1250px !important;
     display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+#ticketModal .modal-header {
+    flex-shrink: 0 !important;
+}
+
+#ticketModal .modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0.75rem 1.15rem !important;
+    background: #ffffff !important;
+}
+
+#ticketModal .table-responsive {
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    max-height: none !important; /* Hapus batasan 52vh agar tabel mengisi penuh */
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border-color, #e2e8f0) !important;
+    border-radius: var(--radius-sm, 6px) !important;
+    background: #ffffff !important;
+    margin-bottom: 0 !important;
+    isolation: isolate !important;
+}
+
+#ticketModal .tickets-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+}
+
+#ticketModal .tickets-table thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 8 !important;
+    background: #f8fafc !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+}
+
+#ticketModal .tickets-table td {
+    padding: 0.6rem 0.8rem !important;
+    vertical-align: middle !important;
+}
+
+#ticketModal .modal-footer {
+    flex-shrink: 0 !important;
+    border-top: 1px solid var(--border-color, #e2e8f0) !important;
 }

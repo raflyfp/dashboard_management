@@ -44,6 +44,17 @@ const healthState = {
         message: 'Menunggu pemeriksaan awal...',
         consecutiveFailures: 0
     },
+    paperless: {
+        status: 'unknown',
+        name: 'Paperless REST API (DC)',
+        baseUrl: config.paperlessApi?.baseUrl || '',
+        latencyMs: 0,
+        httpStatus: null,
+        lastChecked: null,
+        lastOnline: null,
+        message: 'Menunggu pemeriksaan awal...',
+        consecutiveFailures: 0
+    },
     subcon: {
         status: 'unknown',
         name: 'E-Subcon API',
@@ -60,6 +71,67 @@ class ApiHealthService {
     /**
      * Ping aktif ke Atena ERP REST API (Auth/login)
      */
+    /**
+     * Ping aktif ke Paperless REST API (Auth/login)
+     */
+    async pingPaperless() {
+        const start = Date.now();
+        const loginUrl = `${config.paperlessApi?.baseUrl || ''}Auth/login`;
+
+        try {
+            const response = await axios.post(
+                loginUrl,
+                {
+                    username: config.paperlessApi.username,
+                    password: config.paperlessApi.password,
+                },
+                {
+                    timeout: 8000,
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+
+            const latency = Date.now() - start;
+            const isOk = response.status === 200 && (response.data?.success || response.data?.data?.token);
+
+            healthState.paperless.status = isOk ? 'online' : 'degraded';
+            healthState.paperless.latencyMs = latency;
+            healthState.paperless.httpStatus = response.status;
+            healthState.paperless.lastChecked = new Date().toISOString();
+            if (isOk) {
+                healthState.paperless.lastOnline = healthState.paperless.lastChecked;
+                healthState.paperless.consecutiveFailures = 0;
+                healthState.paperless.message = `Paperless REST API berjalan normal (${latency}ms)`;
+            } else {
+                healthState.paperless.message = response.data?.message || 'Respons tidak terduga dari Paperless API';
+            }
+
+            return {
+                success: isOk,
+                status: healthState.paperless.status,
+                latencyMs: latency,
+                httpStatus: response.status,
+                message: healthState.paperless.message
+            };
+        } catch (error) {
+            const latency = Date.now() - start;
+            healthState.paperless.status = 'offline';
+            healthState.paperless.latencyMs = latency;
+            healthState.paperless.httpStatus = error.response?.status || null;
+            healthState.paperless.lastChecked = new Date().toISOString();
+            healthState.paperless.consecutiveFailures += 1;
+            healthState.paperless.message = error.response?.data?.message || error.message || 'Tidak dapat terhubung ke Paperless API';
+
+            return {
+                success: false,
+                status: 'offline',
+                latencyMs: latency,
+                httpStatus: error.response?.status || null,
+                message: healthState.paperless.message
+            };
+        }
+    }
+
     async pingAtena() {
         const start = Date.now();
         const loginUrl = `${config.atenaApi.baseUrl}Auth/login`;

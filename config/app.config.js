@@ -42,7 +42,7 @@ module.exports = {
         baseUrl: (process.env.ATENA_API_BASE_URL || 'https://erpsna.atena.id/API/Dashboard/').trim().replace(/\/?$/, '/'),
         username: (process.env.ATENA_API_USERNAME || 'SNATEST@EMAIL.COM').trim(),
         password: (process.env.ATENA_API_PASSWORD || 'admin123').trim(),
-        timeoutMs: 15000,
+        timeoutMs: parseInt(process.env.ATENA_API_TIMEOUT_MS, 10) || 45000,
     },
 
     // Konfigurasi REST API Paperless Document Control (DC)

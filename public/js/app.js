@@ -1,3 +1,39 @@
+
+/**
+ * Helper fetch aman: membaca response sebagai text terlebih dahulu
+ * Menghindari crash 'Unexpected token <' bila server/proxy mengembalikan halaman HTML (404/502/504)
+ */
+async function fetchJsonSafely(url, options = {}) {
+    const res = await fetch(url, options);
+    const text = await res.text();
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+        throw new Error(`Respon server tidak valid atau koneksi timeout (HTTP ${res.status}). Silakan coba klik tombol refresh.`);
+    }
+    if (!res.ok) {
+        throw new Error(data?.message || `Gagal mengambil data dari server (HTTP ${res.status})`);
+    }
+    return data;
+}
+
+
+/**
+ * Format teks penomoran pagination seragam untuk semua modal
+ */
+function getPaginationInfoText(currentPage, totalPages, totalItems, pageSize) {
+    if (!totalItems || totalItems === 0) {
+        return 'Menampilkan 0 data (Halaman 1/1)';
+    }
+    const pSize = pageSize || 10;
+    const cPage = currentPage || 1;
+    const tPages = Math.max(1, totalPages || Math.ceil(totalItems / pSize));
+    const start = (cPage - 1) * pSize + 1;
+    const end = Math.min(cPage * pSize, totalItems);
+    return `Menampilkan ${start}–${end} dari ${totalItems} data (Halaman ${cPage}/${tPages})`;
+}
+
 /**
  * ====================================================================
  * MANAGEMENT MONITORING DASHBOARD - FRONTEND JAVASCRIPT
@@ -873,7 +909,7 @@ function renderServiceCards(layanan) {
 
             animateCounter('totalDC', item.total_tiket || item.total || 0);
             animateCounter('selesaiDC', item.selesai || 0);
-            animateCounter('belumDC', item.belum_selesai || 0);
+            animateCounter('belumDC', item.belum_selesai || item.belum || item.total_belum || 0);
             return;
         }
 
@@ -2199,9 +2235,7 @@ function renderSubconPagination(totalItems) {
     const currentPage = state.subconCurrentPage || 1;
 
     if (pageInfo) {
-        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-        const end = Math.min(currentPage * pageSize, totalItems);
-        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+        pageInfo.textContent = getPaginationInfoText(currentPage, totalPages, totalItems, pageSize);
     }
     if (btnPrev) btnPrev.disabled = currentPage <= 1;
     if (btnNext) btnNext.disabled = currentPage >= totalPages;
@@ -2888,7 +2922,7 @@ function renderPurchasingPrTable(prList) {
             </tr>
         `;
         if (footerStats) footerStats.textContent = 'Menampilkan 0 No. PR';
-        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
+        if (pageInfo) pageInfo.textContent = 'Menampilkan 0 data (Halaman 1/1)';
         if (btnPrev) btnPrev.disabled = true;
         if (btnNext) btnNext.disabled = true;
         return;
@@ -2945,7 +2979,7 @@ function renderPurchasingPrTable(prList) {
         footerStats.textContent = `Menampilkan ${startIndex + 1}-${Math.min(startIndex + pageSize, prList.length)} dari ${prList.length} No. PR`;
     }
     if (pageInfo) {
-        pageInfo.textContent = `Halaman ${state.purchasingCurrentPage} dari ${totalPages} (${prList.length} PR)`;
+        pageInfo.textContent = getPaginationInfoText(state.purchasingCurrentPage, totalPages, prList.length, pageSize);
     }
     if (btnPrev) btnPrev.disabled = state.purchasingCurrentPage <= 1;
     if (btnNext) btnNext.disabled = state.purchasingCurrentPage >= totalPages;
@@ -2973,7 +3007,7 @@ function renderPurchasingItemsTable(itemList) {
             </tr>
         `;
         if (footerStats) footerStats.textContent = 'Menampilkan 0 Item';
-        if (pageInfo) pageInfo.textContent = 'Halaman 1 dari 1';
+        if (pageInfo) pageInfo.textContent = 'Menampilkan 0 data (Halaman 1/1)';
         if (btnPrev) btnPrev.disabled = true;
         if (btnNext) btnNext.disabled = true;
         return;
@@ -3044,7 +3078,7 @@ function renderPurchasingItemsTable(itemList) {
         footerStats.textContent = `Menampilkan ${startIndex + 1}-${Math.min(startIndex + pageSize, itemList.length)} dari ${itemList.length} Item`;
     }
     if (pageInfo) {
-        pageInfo.textContent = `Halaman ${state.purchasingCurrentPage} dari ${totalPages} (${itemList.length} Item)`;
+        pageInfo.textContent = getPaginationInfoText(state.purchasingCurrentPage, totalPages, itemList.length, pageSize);
     }
     if (btnPrev) btnPrev.disabled = state.purchasingCurrentPage <= 1;
     if (btnNext) btnNext.disabled = state.purchasingCurrentPage >= totalPages;
@@ -3759,7 +3793,7 @@ function renderProduksiUI(payload) {
     // 7. Update Pagination Bar
     const pageInfoEl = document.getElementById('produksiPageInfo');
     if (pageInfoEl) {
-        pageInfoEl.textContent = `Halaman ${state.produksiCurrentPage} dari ${totalPages} (${totalItems} data)`;
+        pageInfoEl.textContent = getPaginationInfoText(state.produksiCurrentPage, totalPages, totalItems, pageSize);
     }
 
     const prevBtn = document.getElementById('btnProduksiPrevPage');
@@ -5485,9 +5519,7 @@ function renderQaPagination(totalItems, currentPage, pageSize) {
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
 
     if (pageInfo) {
-        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-        const end = Math.min(currentPage * pageSize, totalItems);
-        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+        pageInfo.textContent = getPaginationInfoText(currentPage, totalPages, totalItems, pageSize);
     }
 
     if (btnPrev) btnPrev.disabled = currentPage <= 1;
@@ -5935,9 +5967,7 @@ function renderWhFgPagination(totalItems, currentPage, pageSize) {
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
 
     if (pageInfo) {
-        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-        const end = Math.min(currentPage * pageSize, totalItems);
-        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+        pageInfo.textContent = getPaginationInfoText(currentPage, totalPages, totalItems, pageSize);
     }
 
     if (btnPrev) btnPrev.disabled = currentPage <= 1;
@@ -6520,7 +6550,7 @@ function renderWhMatMrDocTable(docs) {
                 <td class="text-center font-mono">${no}</td>
                 <td>
                     <strong style="color: var(--sna-blue); cursor: pointer;" onclick="viewWhMatMrDocItems('${doc.no_trans}')" title="Klik untuk lihat rincian item">
-                        ${doc.no_trans} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 3px; opacity: 0.7;"></i>
+                        ${doc.no_trans} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 4px; color: #0284c7;"></i>
                     </strong>
                 </td>
                 <td class="text-center font-mono" style="font-size: 0.8rem;">${doc.tgl_kirim_label || doc.tgl_kirim}</td>
@@ -6635,7 +6665,7 @@ function renderWhMatDrDocTable(docs) {
                 <td><span class="badge-satuan" style="font-size: 0.72rem;">${doc.sumber || '-'}</span></td>
                 <td>
                     <strong style="color: var(--sna-blue); cursor: pointer;" onclick="viewWhMatDrDocItems('${doc.no_trans}')" title="Klik untuk lihat rincian item">
-                        ${doc.no_trans} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 3px; opacity: 0.7;"></i>
+                        ${doc.no_trans} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 4px; color: #0284c7;"></i>
                     </strong>
                 </td>
                 <td class="text-center font-mono" style="font-size: 0.8rem;">${doc.tgl_kirim_label || doc.tgl_kirim}</td>
@@ -6721,9 +6751,7 @@ function renderWhMatPagination(totalItems, currentPage, pageSize) {
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
 
     if (pageInfo) {
-        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-        const end = Math.min(currentPage * pageSize, totalItems);
-        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+        pageInfo.textContent = getPaginationInfoText(currentPage, totalPages, totalItems, pageSize);
     }
 
     if (btnPrev) btnPrev.disabled = currentPage <= 1;
@@ -7202,12 +7230,13 @@ function renderPbfPagination(totalItems) {
 
     const pageSize = state.pbfPageSize || 10;
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const currentPage = state.pbfCurrentPage || 1;
 
     if (pageInfo) {
-        pageInfo.textContent = `Halaman ${state.pbfCurrentPage} dari ${totalPages} (${totalItems} Data)`;
+        pageInfo.textContent = getPaginationInfoText(currentPage, totalPages, totalItems, pageSize);
     }
-    if (btnPrev) btnPrev.disabled = state.pbfCurrentPage <= 1;
-    if (btnNext) btnNext.disabled = state.pbfCurrentPage >= totalPages;
+    if (btnPrev) btnPrev.disabled = currentPage <= 1;
+    if (btnNext) btnNext.disabled = currentPage >= totalPages;
 }
 
 function changePbfPage(delta) {
@@ -7363,7 +7392,7 @@ async function syncHrData() {
 
     try {
         renderHrTableLoading();
-        const res = await fetch('/api/dashboard/hr/sync', {
+        const result = await fetchJsonSafely('/api/dashboard/hr/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -7372,7 +7401,6 @@ async function syncHrData() {
                 tanggal_akhir: state.hrDateEnd
             })
         });
-        const result = await res.json();
         if (!result.success) throw new Error(result.message || 'Gagal sinkronisasi data HR');
 
         const cacheKey = `${state.currentHrBagian}_${state.hrDateStart}_${state.hrDateEnd}`;
@@ -7413,8 +7441,7 @@ async function loadHrData(force = false) {
 
     try {
         const url = `/api/dashboard/hr?bagian=${encodeURIComponent(bagian)}&tanggal_mulai=${encodeURIComponent(start)}&tanggal_akhir=${encodeURIComponent(end)}`;
-        const res = await fetch(url);
-        const result = await res.json();
+        const result = await fetchJsonSafely(url);
         if (!result.success) throw new Error(result.message || 'Gagal memuat data kehadiran');
 
         state.hrCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
@@ -7613,9 +7640,7 @@ function renderHrPagination(totalItems) {
     const currentPage = state.hrCurrentPage || 1;
 
     if (pageInfo) {
-        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-        const end = Math.min(currentPage * pageSize, totalItems);
-        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+        pageInfo.textContent = getPaginationInfoText(currentPage, totalPages, totalItems, pageSize);
     }
     if (btnPrev) btnPrev.disabled = currentPage <= 1;
     if (btnNext) btnNext.disabled = currentPage >= totalPages;
@@ -7947,9 +7972,7 @@ function renderDevPagination(totalItems) {
     const currentPage = state.devCurrentPage || 1;
 
     if (pageInfo) {
-        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-        const end = Math.min(currentPage * pageSize, totalItems);
-        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+        pageInfo.textContent = getPaginationInfoText(currentPage, totalPages, totalItems, pageSize);
     }
     if (btnPrev) btnPrev.disabled = currentPage <= 1;
     if (btnNext) btnNext.disabled = currentPage >= totalPages;
@@ -8041,19 +8064,14 @@ function closeDcModal() {
 
 function setDcQuickDate(preset = 'month') {
     state.currentDcRange = preset;
+    state.dcCurrentPage = 1;
 
-    if (preset === 'all') {
-        state.dcDateStart = '';
-        state.dcDateEnd = '';
-        setDateInputValue('dcDateStart', '');
-        setDateInputValue('dcDateEnd', '');
-    } else {
-        const { startDate, endDate } = getActivePeriodDates(preset);
-        state.dcDateStart = startDate;
-        state.dcDateEnd = endDate;
-        setDateInputValue('dcDateStart', startDate);
-        setDateInputValue('dcDateEnd', endDate);
-    }
+    const { startDate, endDate } = getActivePeriodDates(preset);
+    state.dcDateStart = startDate;
+    state.dcDateEnd = endDate;
+
+    setDateInputValue('dcDateStart', startDate);
+    setDateInputValue('dcDateEnd', endDate);
 
     const btnMonth = document.getElementById('btnQuickDcMonth');
     const btnToday = document.getElementById('btnQuickDcToday');
@@ -8063,7 +8081,6 @@ function setDcQuickDate(preset = 'month') {
     if (btnToday) btnToday.classList.toggle('active', preset === 'today');
     if (btnAll) btnAll.classList.toggle('active', preset === 'all');
 
-    state.dcCurrentPage = 1;
     loadDcData();
 }
 
@@ -8140,7 +8157,7 @@ async function loadDcData(force = false) {
         const end = state.dcDateEnd || '';
 
         let url = `/api/dashboard/dc?range=${range}&bulan=${bulan}&tahun=${tahun}`;
-        if (range === 'custom' && start && end) {
+        if (start && end) {
             url += `&tglawal=${start}&tglakhir=${end}`;
         }
         if (force) url += '&force=true';
@@ -8182,10 +8199,12 @@ function filterAndRenderDcTable() {
     let items = state.dcRawData.items;
 
     // Filter status
-    if (state.dcStatus === 'selesai') {
-        items = items.filter(it => it.is_selesai || it.status === 'SELESAI');
-    } else if (state.dcStatus === 'belum') {
-        items = items.filter(it => !it.is_selesai && it.status !== 'SELESAI');
+    if (state.dcStatus && state.dcStatus !== 'all') {
+        if (state.dcStatus === 'selesai') {
+            items = items.filter(it => it.is_selesai || it.status === 'SELESAI');
+        } else if (state.dcStatus === 'belum') {
+            items = items.filter(it => !it.is_selesai && it.status !== 'SELESAI');
+        }
     }
 
     // Filter jenis dokumen
@@ -8270,9 +8289,7 @@ function renderDcPagination(totalItems) {
     const currentPage = state.dcCurrentPage || 1;
 
     if (pageInfo) {
-        const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-        const end = Math.min(currentPage * pageSize, totalItems);
-        pageInfo.textContent = `Menampilkan ${start}-${end} dari ${totalItems} data (Halaman ${currentPage}/${totalPages})`;
+        pageInfo.textContent = getPaginationInfoText(currentPage, totalPages, totalItems, pageSize);
     }
     if (btnPrev) btnPrev.disabled = currentPage <= 1;
     if (btnNext) btnNext.disabled = currentPage >= totalPages;

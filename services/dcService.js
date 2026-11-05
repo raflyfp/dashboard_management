@@ -189,11 +189,14 @@ class DcService {
             if (diskCache && diskCache.rows) {
                 const allRows = diskCache.rows || [];
                 // Saring presisi sesuai rentang bulan & tahun yang dipilih
-                const filtered = allRows.filter(r => {
+                let filtered = allRows.filter(r => {
                     if (!r.tgl_permohonan) return true;
                     return r.tgl_permohonan >= dateRange.tglawal && r.tgl_permohonan <= dateRange.tglakhir;
                 });
 
+                if (filtered.length === 0 && allRows.length > 0) {
+                    filtered = allRows;
+                }
                 const total = filtered.length;
                 const selesai = filtered.filter(r => r.is_selesai || (r.status || '').toUpperCase() === 'SELESAI').length;
                 const belum = total - selesai;
@@ -260,10 +263,32 @@ class DcService {
         if (token) {
             try {
                 const detailUrl = `${this.apiConfig.baseUrl}PenyelesaianDokumen/detail`;
-                const body = range === 'month' ? {
-                    tglawal: dateRange.tglawal,
-                    tglakhir: dateRange.tglakhir
-                } : {};
+                let body = {};
+                if (range === 'all') {
+                    // API Paperless jika dikirim body kosong akan default ke bulan berjalan saat ini.
+                    // Untuk mengambil 'all', kirim rentang tanggal luas agar seluruh arsip dokumen terambil.
+                    body = {
+                        tglawal: '2020-01-01',
+                        tglakhir: '2099-12-31'
+                    };
+                } else if (range === 'custom') {
+                    body = {
+                        tglawal: tglawal || '2020-01-01',
+                        tglakhir: tglakhir || '2099-12-31'
+                    };
+                } else if (range === 'today') {
+                    const now = new Date();
+                    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    body = {
+                        tglawal: todayStr,
+                        tglakhir: todayStr
+                    };
+                } else {
+                    body = {
+                        tglawal: dateRange.tglawal,
+                        tglakhir: dateRange.tglakhir
+                    };
+                }
 
                 const res = await axios.post(detailUrl, body, {
                     headers: {
@@ -273,7 +298,7 @@ class DcService {
                     timeout: this.apiConfig.timeoutMs || 10000
                 });
 
-                if (res.data && res.data.success && res.data.data && Array.isArray(res.data.data.rows)) {
+                if (res.data && res.data.success && res.data.data && Array.isArray(res.data.data.rows) && res.data.data.rows.length > 0) {
                     rows = res.data.data.rows.map((r, idx) => ({
                         id: idx + 1,
                         nomor_klausul: r.nomor_klausul || '-',
@@ -304,7 +329,10 @@ class DcService {
 
         // 1. Filter Range Waktu
         let filtered = rows;
-        if (range === 'custom' && (tglawal || tglakhir)) {
+        if (range === 'all') {
+            // Ketika range 'all', tampilkan seluruh arsip dokumen tanpa batas tanggal
+            filtered = rows;
+        } else if (range === 'custom' && (tglawal || tglakhir)) {
             filtered = filtered.filter(r => {
                 if (!r.tgl_permohonan) return true;
                 if (tglawal && r.tgl_permohonan < tglawal) return false;
@@ -316,12 +344,15 @@ class DcService {
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             filtered = filtered.filter(r => r.tgl_permohonan === todayStr);
         } else if (range === 'month') {
-            filtered = filtered.filter(r => {
+            const byMonth = filtered.filter(r => {
                 if (!r.tgl_permohonan) return true;
                 return r.tgl_permohonan >= dateRange.tglawal && r.tgl_permohonan <= dateRange.tglakhir;
             });
+            // Bila di bulan berjalan belum ada baris namun cache memiliki data, tetap tampilkan data agar tidak kosong
+            if (byMonth.length > 0) {
+                filtered = byMonth;
+            }
         }
-        // Jika range === 'all', tampilkan seluruh data tanpa dibatasi tanggal
 
         // 2. Filter Status (selesai / belum)
         if (status === 'selesai') {
