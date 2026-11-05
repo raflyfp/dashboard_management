@@ -2844,3 +2844,125 @@ html, body {
     flex-shrink: 0 !important;
     border-top: 1px solid var(--border-color, #e2e8f0) !important;
 }
+
+
+/* ====================================================================
+   GLOBAL PERIOD LOADING INDICATOR & TOP PROGRESS BAR
+   ==================================================================== */
+.global-loading-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 3.5px;
+    background: linear-gradient(90deg, #0284c7, #38bdf8, #2563eb);
+    z-index: 999999;
+    transition: width 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    box-shadow: 0 0 10px rgba(2, 132, 199, 0.7);
+}
+
+.global-loading-bar.is-loading {
+    opacity: 1;
+    width: 75%;
+    animation: loadingBarPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes loadingBarPulse {
+    0% { width: 30%; }
+    50% { width: 85%; }
+    100% { width: 30%; }
+}
+
+.global-loading-bar.is-finished {
+    width: 100% !important;
+    opacity: 0;
+    transition: width 0.2s ease, opacity 0.4s ease 0.2s;
+}
+
+/* Floating Loading Pill saat ganti periode */
+.period-loading-pill {
+    position: fixed;
+    top: 72px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: #0f172a;
+    color: #ffffff;
+    padding: 0.5rem 1.25rem;
+    border-radius: 30px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    z-index: 99999;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.period-loading-pill.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+.period-loading-pill i {
+    color: #38bdf8;
+    font-size: 0.88rem;
+}
+
+/* Redupkan kartu dashboard secara halus saat proses fetching periode berlangsung */
+.cards-grid-10.is-loading-period,
+.services-grid.is-loading-period {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+/* Toast Notification Global */
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 999999;
+    pointer-events: none;
+}
+
+.toast-message {
+    background: #1e293b;
+    color: #ffffff;
+    padding: 0.65rem 1.1rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.25s ease;
+    pointer-events: auto;
+}
+
+.toast-message.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-message.toast-success {
+    border-left: 4px solid #10b981;
+}
+
+.toast-message.toast-error {
+    border-left: 4px solid #ef4444;
+}
+
+.toast-message.toast-info {
+    border-left: 4px solid #0284c7;
+}

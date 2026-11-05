@@ -23,10 +23,19 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
 
     <!-- Stylesheet Tema Flat SNA Medika -->
-    <link rel="stylesheet" href="/css/style.css?v=2.11.0">
+    <link rel="stylesheet" href="/css/style.css?v=2.11.5">
 </head>
 
 <body>
+
+    <!-- Top Global Loading Bar -->
+    <div id="globalLoadingBar" class="global-loading-bar"></div>
+
+    <!-- Floating Indicator Saat Ganti Periode Bulan/Tahun -->
+    <div id="periodLoadingIndicator" class="period-loading-pill" style="display: none;">
+        <i class="fa-solid fa-arrows-rotate fa-spin"></i>
+        <span>Memuat data periode <b id="loadingPeriodLabel">...</b>...</span>
+    </div>
 
     <div class="dashboard-wrapper">
 
@@ -106,7 +115,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentIT">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillIT" style="width: 0%"></div>
@@ -150,7 +159,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentTK">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillTK" style="width: 0%"></div>
@@ -194,7 +203,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentGA">0%</span>
-                                <span class="percent-lbl">Selesai</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillGA" style="width: 0%"></div>
@@ -238,7 +247,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_FINISHING">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_FINISHING"
@@ -283,7 +292,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_ANTISEPTIK">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_ANTISEPTIK"
@@ -329,7 +338,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_CW">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_CW" style="width: 0%"></div>
@@ -374,7 +383,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_SIZING">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SIZING" style="width: 0%">
@@ -419,7 +428,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_POLIGYP">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_POLIGYP" style="width: 0%">
@@ -465,7 +474,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_IRONING">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_IRONING" style="width: 0%">
@@ -510,7 +519,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_SURGICAL_MESIN">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SURGICAL_MESIN"
@@ -555,7 +564,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPROD_SURGICAL_PACKING">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPROD_SURGICAL_PACKING"
@@ -609,7 +618,7 @@
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
                                     <span><i class="fa-solid fa-boxes-stacked"
                                             style="color: #2563eb; margin-right: 3px;"></i> Material</span>
-                                    <span style="font-size: 0.62rem; color: var(--text-muted);">Bln Ini</span>
+                                    <span style="font-size: 0.62rem; color: var(--text-muted);"></span>
                                 </div>
                                 <div class="percent-number-row" style="margin-top: 2px;">
                                     <span class="percent-val kpi-color-red" id="percentPurchasingMaterial"
@@ -626,7 +635,7 @@
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
                                     <span><i class="fa-solid fa-screwdriver-wrench"
                                             style="color: #8b5cf6; margin-right: 3px;"></i> Non-Mat</span>
-                                    <span style="font-size: 0.62rem; color: var(--text-muted);">Bln Ini</span>
+                                    <span style="font-size: 0.62rem; color: var(--text-muted);"></span>
                                 </div>
                                 <div class="percent-number-row" style="margin-top: 2px;">
                                     <span class="percent-val kpi-color-red" id="percentPurchasingNonMaterial"
@@ -688,7 +697,7 @@
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
                                     <span><i class="fa-solid fa-boxes-packing"
                                             style="color: #2563eb; margin-right: 2px;"></i> GRS</span>
-                                    <span style="font-size: 0.58rem; color: var(--text-muted);">Bln Ini</span>
+                                    <span style="font-size: 0.58rem; color: var(--text-muted);"></span>
                                 </div>
                                 <div class="percent-number-row" style="margin-top: 2px;">
                                     <span class="percent-val kpi-color-red" id="percentQaGrs"
@@ -705,7 +714,7 @@
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
                                     <span><i class="fa-solid fa-industry"
                                             style="color: #8b5cf6; margin-right: 2px;"></i> SCN</span>
-                                    <span style="font-size: 0.58rem; color: var(--text-muted);">Bln Ini</span>
+                                    <span style="font-size: 0.58rem; color: var(--text-muted);"></span>
                                 </div>
                                 <div class="percent-number-row" style="margin-top: 2px;">
                                     <span class="percent-val kpi-color-red" id="percentQaScn"
@@ -722,7 +731,7 @@
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
                                     <span><i class="fa-solid fa-file-circle-check"
                                             style="color: #10b981; margin-right: 2px;"></i> Acc BR</span>
-                                    <span style="font-size: 0.58rem; color: var(--text-muted);">Bln Ini</span>
+                                    <span style="font-size: 0.58rem; color: var(--text-muted);"></span>
                                 </div>
                                 <div class="percent-number-row" style="margin-top: 2px;">
                                     <span class="percent-val kpi-color-red" id="percentQaBr"
@@ -779,7 +788,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentLOGISTIK">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillLOGISTIK" style="width: 0%">
@@ -824,7 +833,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentWH_FG">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillWH_FG" style="width: 0%"></div>
@@ -875,7 +884,7 @@
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
                                     <span><i class="fa-solid fa-boxes-stacked"
                                             style="color: #2563eb; margin-right: 3px;"></i> MR Bahan</span>
-                                    <span style="font-size: 0.62rem; color: var(--text-muted);">Bln Ini</span>
+                                    <span style="font-size: 0.62rem; color: var(--text-muted);"></span>
                                 </div>
                                 <div class="percent-number-row" style="margin-top: 2px;">
                                     <span class="percent-val kpi-color-red" id="percentWhMatMr"
@@ -892,7 +901,7 @@
                                     style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
                                     <span><i class="fa-solid fa-truck-ramp-box"
                                             style="color: #10b981; margin-right: 3px;"></i> DR Paskot</span>
-                                    <span style="font-size: 0.62rem; color: var(--text-muted);">Bln Ini</span>
+                                    <span style="font-size: 0.62rem; color: var(--text-muted);"></span>
                                 </div>
                                 <div class="percent-number-row" style="margin-top: 2px;">
                                     <span class="percent-val kpi-color-red" id="percentWhMatDr"
@@ -950,7 +959,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentPBF">0%</span>
-                                <span class="percent-lbl">Bulan Ini</span>
+                                <span class="percent-lbl"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillPBF" style="width: 0%"></div>
@@ -1008,7 +1017,7 @@
                                     <span><i class="fa-solid fa-user-gear"
                                             style="color: #2563eb; margin-right: 3px;"></i> TK SNA</span>
                                     <span style="font-size: 0.62rem; color: var(--text-muted);"
-                                        id="lblHrPeriodTkSna">Hari Ini</span>
+                                        id="lblHrPeriodTkSna"></span>
                                 </div>
                                 <div class="percent-number-row" style="margin-top: 2px;">
                                     <span class="percent-val kpi-color-green" id="percentHrTkSna"
@@ -1026,7 +1035,7 @@
                                     <span><i class="fa-solid fa-bullhorn"
                                             style="color: #8b5cf6; margin-right: 3px;"></i> Marketing</span>
                                     <span style="font-size: 0.62rem; color: var(--text-muted);"
-                                        id="lblHrPeriodMarketing">Hari Ini</span>
+                                        id="lblHrPeriodMarketing"></span>
                                 </div>
                                 <div class="percent-number-row" style="margin-top: 2px;">
                                     <span class="percent-val kpi-color-green" id="percentHrMarketing"
@@ -1084,7 +1093,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentDC">0%</span>
-                                <span class="percent-lbl" id="lblDcPeriod">Bulan Ini</span>
+                                <span class="percent-lbl" id="lblDcPeriod"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillDC" style="width: 0%"></div>
@@ -1131,7 +1140,7 @@
                         <div class="percent-hero">
                             <div class="percent-number-row">
                                 <span class="percent-val kpi-color-red" id="percentDEVELOPMENT">0%</span>
-                                <span class="percent-lbl" id="lblDevPeriod">Bulan Ini</span>
+                                <span class="percent-lbl" id="lblDevPeriod"></span>
                             </div>
                             <div class="progress-bar-track">
                                 <div class="progress-bar-fill kpi-fill-red" id="barFillDEVELOPMENT" style="width: 0%">
@@ -1183,7 +1192,7 @@
                                 <span class="subcon-unit">PCS</span>
                             </div>
                             <div class="subcon-hero-sub" id="subconHeroSub">
-                                <i class="fa-solid fa-industry"></i> Hasil Produksi (Hari Ini)
+                                <i class="fa-solid fa-industry"></i> Hasil Produksi
                             </div>
                         </div>
 
@@ -4643,8 +4652,11 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
 
+    <!-- Container Notifikasi Toast Global -->
+    <div id="toastContainer" class="toast-container"></div>
+
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=2.11.0"></script>
+    <script src="/js/app.js?v=2.11.5"></script>
 </body>
 
 </html>

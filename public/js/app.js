@@ -1,4 +1,14 @@
 
+const INDO_MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+function getSelectedPeriodText(includeYear = true) {
+    const m = Math.max(1, Math.min(12, parseInt(state.selectedMonth, 10) || (new Date().getMonth() + 1)));
+    const y = state.selectedYear || new Date().getFullYear();
+    const name = INDO_MONTH_NAMES[m - 1] || 'Bulan Ini';
+    return includeYear ? `${name} ${y}` : name;
+}
+
+
 /**
  * Helper fetch aman: membaca response sebagai text terlebih dahulu
  * Menghindari crash 'Unexpected token <' bila server/proxy mengembalikan halaman HTML (404/502/504)
@@ -200,6 +210,7 @@ const state = {
     // Filter Periode Global Header (Bulan & Tahun)
     selectedMonth: new Date().getMonth() + 1,
     selectedYear: new Date().getFullYear(),
+    selectedMonthName: INDO_MONTH_NAMES[new Date().getMonth()],
 };
 
 // ====================================================================
@@ -286,13 +297,14 @@ function initPeriodSelector() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1; // 1-12
+    const monthNames = INDO_MONTH_NAMES;
 
     state.selectedMonth = currentMonth;
     state.selectedYear = currentYear;
-
-    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    state.selectedMonthName = monthNames[currentMonth - 1];
 
     pickerInput.value = `${monthNames[state.selectedMonth - 1]} ${state.selectedYear}`;
+    updateAllCardPeriodLabels();
 
     let fpInstance = null;
     if (typeof flatpickr !== 'undefined') {
@@ -317,15 +329,32 @@ function initPeriodSelector() {
             onClose: () => {
                 if (periodBox) periodBox.classList.remove('is-open');
             },
-            onChange: (selectedDates) => {
+            onChange: async (selectedDates) => {
                 if (selectedDates && selectedDates.length > 0) {
                     const d = selectedDates[0];
                     state.selectedYear = d.getFullYear();
                     state.selectedMonth = d.getMonth() + 1;
-                    pickerInput.value = `${monthNames[state.selectedMonth - 1]} ${state.selectedYear}`;
+                    state.selectedMonthName = monthNames[state.selectedMonth - 1];
+                    const periodStr = `${monthNames[state.selectedMonth - 1]} ${state.selectedYear}`;
+                    pickerInput.value = periodStr;
                     console.log(`📅 [Periode]: Bulan diubah ke ${state.selectedMonth}, Tahun ${state.selectedYear}`);
-                    fetchDashboardStats(true);
-                    refreshOpenModalOnPeriodChange();
+                    
+                    setPeriodLoading(true, periodStr);
+                    updateAllCardPeriodLabels();
+                    try {
+                        await fetchDashboardStats(true);
+                        refreshOpenModalOnPeriodChange();
+                        if (!state.isOffline) {
+                            showToast(`Data periode ${periodStr} berhasil dimuat`, 'success');
+                        } else {
+                            showToast(`Gagal memuat data periode ${periodStr}`, 'error');
+                        }
+                    } catch (err) {
+                        console.error('Error updating period:', err);
+                        showToast(`Gagal memuat data periode ${periodStr}`, 'error');
+                    } finally {
+                        setPeriodLoading(false);
+                    }
                 }
             }
         });
@@ -336,6 +365,93 @@ function initPeriodSelector() {
             });
         }
     }
+}
+
+/**
+ * Kontrol visual loading indikator saat pemilihan bulan/periode di dashboard
+ */
+function setPeriodLoading(isLoading, periodName = '') {
+    const loadingBar = document.getElementById('globalLoadingBar');
+    const loadingPill = document.getElementById('periodLoadingIndicator');
+    const periodLabel = document.getElementById('loadingPeriodLabel');
+    const periodBox = document.getElementById('headerPeriodBox');
+    const cardsGrid = document.querySelector('.cards-grid-10') || document.querySelector('.services-grid');
+
+    if (isLoading) {
+        if (loadingBar) {
+            loadingBar.classList.remove('is-finished');
+            loadingBar.classList.add('is-loading');
+        }
+        if (periodLabel && periodName) {
+            periodLabel.textContent = periodName;
+        }
+        if (loadingPill) {
+            loadingPill.style.display = 'inline-flex';
+            requestAnimationFrame(() => loadingPill.classList.add('is-active'));
+        }
+        if (periodBox) {
+            periodBox.classList.add('is-loading');
+            const caret = periodBox.querySelector('.period-caret');
+            if (caret) {
+                caret.className = 'fa-solid fa-arrows-rotate fa-spin period-caret';
+            }
+        }
+        if (cardsGrid) {
+            cardsGrid.classList.add('is-loading-period');
+        }
+    } else {
+        if (loadingBar) {
+            loadingBar.classList.remove('is-loading');
+            loadingBar.classList.add('is-finished');
+            setTimeout(() => {
+                loadingBar.classList.remove('is-finished');
+            }, 600);
+        }
+        if (loadingPill) {
+            loadingPill.classList.remove('is-active');
+            setTimeout(() => {
+                loadingPill.style.display = 'none';
+            }, 250);
+        }
+        if (periodBox) {
+            periodBox.classList.remove('is-loading');
+            const caret = periodBox.querySelector('.period-caret');
+            if (caret) {
+                caret.className = 'fa-solid fa-angle-down period-caret';
+            }
+        }
+        if (cardsGrid) {
+            cardsGrid.classList.remove('is-loading-period');
+        }
+    }
+}
+
+/**
+ * Menampilkan notifikasi toast ringkas di pojok kanan bawah
+ */
+function showToast(message, type = 'info') {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast-message toast-${type}`;
+    let icon = 'fa-circle-info';
+    if (type === 'success') icon = 'fa-circle-check';
+    if (type === 'error') icon = 'fa-circle-xmark';
+    if (type === 'warning') icon = 'fa-triangle-exclamation';
+    
+    toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 2800);
 }
 
 
@@ -790,8 +906,57 @@ function getKpiClass(val) {
     return { text: 'kpi-color-red', fill: 'kpi-fill-red' };
 }
 
+
+/**
+ * Memperbarui seluruh label periode di semua 21 kartu dashboard
+ * Sesuai bulan & tahun yang sedang dipilih di filter navbar atas.
+ */
+function updateAllCardPeriodLabels() {
+    // 1. Kosongkan seluruh label periode (.percent-lbl) pada semua kartu sehingga hanya angka persentase yang tampil
+    document.querySelectorAll('.percent-lbl').forEach(lbl => {
+        lbl.textContent = '';
+    });
+
+    // 2. Purchasing (Dual Hero: Material & Non-Material)
+    const cardPurchasing = document.getElementById('card-PURCHASING');
+    if (cardPurchasing) {
+        cardPurchasing.querySelectorAll('.percent-hero span[style*="font-size: 0.62rem"]').forEach(span => {
+            span.textContent = '';
+        });
+    }
+
+    // 3. QA (Triple Hero: GRS, SCN, Acc BR)
+    const cardQa = document.getElementById('card-QA');
+    if (cardQa) {
+        cardQa.querySelectorAll('.percent-hero span[style*="font-size: 0.58rem"]').forEach(span => {
+            span.textContent = '';
+        });
+    }
+
+    // 4. WH Material (Dual Hero: MR Bahan & DR Paskot)
+    const cardWhMat = document.getElementById('card-WH_MAT');
+    if (cardWhMat) {
+        cardWhMat.querySelectorAll('.percent-hero span[style*="font-size: 0.62rem"]').forEach(span => {
+            span.textContent = '';
+        });
+    }
+
+    // 5. HR (Dual Hero: TK SNA & Marketing)
+    const lblTk = document.getElementById('lblHrPeriodTkSna');
+    const lblMkt = document.getElementById('lblHrPeriodMarketing');
+    if (lblTk) lblTk.textContent = '';
+    if (lblMkt) lblMkt.textContent = '';
+
+    // 6. Subcon (Hasil Produksi PCS)
+    const subHeroSub = document.getElementById('subconHeroSub');
+    if (subHeroSub) {
+        subHeroSub.innerHTML = '<i class="fa-solid fa-industry"></i> Hasil Produksi';
+    }
+}
+
 function renderServiceCards(layanan) {
     if (!layanan) return;
+    updateAllCardPeriodLabels();
 
     // Dukung seluruh modul dari API (22 Modul Operasional SNA Medika)
     const services = Object.keys(layanan);
@@ -813,13 +978,7 @@ function renderServiceCards(layanan) {
 
             const subHeroSub = document.getElementById('subconHeroSub');
             if (subHeroSub) {
-                const now = new Date();
-                const isCurrent = (state.selectedYear == now.getFullYear() && state.selectedMonth == (now.getMonth() + 1));
-                if (isCurrent) {
-                    subHeroSub.innerHTML = '<i class="fa-solid fa-industry"></i> Hasil Produksi (Hari Ini)';
-                } else {
-                    subHeroSub.innerHTML = `<i class="fa-solid fa-industry"></i> Hasil Produksi (${state.selectedMonthName || 'Bulan Ini'} ${state.selectedYear})`;
-                }
+                subHeroSub.innerHTML = '<i class="fa-solid fa-industry"></i> Hasil Produksi';
             }
 
             const subconEl = document.getElementById('subconJumlahSubcon') || document.getElementById('totalSUBCON') || document.getElementById('subconJumlahMitra');
@@ -838,12 +997,10 @@ function renderServiceCards(layanan) {
         if (code === 'HR') {
             const now = new Date();
             const isCurrent = (state.selectedYear == now.getFullYear() && state.selectedMonth == (now.getMonth() + 1));
-            const periodLabel = isCurrent ? 'Hari Ini' : (state.selectedMonthName || 'Bulan Ini');
-
             const lblTk = document.getElementById('lblHrPeriodTkSna');
             const lblMkt = document.getElementById('lblHrPeriodMarketing');
-            if (lblTk) lblTk.textContent = periodLabel;
-            if (lblMkt) lblMkt.textContent = periodLabel;
+            if (lblTk) lblTk.textContent = '';
+            if (lblMkt) lblMkt.textContent = '';
 
             const tksna = item.sub_metrics?.tksna || {};
             const mkt = item.sub_metrics?.marketing || {};
@@ -891,7 +1048,7 @@ function renderServiceCards(layanan) {
             const isCurrent = (state.selectedYear == now.getFullYear() && state.selectedMonth == (now.getMonth() + 1));
             const lblDc = document.getElementById('lblDcPeriod');
             if (lblDc) {
-                lblDc.textContent = isCurrent ? (state.selectedMonthName || 'Bulan Ini') : `${state.selectedMonthName} ${state.selectedYear}`;
+                lblDc.textContent = '';
             }
 
             const percent = Number(item.persentase_selesai || 0);
@@ -919,7 +1076,7 @@ function renderServiceCards(layanan) {
             const isCurrent = (state.selectedYear == now.getFullYear() && state.selectedMonth == (now.getMonth() + 1));
             const lblDev = document.getElementById('lblDevPeriod');
             if (lblDev) {
-                lblDev.textContent = isCurrent ? (state.selectedMonthName || 'Bulan Ini') : `${state.selectedMonthName} ${state.selectedYear}`;
+                lblDev.textContent = '';
             }
 
             const percent = Number(item.persentase_selesai || 0);
