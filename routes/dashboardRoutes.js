@@ -1586,7 +1586,7 @@ router.get('/dc', async (req, res) => {
             tglawal: req.query.tglawal,
             tglakhir: req.query.tglakhir,
             page: req.query.page || 1,
-            pageSize: req.query.pageSize || 15,
+            pageSize: req.query.pageSize || 10,
             force: forceRefresh
         });
         res.json({ success: true, data });

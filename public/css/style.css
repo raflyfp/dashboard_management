@@ -759,7 +759,7 @@ html, body {
     border-radius: var(--radius-lg);
     width: 100%;
     max-width: 1150px;
-    max-height: 85vh;
+    max-height: 94vh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
@@ -2520,35 +2520,71 @@ html, body {
 
 
 /* ====================================================================
-   PENYERAGAMAN PAGINATION BUTTONS & TEMA MODAL (HR, SUBCON, QA, DLL)
+   PENYERAGAMAN PAGINATION BUTTONS & BAR MODAL (PAKEM, TEGAS, SOLID)
    ==================================================================== */
-.purchasing-pagination-bar .filter-pill {
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    color: var(--text-primary);
-    padding: 0.35rem 0.75rem;
-    border-radius: var(--radius-sm);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
+.purchasing-pagination-bar {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 0.45rem 0.85rem !important;
+    margin-top: 0.6rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    flex-shrink: 0 !important;
 }
 
-.purchasing-pagination-bar .filter-pill:hover:not(:disabled) {
-    background: var(--sna-blue);
-    border-color: var(--sna-blue);
-    color: #ffffff;
+.purchasing-pagination-bar > div:first-child {
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    letter-spacing: -0.01em !important;
 }
 
-.purchasing-pagination-bar .filter-pill:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    background: #f8fafc;
-    border-color: #e2e8f0;
-    color: #94a3b8;
+.purchasing-pagination-bar .filter-pill,
+.purchasing-pagination-bar button {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    padding: 0.42rem 0.95rem !important;
+    border-radius: 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease-in-out !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+    user-select: none !important;
+}
+
+.purchasing-pagination-bar .filter-pill:hover:not(:disabled),
+.purchasing-pagination-bar button:hover:not(:disabled) {
+    background: #0284c7 !important;
+    border-color: #0284c7 !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28) !important;
+    transform: translateY(-1px) !important;
+}
+
+.purchasing-pagination-bar .filter-pill:active:not(:disabled),
+.purchasing-pagination-bar button:active:not(:disabled) {
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2) !important;
+}
+
+.purchasing-pagination-bar .filter-pill:disabled,
+.purchasing-pagination-bar button:disabled {
+    background: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+    opacity: 0.65 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    transform: none !important;
 }
 
 .hr-theme {
@@ -2626,4 +2662,99 @@ html, body {
     .kpi-status-legend {
         display: none;
     }
+}
+
+/* ====================================================================
+   LAYOUT MODAL PRESISI: SCROLL HANYA DI DALAM TABEL, PREV/NEXT TETAP
+   ==================================================================== */
+.modal-card {
+    height: 90vh !important;
+    max-height: 90vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18) !important;
+}
+
+.modal-header {
+    flex-shrink: 0 !important;
+}
+
+.modal-footer {
+    flex-shrink: 0 !important;
+}
+
+/* Modal Body tidak boleh scroll, seluruh ruang diberikan ke tabel */
+.modal-body,
+.subcon-modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important; /* Mencegah scrollbar ganda di luar tabel */
+    padding: 0.75rem 1.15rem !important;
+    gap: 0.4rem !important;
+    background: #ffffff !important;
+}
+
+/* Header kontrol, filter, tab, dan KPI diam di atas */
+.subcon-kpi-grid,
+.qa-kpi-grid,
+.purchasing-kpi-grid,
+.logistik-kpi-grid,
+.modal-tab-nav-row,
+.subcon-filter-bar,
+.subcon-tabs {
+    flex-shrink: 0 !important;
+    margin-bottom: 0.15rem !important;
+}
+
+/* Tab Panel aktif mengisi sisa ruang flex */
+.subcon-tab-panel.active {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* HANYA DI DALAM TABEL YANG BISA DI-SCROLL */
+.table-responsive,
+.modal-body .table-responsive,
+.subcon-modal-body .table-responsive,
+.subcon-tab-panel .table-responsive {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;  /* Scrollbar vertikal HANYA ada di sini */
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border-color, #e2e8f0) !important;
+    border-radius: var(--radius-sm, 6px) !important;
+    background: #ffffff !important;
+}
+
+/* Header tabel tetap kelihatan saat tabel di-scroll */
+.table-responsive thead th,
+.subcon-table thead th,
+.tickets-table thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 8 !important;
+    background: #f8fafc !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Bar Pagination Prev / Next tetap diam di bawah tabel tanpa harus scroll */
+.purchasing-pagination-bar {
+    flex-shrink: 0 !important;
+    position: static !important;
+    margin-top: 0.45rem !important;
+    padding: 0.45rem 0.85rem !important;
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }

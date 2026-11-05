@@ -388,13 +388,12 @@ const developmentService = {
                 return true;
             });
         } else if (range === 'month') {
-            const mFiltered = filtered.filter(it => it.year === targetYear && it.month === targetMonth);
-            filtered = mFiltered.length > 0 ? mFiltered : (allItems.length > 0 ? allItems.slice(-30) : []);
+            filtered = filtered.filter(it => it.year === targetYear && it.month === targetMonth);
         } else if (range === 'today') {
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            const tFiltered = filtered.filter(it => it.tanggal === todayStr);
-            filtered = tFiltered.length > 0 ? tFiltered : (allItems.length > 0 ? allItems.slice(-30) : []);
+            filtered = filtered.filter(it => it.tanggal === todayStr);
         }
+        // Jika range === 'all', tampilkan seluruh dataset
 
         // Filter status
         if (status === 'complete' || status === 'selesai') {

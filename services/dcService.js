@@ -30,7 +30,7 @@ if (!fs.existsSync(CACHE_DIR)) {
 
 // In-memory cache
 const cache = {
-    summary: { data: null, timestamp: 0 },
+    summaryMap: new Map(), // key: tglawal_tglakhir -> { data, timestamp }
     detailCache: new Map(), // key: tglawal_tglakhir
     authToken: null,
     tokenExpiresAt: 0,
@@ -133,8 +133,9 @@ class DcService {
         const dateRange = getDateRange(customDates?.bulan, customDates?.tahun);
         const cacheKey = `${dateRange.tglawal}_${dateRange.tglakhir}`;
 
-        if (!force && cache.summary.data && (now - cache.summary.timestamp < CACHE_TTL_MS)) {
-            return cache.summary.data;
+        const cached = cache.summaryMap?.get(cacheKey);
+        if (!force && cached && (now - cached.timestamp < CACHE_TTL_MS)) {
+            return cached.data;
         }
 
         let summaryData = null;
@@ -185,17 +186,16 @@ class DcService {
         // Jika API tidak terjangkau atau gagal, gunakan fallback cache persisten
         if (!summaryData) {
             const diskCache = loadPersistentCache();
-            if (diskCache && diskCache.summary) {
-                // Filter rows untuk rentang waktu jika ada
+            if (diskCache && diskCache.rows) {
                 const allRows = diskCache.rows || [];
+                // Saring presisi sesuai rentang bulan & tahun yang dipilih
                 const filtered = allRows.filter(r => {
                     if (!r.tgl_permohonan) return true;
                     return r.tgl_permohonan >= dateRange.tglawal && r.tgl_permohonan <= dateRange.tglakhir;
                 });
 
-                const targetRows = filtered.length > 0 ? filtered : allRows;
-                const total = targetRows.length;
-                const selesai = targetRows.filter(r => r.is_selesai || (r.status || '').toUpperCase() === 'SELESAI').length;
+                const total = filtered.length;
+                const selesai = filtered.filter(r => r.is_selesai || (r.status || '').toUpperCase() === 'SELESAI').length;
                 const belum = total - selesai;
                 const persentase = total > 0 ? Number(((selesai / total) * 100).toFixed(2)) : 0;
 
@@ -230,7 +230,8 @@ class DcService {
             }
         }
 
-        cache.summary = { data: summaryData, timestamp: now };
+        if (!cache.summaryMap) cache.summaryMap = new Map();
+        cache.summaryMap.set(cacheKey, { data: summaryData, timestamp: now });
         return summaryData;
     }
 
@@ -248,7 +249,7 @@ class DcService {
             tglawal,
             tglakhir,
             page = 1,
-            pageSize = 15,
+            pageSize = 10,
             force = false
         } = options;
 
@@ -313,16 +314,14 @@ class DcService {
         } else if (range === 'today') {
             const now = new Date();
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            const tFiltered = filtered.filter(r => r.tgl_permohonan === todayStr);
-            filtered = tFiltered.length > 0 ? tFiltered : rows;
+            filtered = filtered.filter(r => r.tgl_permohonan === todayStr);
         } else if (range === 'month') {
-            const mFiltered = filtered.filter(r => {
+            filtered = filtered.filter(r => {
                 if (!r.tgl_permohonan) return true;
                 return r.tgl_permohonan >= dateRange.tglawal && r.tgl_permohonan <= dateRange.tglakhir;
             });
-            // Fallback ke seluruh dataset jika pada bulan filter belum ada data transaksi baru
-            filtered = mFiltered.length > 0 ? mFiltered : rows;
         }
+        // Jika range === 'all', tampilkan seluruh data tanpa dibatasi tanggal
 
         // 2. Filter Status (selesai / belum)
         if (status === 'selesai') {

@@ -51,7 +51,7 @@ const state = {
     currentPurchasingView: 'pr',
     purchasingSearchQuery: '',
     purchasingCurrentPage: 1,
-    purchasingPageSize: 30,
+    purchasingPageSize: 10,
     purchasingRawData: null,
     purchasingCache: new Map(),
 
@@ -70,7 +70,7 @@ const state = {
     currentProduksiStatus: 'all',
     produksiSearchQuery: '',
     produksiCurrentPage: 1,
-    produksiPageSize: 20,
+    produksiPageSize: 10,
     produksiRawData: null,
     produksiCache: new Map(),
     produksiSort: { column: 'nomor_pp', dir: 'asc' },
@@ -85,7 +85,7 @@ const state = {
     logistikFilteredOrder: '', // Ketika user klik drilldown rincian order spesifik
     logistikSearchQuery: '',
     logistikCurrentPage: 1,
-    logistikPageSize: 15,
+    logistikPageSize: 10,
     logistikRawData: null,
     logistikCache: new Map(),
     logistikSort: {
@@ -102,7 +102,7 @@ const state = {
     currentQaGrsSubView: 'grs', // 'grs' (Daftar GRS) | 'po' (Ringkasan Per PO)
     qaSearchQuery: '',
     qaCurrentPage: 1,
-    qaPageSize: 30,
+    qaPageSize: 10,
     qaRawData: null,
     qaCache: new Map(),
     qaSort: {
@@ -120,7 +120,7 @@ const state = {
     currentWhFgView: 'dr', // 'dr' | 'items'
     whFgSearchQuery: '',
     whFgCurrentPage: 1,
-    whFgPageSize: 15,
+    whFgPageSize: 10,
     whFgRawData: null,
     whFgCache: new Map(),
     whFgSort: {
@@ -138,7 +138,7 @@ const state = {
     whMatDrSubView: 'doc', // 'doc' (Dokumen DR) | 'item' (Rincian DR)
     whMatSearchQuery: '',
     whMatCurrentPage: 1,
-    whMatPageSize: 15,
+    whMatPageSize: 10,
     whMatRawData: null,
     whMatCache: new Map(),
     whMatSort: {
@@ -156,7 +156,7 @@ const state = {
     currentHrStatus: 'all', // 'all' | 'sesuai' | 'tidak_sesuai' | 'alpha' | 'terlambat' | 'beda_shift'
     hrSearchQuery: '',
     hrCurrentPage: 1,
-    hrPageSize: 25,
+    hrPageSize: 10,
     hrRawData: null,
     hrCache: new Map(),
     hrSort: { column: 'tanggal', dir: 'desc' },
@@ -3683,7 +3683,7 @@ function renderProduksiUI(payload) {
 
     // 5. Pagination
     const totalItems = rows.length;
-    const pageSize = state.produksiPageSize || 20;
+    const pageSize = state.produksiPageSize || 10;
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
 
     if (state.produksiCurrentPage > totalPages) state.produksiCurrentPage = totalPages;
@@ -7141,7 +7141,7 @@ function renderPbfTable(list) {
         return;
     }
 
-    const pageSize = state.pbfPageSize || 20;
+    const pageSize = state.pbfPageSize || 10;
     const totalItems = list.length;
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
     if (state.pbfCurrentPage > totalPages) state.pbfCurrentPage = totalPages;
@@ -7200,7 +7200,7 @@ function renderPbfPagination(totalItems) {
     const btnPrev = document.getElementById('btnPbfPrevPage');
     const btnNext = document.getElementById('btnPbfNextPage');
 
-    const pageSize = state.pbfPageSize || 20;
+    const pageSize = state.pbfPageSize || 10;
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
 
     if (pageInfo) {
@@ -7553,7 +7553,7 @@ function renderHrTable(list) {
         return;
     }
 
-    const pageSize = state.hrPageSize || 25;
+    const pageSize = state.hrPageSize || 10;
     const totalItems = list.length;
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
     if (state.hrCurrentPage > totalPages) state.hrCurrentPage = totalPages;
@@ -7608,7 +7608,7 @@ function renderHrPagination(totalItems) {
     const btnPrev = document.getElementById('btnPrevHrPage');
     const btnNext = document.getElementById('btnNextHrPage');
 
-    const pageSize = state.hrPageSize || 25;
+    const pageSize = state.hrPageSize || 10;
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
     const currentPage = state.hrCurrentPage || 1;
 
@@ -7683,7 +7683,7 @@ function openDevModal(range = 'month') {
     state.devJenis = 'all';
     state.devStatus = 'all';
     state.devCurrentPage = 1;
-    state.devPageSize = 15;
+    state.devPageSize = 10;
 
     const searchInput = document.getElementById('devSearchInput');
     if (searchInput) searchInput.value = '';
@@ -7704,12 +7704,18 @@ function closeDevModal() {
 function setDevQuickDate(preset = 'month') {
     state.currentDevRange = preset;
 
-    const { startDate, endDate } = getActivePeriodDates(preset);
-    state.devDateStart = startDate;
-    state.devDateEnd = endDate;
-
-    setDateInputValue('devDateStart', startDate);
-    setDateInputValue('devDateEnd', endDate);
+    if (preset === 'all') {
+        state.devDateStart = '';
+        state.devDateEnd = '';
+        setDateInputValue('devDateStart', '');
+        setDateInputValue('devDateEnd', '');
+    } else {
+        const { startDate, endDate } = getActivePeriodDates(preset);
+        state.devDateStart = startDate;
+        state.devDateEnd = endDate;
+        setDateInputValue('devDateStart', startDate);
+        setDateInputValue('devDateEnd', endDate);
+    }
 
     const btnMonth = document.getElementById('btnQuickDevMonth');
     const btnToday = document.getElementById('btnQuickDevToday');
@@ -7881,7 +7887,7 @@ function renderDevTable(items) {
         return;
     }
 
-    const pageSize = state.devPageSize || 15;
+    const pageSize = state.devPageSize || 10;
     const totalPages = Math.ceil(items.length / pageSize) || 1;
     if ((state.devCurrentPage || 1) > totalPages) state.devCurrentPage = totalPages;
     const page = state.devCurrentPage || 1;
@@ -7926,6 +7932,7 @@ function renderDevTable(items) {
         `;
     }).join('');
 
+    state.devFilteredCount = items.length;
     renderDevPagination(items.length);
 }
 
@@ -7935,7 +7942,7 @@ function renderDevPagination(totalItems) {
     const btnNext = document.getElementById('btnDevNextPage');
     if (!pageInfo && !btnPrev && !btnNext) return;
 
-    const pageSize = state.devPageSize || 15;
+    const pageSize = state.devPageSize || 10;
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
     const currentPage = state.devCurrentPage || 1;
 
@@ -7949,8 +7956,13 @@ function renderDevPagination(totalItems) {
 }
 
 function changeDevPage(delta) {
-    state.devCurrentPage = (state.devCurrentPage || 1) + delta;
-    filterAndRenderDevTable();
+    const totalItems = state.devFilteredCount !== undefined ? state.devFilteredCount : (state.devRawData?.items || []).length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / (state.devPageSize || 10)));
+    const targetPage = (state.devCurrentPage || 1) + delta;
+    if (targetPage >= 1 && targetPage <= totalPages) {
+        state.devCurrentPage = targetPage;
+        filterAndRenderDevTable();
+    }
 }
 
 async function syncDevData() {
@@ -8009,7 +8021,7 @@ function openDcModal(range = 'month') {
     state.dcStatus = 'all';
     state.dcJenis = 'all';
     state.dcCurrentPage = 1;
-    state.dcPageSize = 15;
+    state.dcPageSize = 10;
 
     const searchInput = document.getElementById('dcSearchInput');
     if (searchInput) searchInput.value = '';
@@ -8030,12 +8042,18 @@ function closeDcModal() {
 function setDcQuickDate(preset = 'month') {
     state.currentDcRange = preset;
 
-    const { startDate, endDate } = getActivePeriodDates(preset);
-    state.dcDateStart = startDate;
-    state.dcDateEnd = endDate;
-
-    setDateInputValue('dcDateStart', startDate);
-    setDateInputValue('dcDateEnd', endDate);
+    if (preset === 'all') {
+        state.dcDateStart = '';
+        state.dcDateEnd = '';
+        setDateInputValue('dcDateStart', '');
+        setDateInputValue('dcDateEnd', '');
+    } else {
+        const { startDate, endDate } = getActivePeriodDates(preset);
+        state.dcDateStart = startDate;
+        state.dcDateEnd = endDate;
+        setDateInputValue('dcDateStart', startDate);
+        setDateInputValue('dcDateEnd', endDate);
+    }
 
     const btnMonth = document.getElementById('btnQuickDcMonth');
     const btnToday = document.getElementById('btnQuickDcToday');
@@ -8209,7 +8227,7 @@ function renderDcTable(items) {
         return;
     }
 
-    const pageSize = state.dcPageSize || 15;
+    const pageSize = state.dcPageSize || 10;
     const totalPages = Math.ceil(items.length / pageSize) || 1;
     if ((state.dcCurrentPage || 1) > totalPages) state.dcCurrentPage = totalPages;
     const page = state.dcCurrentPage || 1;
@@ -8237,6 +8255,7 @@ function renderDcTable(items) {
         `;
     }).join('');
 
+    state.dcFilteredCount = items.length;
     renderDcPagination(items.length);
 }
 
@@ -8246,7 +8265,7 @@ function renderDcPagination(totalItems) {
     const btnNext = document.getElementById('btnDcNextPage');
     if (!pageInfo && !btnPrev && !btnNext) return;
 
-    const pageSize = state.dcPageSize || 15;
+    const pageSize = state.dcPageSize || 10;
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
     const currentPage = state.dcCurrentPage || 1;
 
@@ -8260,8 +8279,13 @@ function renderDcPagination(totalItems) {
 }
 
 function changeDcPage(delta) {
-    state.dcCurrentPage = (state.dcCurrentPage || 1) + delta;
-    filterAndRenderDcTable();
+    const totalItems = state.dcFilteredCount !== undefined ? state.dcFilteredCount : (state.dcRawData?.items || []).length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / (state.dcPageSize || 10)));
+    const targetPage = (state.dcCurrentPage || 1) + delta;
+    if (targetPage >= 1 && targetPage <= totalPages) {
+        state.dcCurrentPage = targetPage;
+        filterAndRenderDcTable();
+    }
 }
 
 async function syncDcData() {
