@@ -45,12 +45,15 @@ module.exports = {
         timeoutMs: parseInt(process.env.ATENA_API_TIMEOUT_MS, 10) || 45000,
     },
 
-    // Konfigurasi REST API Paperless Document Control (DC)
+    // Konfigurasi REST API & Web Paperless Document Control (DC)
     paperlessApi: {
-        baseUrl: (process.env.PAPERLESS_API_BASE_URL || 'http://alpha_sna_medika_paperless.test/API/Dashboard/').trim().replace(/\/?$/, '/'),
-        username: (process.env.PAPERLESS_API_USERNAME || 'ADMINDC@YOPMAIL.COM').trim(),
-        password: (process.env.PAPERLESS_API_PASSWORD || '12345678').trim(),
-        timeoutMs: 10000,
+        baseUrl: (process.env.PAPERLESS_API_BASE_URL || 'http://snam.ddns.net:8069/API/Dashboard/').trim().replace(/\/?$/, '/'),
+        fallbackBaseUrl: 'http://alpha_sna_medika_paperless.test/API/Dashboard/',
+        webBaseUrl: (process.env.PAPERLESS_WEB_BASE_URL || 'http://snam.ddns.net:8069/').trim().replace(/\/?$/, '/'),
+        webUrl: 'http://snam.ddns.net:8069/Auth/Login',
+        username: (process.env.PAPERLESS_API_USERNAME || 'DC@SINARAYA.CO.ID').trim(),
+        password: (process.env.PAPERLESS_API_PASSWORD || 'ADMIN').trim(),
+        timeoutMs: 20000,
     },
 
     // Konfigurasi Google Spreadsheet Monitoring (Development / R&D)

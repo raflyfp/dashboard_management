@@ -342,7 +342,7 @@ function initPeriodSelector() {
                     setPeriodLoading(true, periodStr);
                     updateAllCardPeriodLabels();
                     try {
-                        await fetchDashboardStats(true);
+                        await fetchDashboardStats(false, true);
                         refreshOpenModalOnPeriodChange();
                         if (!state.isOffline) {
                             showToast(`Data periode ${periodStr} berhasil dimuat`, 'success');
@@ -813,16 +813,23 @@ function updateCountdownUI() {
 // ====================================================================
 // 5. MENGAMBIL DATA DARI EXPRESS API (/api/dashboard/stats)
 // ====================================================================
-async function fetchDashboardStats(force = false) {
-    if (state.isFetching) return;
+async function fetchDashboardStats(force = false, isPeriodSwitch = false) {
+    if (state.isFetching) {
+        if (!isPeriodSwitch) return;
+        // Jika pengguna baru saja mengganti bulan/periode di header, batalkan request lama yang sedang berjalan
+        if (state.activeFetchController) {
+            try { state.activeFetchController.abort('PERIOD_SWITCH'); } catch (_) {}
+        }
+    }
     state.isFetching = true;
 
     const refreshIcon = document.getElementById('refreshIcon');
     if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
-    // Timeout 10 detik dengan AbortController untuk mencegah fetch menggantung tanpa batas waktu
+    // Timeout 35 detik dengan AbortController agar penarikan bulan historis (31 hari penuh) dari ERP tidak terputus prematur
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    state.activeFetchController = controller;
+    const timeoutId = setTimeout(() => controller.abort('TIMEOUT'), 35000);
 
     try {
         const params = new URLSearchParams();
@@ -862,8 +869,12 @@ async function fetchDashboardStats(force = false) {
 
     } catch (error) {
         clearTimeout(timeoutId);
+        // Abaikan jika dibatalkan karena pengguna berpindah periode bulan
+        if (controller.signal.reason === 'PERIOD_SWITCH') {
+            return;
+        }
         const isAbort = error.name === 'AbortError';
-        const errorMsg = isAbort ? 'Request Timeout (10s)' : (error.message || 'Jaringan Terputus');
+        const errorMsg = isAbort ? 'Request Timeout (35s)' : (error.message || 'Jaringan Terputus');
         console.warn(`⚠️ [Sync Error]: ${errorMsg}, mencoba reconnect otomatis dalam 5 detik...`);
 
         state.isOffline = true;
@@ -873,7 +884,10 @@ async function fetchDashboardStats(force = false) {
         updateCountdownUI();
 
     } finally {
-        state.isFetching = false;
+        if (state.activeFetchController === controller) {
+            state.isFetching = false;
+            state.activeFetchController = null;
+        }
         if (refreshIcon) {
             setTimeout(() => refreshIcon.classList.remove('fa-spin'), 600);
         }
@@ -8458,6 +8472,10 @@ function renderDcTable(items) {
     }).join('');
 
     state.dcFilteredCount = items.length;
+    const footerStats = document.getElementById('dcModalFooterStats');
+    if (footerStats) {
+        footerStats.textContent = `Menampilkan ${startIdx + 1} - ${Math.min(startIdx + pageSize, items.length)} dari ${items.length.toLocaleString('id-ID')} Dokumen Paperless (snam.ddns.net:8069)`;
+    }
     renderDcPagination(items.length);
 }
 

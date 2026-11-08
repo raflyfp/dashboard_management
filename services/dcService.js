@@ -1,11 +1,15 @@
 /**
  * ====================================================================
- * SERVICE: DC (DOCUMENT CONTROL) - REST API PAPERLESS
+ * SERVICE: DC (DOCUMENT CONTROL) - PAPERLESS SNA MEDIKA
  * ====================================================================
- * Mengambil data pemantauan pengerjaan dokumen dari REST API Paperless:
- * 1. Login: POST Auth/login (Bearer Token JWT)
- * 2. Ringkasan: POST PenyelesaianDokumen/ringkasan
- * 3. Detail: POST PenyelesaianDokumen/detail
+ * Mengambil data pemantauan pengerjaan dokumen DC dari Paperless SNA Medika
+ * (http://snam.ddns.net:8069/) pada Menu Pengesahan Dokumen (TRNS3):
+ * 1. Login: POST Auth/Login/cekLogin (email: DC@SINARAYA.CO.ID)
+ * 2. Jenis Dokumen: POST Master/Data/JenisDokumen/comboGrid
+ * 3. Tab "Pengajuan Masuk" (Belum dibuat pengesahan oleh DC):
+ *    POST Transaksi/Transaksi/PengesahanDokumen/dataGridDokumenMasuk
+ * 4. Tab "Pengesahan Dibuat" (Sudah dikerjakan / disahkan oleh DC):
+ *    POST Transaksi/Transaksi/PengesahanDokumen/dataGrid
  * 
  * Dilengkapi in-memory caching, auto re-login, dan fallback cache
  * persisten (data/dc_paperless_cache.json).
@@ -13,6 +17,7 @@
  */
 
 const axios = require('axios');
+const qs = require('querystring');
 const fs = require('fs');
 const path = require('path');
 const config = require('../config/app.config');
@@ -31,14 +36,15 @@ if (!fs.existsSync(CACHE_DIR)) {
 // In-memory cache
 const cache = {
     summaryMap: new Map(), // key: tglawal_tglakhir -> { data, timestamp }
-    detailCache: new Map(), // key: tglawal_tglakhir
-    authToken: null,
-    tokenExpiresAt: 0,
+    liveRows: null,
+    liveRowsTimestamp: 0,
+    sessionCookie: null,
+    sessionExpiresAt: 0,
     lastFetchedAt: null,
     isSyncing: false,
 };
 
-const CACHE_TTL_MS = 60 * 1000; // 60 detik
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 menit
 
 function getDateRange(customMonth, customYear) {
     const now = new Date();
@@ -61,6 +67,10 @@ function loadPersistentCache() {
             const parsed = JSON.parse(raw);
             if (parsed) {
                 cache.lastFetchedAt = parsed.lastFetchedAt || new Date().toISOString();
+                if (Array.isArray(parsed.rows) && parsed.rows.length > 0 && !cache.liveRows) {
+                    cache.liveRows = parsed.rows;
+                    cache.liveRowsTimestamp = Date.now();
+                }
                 return parsed;
             }
         }
@@ -86,43 +96,215 @@ function savePersistentCache(summary, rows) {
 class DcService {
     constructor() {
         this.apiConfig = config.paperlessApi || {
-            baseUrl: 'http://alpha_sna_medika_paperless.test/API/Dashboard/',
-            username: 'ADMINDC@YOPMAIL.COM',
-            password: '12345678',
-            timeoutMs: 10000,
+            baseUrl: 'http://snam.ddns.net:8069/API/Dashboard/',
+            webBaseUrl: 'http://snam.ddns.net:8069/',
+            username: 'DC@SINARAYA.CO.ID',
+            password: 'ADMIN',
+            timeoutMs: 20000,
         };
         loadPersistentCache();
     }
 
     /**
-     * Otentikasi ke Paperless API untuk mendapatkan JWT Bearer Token
+     * Otentikasi ke Web Paperless (http://snam.ddns.net:8069/Auth/Login/cekLogin)
+     * menggunakan akun DC@SINARAYA.CO.ID / ADMIN untuk mendapatkan session cookie ci_session.
      */
-    async getToken(forceRefresh = false) {
+    async getWebSessionCookie(forceRefresh = false) {
         const now = Date.now();
-        if (!forceRefresh && cache.authToken && cache.tokenExpiresAt > (now + 60000)) {
-            return cache.authToken;
+        if (!forceRefresh && cache.sessionCookie && cache.sessionExpiresAt > (now + 60000)) {
+            return cache.sessionCookie;
         }
 
-        const loginUrl = `${this.apiConfig.baseUrl}Auth/login`;
+        const webBaseUrl = (this.apiConfig.webBaseUrl || 'http://snam.ddns.net:8069/').replace(/\/?$/, '/');
+        const loginUrl = `${webBaseUrl}Auth/Login/cekLogin`;
+
         try {
-            const res = await axios.post(loginUrl, {
-                username: this.apiConfig.username,
+            const res = await axios.post(loginUrl, qs.stringify({
+                email: this.apiConfig.username,
                 password: this.apiConfig.password
-            }, {
-                timeout: this.apiConfig.timeoutMs || 10000,
-                headers: { 'Content-Type': 'application/json' }
+            }), {
+                timeout: this.apiConfig.timeoutMs || 15000,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
             });
 
-            if (res.data && res.data.success && res.data.data && res.data.data.token) {
-                cache.authToken = res.data.data.token;
-                cache.tokenExpiresAt = now + (2 * 60 * 60 * 1000); // 2 jam default
-                return cache.authToken;
+            const setCookies = res.headers['set-cookie'];
+            if (res.data && res.data.success && Array.isArray(setCookies) && setCookies.length > 0) {
+                cache.sessionCookie = setCookies.map(c => c.split(';')[0]).join('; ');
+                cache.sessionExpiresAt = now + (60 * 60 * 1000); // 1 jam
+                return cache.sessionCookie;
             }
-            throw new Error(res.data?.message || 'Login Paperless gagal');
         } catch (err) {
-            console.warn(`⚠️ [PAPERLESS AUTH]: Gagal login ke ${loginUrl}: ${err.message}`);
-            return null;
+            console.warn(`⚠️ [PAPERLESS WEB AUTH]: Gagal login ke ${loginUrl}: ${err.message}`);
         }
+        return null;
+    }
+
+    /**
+     * Mengambil data live pengerjaan dokumen DC dari Menu Pengesahan Dokumen (TRNS3):
+     * - Tab "Pengajuan Masuk" (dataGridDokumenMasuk) -> Belum dibuat pengesahan oleh DC
+     * - Tab "Pengesahan Dibuat" (dataGrid) -> Sudah dibuatkan pengesahan / disahkan oleh DC
+     */
+    async fetchLiveRows(force = false) {
+        const now = Date.now();
+        if (!force && Array.isArray(cache.liveRows) && cache.liveRows.length > 0 && (now - cache.liveRowsTimestamp < CACHE_TTL_MS)) {
+            return { rows: cache.liveRows, source: 'Live Paperless (snam.ddns.net:8069)' };
+        }
+
+        const cookie = await this.getWebSessionCookie(force);
+        if (cookie) {
+            const webBaseUrl = (this.apiConfig.webBaseUrl || 'http://snam.ddns.net:8069/').replace(/\/?$/, '/');
+            try {
+                // 1. Ambil daftar seluruh Jenis Dokumen
+                const jdRes = await axios.post(`${webBaseUrl}Master/Data/JenisDokumen/comboGrid`, '', {
+                    timeout: this.apiConfig.timeoutMs || 15000,
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Cookie': cookie
+                    }
+                });
+                const jenisList = Array.isArray(jdRes.data?.rows) ? jdRes.data.rows : [];
+
+                if (jenisList.length > 0) {
+                    // 2. Tarik paralel "Pengesahan Dibuat" (dataGrid) & "Pengajuan Masuk" (dataGridDokumenMasuk)
+                    const results = await Promise.all(jenisList.map(async (jd) => {
+                        const [rDibuat, rMasuk] = await Promise.all([
+                            axios.post(`${webBaseUrl}Transaksi/Transaksi/PengesahanDokumen/dataGrid`, qs.stringify({
+                                page: 1,
+                                limit: 2500,
+                                search: '',
+                                jenis: 'pengajuan',
+                                uuidjenisdokumen: jd.id,
+                                kodemenu: 'TRNS3',
+                                asaldokumen: '',
+                                status: ''
+                            }), {
+                                timeout: this.apiConfig.timeoutMs || 20000,
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': cookie }
+                            }).catch(() => ({ data: { rows: [] } })),
+                            axios.post(`${webBaseUrl}Transaksi/Transaksi/PengesahanDokumen/dataGridDokumenMasuk`, qs.stringify({
+                                page: 1,
+                                limit: 2500,
+                                search: '',
+                                uuidjenisdokumen: jd.id,
+                                status: ''
+                            }), {
+                                timeout: this.apiConfig.timeoutMs || 20000,
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': cookie }
+                            }).catch(() => ({ data: { rows: [] } }))
+                        ]);
+                        return {
+                            dibuat: Array.isArray(rDibuat.data?.rows) ? rDibuat.data.rows : [],
+                            masuk: Array.isArray(rMasuk.data?.rows) ? rMasuk.data.rows : []
+                        };
+                    }));
+
+                    const parsedRows = [];
+
+                    // A. Proses baris "Pengesahan Dibuat" (exclude Batal status='D' dan Reject status='R')
+                    for (const group of results) {
+                        for (const r of group.dibuat) {
+                            if (r.status === 'D' || r.status === 'R' || r.ubahstatus === '2' || r.userbatal) {
+                                continue;
+                            }
+                            const klausul = r.kodepengesahandokumen || r.nomorklausul || r.kodepengajuandokumen || '-';
+                            const revisi = r.norevisi || r.nomorrevisidokumen || '-';
+                            const bagian = r.bagian || r.userbuat || '-';
+                            const tgl = r.tglpermohonan || r.tglpengerjaan || '';
+
+                            let tahap = 'Selesai (Pengesahan Dibuat DC)';
+                            if (r.ubahstatus === '1') {
+                                tahap = r.lastuserapprove
+                                    ? `Selesai (Disahkan oleh ${r.lastuserapprove})`
+                                    : 'Selesai (Disahkan)';
+                            } else {
+                                tahap = r.tglpengerjaan
+                                    ? `Pengesahan Dibuat DC (${r.tglpengerjaan}) - Sirkulasi Approval`
+                                    : 'Pengesahan Dibuat DC';
+                            }
+
+                            parsedRows.push({
+                                id: parsedRows.length + 1,
+                                nomor_klausul: klausul,
+                                jenis_dokumen: r.namajenisdokumen || '-',
+                                nama_dokumen: r.namapengajuandokumen || '-',
+                                nomor_revisi: revisi,
+                                tgl_permohonan: tgl,
+                                tgl_pengerjaan: r.tglpengerjaan || '',
+                                bagian,
+                                pemohon: r.userbuat || '-',
+                                tahap,
+                                status: 'SELESAI',
+                                is_selesai: true
+                            });
+                        }
+
+                        // B. Proses baris "Pengajuan Masuk" (Sudah masuk DC, belum dibuat pengesahan oleh DC)
+                        for (const r of group.masuk) {
+                            if (r.ubahstatus === '2' || r.userbatal) {
+                                continue;
+                            }
+                            const codeMatch = (r.namapengajuandokumen || '').match(/\(([A-Z0-9.\-/]+)\)\s*$/i);
+                            const klausul = r.kodepengajuandokumen || (codeMatch ? codeMatch[1] : '-');
+                            const revisi = r.norevisi || r.nomorrevisidokumen || '-';
+                            const bagian = r.bagian || r.userbuat || '-';
+                            const tgl = r.tglpermohonan || '';
+
+                            const tahap = r.lastuserapprove
+                                ? `Pengajuan Masuk DC (Disetujui ${r.lastuserapprove}) - Menunggu Pengesahan DC`
+                                : 'Pengajuan Masuk DC - Menunggu Pengesahan DC';
+
+                            parsedRows.push({
+                                id: parsedRows.length + 1,
+                                nomor_klausul: klausul,
+                                jenis_dokumen: r.namajenisdokumen || '-',
+                                nama_dokumen: r.namapengajuandokumen || '-',
+                                nomor_revisi: revisi,
+                                tgl_permohonan: tgl,
+                                tgl_pengerjaan: '',
+                                bagian,
+                                pemohon: r.userbuat || '-',
+                                tahap,
+                                status: 'BELUM SELESAI',
+                                is_selesai: false
+                            });
+                        }
+                    }
+
+                    if (parsedRows.length > 0) {
+                        // Urutkan dari tanggal permohonan terbaru ke terlama
+                        parsedRows.sort((a, b) => (b.tgl_permohonan || '').localeCompare(a.tgl_permohonan || ''));
+                        parsedRows.forEach((r, idx) => { r.id = idx + 1; });
+
+                        cache.liveRows = parsedRows;
+                        cache.liveRowsTimestamp = now;
+                        cache.lastFetchedAt = new Date().toISOString();
+
+                        const totalAll = parsedRows.length;
+                        const selesaiAll = parsedRows.filter(r => r.is_selesai).length;
+                        savePersistentCache({
+                            total_masuk: totalAll,
+                            total_selesai: selesaiAll,
+                            total_belum: totalAll - selesaiAll,
+                            persentase: totalAll > 0 ? Number(((selesaiAll / totalAll) * 100).toFixed(2)) : 0
+                        }, parsedRows);
+
+                        return { rows: parsedRows, source: 'Live Paperless (snam.ddns.net:8069)' };
+                    }
+                }
+            } catch (err) {
+                console.warn(`⚠️ [DC LIVE WEB FETCH ERROR]: ${err.message}`);
+            }
+        }
+
+        // Fallback ke cache persisten jika gagal
+        const diskCache = loadPersistentCache();
+        if (diskCache && Array.isArray(diskCache.rows) && diskCache.rows.length > 0) {
+            return { rows: diskCache.rows, source: 'Cache Paperless (Offline Fallback)' };
+        }
+
+        return { rows: [], source: 'Default Standby' };
     }
 
     /**
@@ -138,100 +320,46 @@ class DcService {
             return cached.data;
         }
 
-        let summaryData = null;
-        const token = await this.getToken(force);
-
-        if (token) {
-            try {
-                const ringkasanUrl = `${this.apiConfig.baseUrl}PenyelesaianDokumen/ringkasan`;
-                const res = await axios.post(ringkasanUrl, {
-                    tglawal: dateRange.tglawal,
-                    tglakhir: dateRange.tglakhir
-                }, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    timeout: this.apiConfig.timeoutMs || 10000
-                });
-
-                if (res.data && res.data.success && res.data.data) {
-                    const d = res.data.data;
-                    const total = Number(d.total_masuk || 0);
-                    const selesai = Number(d.total_selesai || 0);
-                    const belum = Number(d.total_belum || (total - selesai));
-                    const persen = Number(d.persentase ?? (total > 0 ? (selesai / total * 100) : 0));
-
-                    summaryData = {
-                        success: true,
-                        total,
-                        total_masuk: total,
-                        selesai,
-                        total_selesai: selesai,
-                        belum,
-                        total_belum: belum,
-                        persentase: Number(persen.toFixed(2)),
-                        persentase_selesai: Number(persen.toFixed(2)),
-                        tglawal: d.tglawal || dateRange.tglawal,
-                        tglakhir: d.tglakhir || dateRange.tglakhir,
-                        last_sync: new Date().toISOString(),
-                        source: 'API Paperless'
-                    };
-                }
-            } catch (apiErr) {
-                console.warn(`⚠️ [DC API RINGKASAN ERROR]: ${apiErr.message}`);
+        // Gunakan liveRows di memori jika sudah tersedia agar perpindahan bulan instan (< 5ms)
+        let allRows = cache.liveRows;
+        let source = 'Live Paperless (snam.ddns.net:8069)';
+        if (!Array.isArray(allRows) || allRows.length === 0) {
+            const fetched = await this.fetchLiveRows(force);
+            allRows = fetched.rows;
+            source = fetched.source;
+        } else if (force || (now - cache.liveRowsTimestamp >= CACHE_TTL_MS)) {
+            // Segarkan di background tanpa memblokir response perpindahan bulan
+            if (!cache.isSyncing) {
+                cache.isSyncing = true;
+                this.fetchLiveRows(true).finally(() => { cache.isSyncing = false; });
             }
         }
 
-        // Jika API tidak terjangkau atau gagal, gunakan fallback cache persisten
-        if (!summaryData) {
-            const diskCache = loadPersistentCache();
-            if (diskCache && diskCache.rows) {
-                const allRows = diskCache.rows || [];
-                // Saring presisi sesuai rentang bulan & tahun yang dipilih
-                let filtered = allRows.filter(r => {
-                    if (!r.tgl_permohonan) return true;
-                    return r.tgl_permohonan >= dateRange.tglawal && r.tgl_permohonan <= dateRange.tglakhir;
-                });
+        const filtered = allRows.filter(r => {
+            if (!r.tgl_permohonan) return false;
+            return r.tgl_permohonan >= dateRange.tglawal && r.tgl_permohonan <= dateRange.tglakhir;
+        });
 
-                if (filtered.length === 0 && allRows.length > 0) {
-                    filtered = allRows;
-                }
-                const total = filtered.length;
-                const selesai = filtered.filter(r => r.is_selesai || (r.status || '').toUpperCase() === 'SELESAI').length;
-                const belum = total - selesai;
-                const persentase = total > 0 ? Number(((selesai / total) * 100).toFixed(2)) : 0;
+        const total = filtered.length;
+        const selesai = filtered.filter(r => r.is_selesai || (r.status || '').toUpperCase() === 'SELESAI').length;
+        const belum = total - selesai;
+        const persentase = total > 0 ? Number(((selesai / total) * 100).toFixed(2)) : 0;
 
-                summaryData = {
-                    success: true,
-                    total,
-                    total_masuk: total,
-                    selesai,
-                    total_selesai: selesai,
-                    belum,
-                    total_belum: belum,
-                    persentase,
-                    persentase_selesai: persentase,
-                    tglawal: dateRange.tglawal,
-                    tglakhir: dateRange.tglakhir,
-                    last_sync: diskCache.lastFetchedAt || new Date().toISOString(),
-                    source: 'Cache Paperless (Offline Fallback)'
-                };
-            } else {
-                summaryData = {
-                    success: false,
-                    total: 0,
-                    selesai: 0,
-                    belum: 0,
-                    persentase: 0,
-                    persentase_selesai: 0,
-                    tglawal: dateRange.tglawal,
-                    tglakhir: dateRange.tglakhir,
-                    last_sync: new Date().toISOString(),
-                    source: 'Default Standby'
-                };
-            }
-        }
+        const summaryData = {
+            success: allRows.length > 0,
+            total,
+            total_masuk: total,
+            selesai,
+            total_selesai: selesai,
+            belum,
+            total_belum: belum,
+            persentase,
+            persentase_selesai: persentase,
+            tglawal: dateRange.tglawal,
+            tglakhir: dateRange.tglakhir,
+            last_sync: cache.lastFetchedAt || new Date().toISOString(),
+            source
+        };
 
         if (!cache.summaryMap) cache.summaryMap = new Map();
         cache.summaryMap.set(cacheKey, { data: summaryData, timestamp: now });
@@ -257,101 +385,37 @@ class DcService {
         } = options;
 
         const dateRange = getDateRange(bulan, tahun);
-        const token = await this.getToken(force);
-        let rows = [];
-
-        if (token) {
-            try {
-                const detailUrl = `${this.apiConfig.baseUrl}PenyelesaianDokumen/detail`;
-                let body = {};
-                if (range === 'all') {
-                    // API Paperless jika dikirim body kosong akan default ke bulan berjalan saat ini.
-                    // Untuk mengambil 'all', kirim rentang tanggal luas agar seluruh arsip dokumen terambil.
-                    body = {
-                        tglawal: '2020-01-01',
-                        tglakhir: '2099-12-31'
-                    };
-                } else if (range === 'custom') {
-                    body = {
-                        tglawal: tglawal || '2020-01-01',
-                        tglakhir: tglakhir || '2099-12-31'
-                    };
-                } else if (range === 'today') {
-                    const now = new Date();
-                    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                    body = {
-                        tglawal: todayStr,
-                        tglakhir: todayStr
-                    };
-                } else {
-                    body = {
-                        tglawal: dateRange.tglawal,
-                        tglakhir: dateRange.tglakhir
-                    };
-                }
-
-                const res = await axios.post(detailUrl, body, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    timeout: this.apiConfig.timeoutMs || 10000
-                });
-
-                if (res.data && res.data.success && res.data.data && Array.isArray(res.data.data.rows) && res.data.data.rows.length > 0) {
-                    rows = res.data.data.rows.map((r, idx) => ({
-                        id: idx + 1,
-                        nomor_klausul: r.nomor_klausul || '-',
-                        jenis_dokumen: r.jenis_dokumen || '-',
-                        nama_dokumen: r.nama_dokumen || '-',
-                        nomor_revisi: r.nomor_revisi ?? '-',
-                        tgl_permohonan: r.tgl_permohonan || '',
-                        bagian: r.bagian || '-',
-                        tahap: r.tahap || '-',
-                        status: (r.status || 'BELUM SELESAI').toUpperCase(),
-                        is_selesai: (r.status || '').toUpperCase() === 'SELESAI'
-                    }));
-
-                    savePersistentCache(res.data.data, rows);
-                }
-            } catch (err) {
-                console.warn(`⚠️ [DC API DETAIL ERROR]: ${err.message}`);
-            }
-        }
-
-        // Fallback ke cache jika rows kosong
-        if (rows.length === 0) {
-            const diskCache = loadPersistentCache();
-            if (diskCache && Array.isArray(diskCache.rows)) {
-                rows = diskCache.rows;
+        let rows = cache.liveRows;
+        let source = 'Live Paperless (snam.ddns.net:8069)';
+        if (!Array.isArray(rows) || rows.length === 0 || force) {
+            const fetched = await this.fetchLiveRows(force);
+            rows = fetched.rows;
+            source = fetched.source;
+        } else if (Date.now() - cache.liveRowsTimestamp >= CACHE_TTL_MS) {
+            if (!cache.isSyncing) {
+                cache.isSyncing = true;
+                this.fetchLiveRows(true).finally(() => { cache.isSyncing = false; });
             }
         }
 
         // 1. Filter Range Waktu
         let filtered = rows;
         if (range === 'all') {
-            // Ketika range 'all', tampilkan seluruh arsip dokumen tanpa batas tanggal
             filtered = rows;
-        } else if (range === 'custom' && (tglawal || tglakhir)) {
+        } else if (tglawal && tglakhir) {
             filtered = filtered.filter(r => {
-                if (!r.tgl_permohonan) return true;
-                if (tglawal && r.tgl_permohonan < tglawal) return false;
-                if (tglakhir && r.tgl_permohonan > tglakhir) return false;
-                return true;
+                if (!r.tgl_permohonan) return false;
+                return r.tgl_permohonan >= tglawal && r.tgl_permohonan <= tglakhir;
             });
         } else if (range === 'today') {
             const now = new Date();
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             filtered = filtered.filter(r => r.tgl_permohonan === todayStr);
         } else if (range === 'month') {
-            const byMonth = filtered.filter(r => {
-                if (!r.tgl_permohonan) return true;
+            filtered = filtered.filter(r => {
+                if (!r.tgl_permohonan) return false;
                 return r.tgl_permohonan >= dateRange.tglawal && r.tgl_permohonan <= dateRange.tglakhir;
             });
-            // Bila di bulan berjalan belum ada baris namun cache memiliki data, tetap tampilkan data agar tidak kosong
-            if (byMonth.length > 0) {
-                filtered = byMonth;
-            }
         }
 
         // 2. Filter Status (selesai / belum)
@@ -417,12 +481,11 @@ class DcService {
                 hasPrev: p > 1
             },
             items: filtered,
-paged_items: pagedItems,
-            source: token ? 'API Paperless' : 'Cache Paperless (Offline Fallback)'
+            paged_items: pagedItems,
+            source
         };
     }
 }
 
 const dcService = new DcService();
 module.exports = dcService;
-
