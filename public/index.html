@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
 
     <!-- Stylesheet Tema Flat SNA Medika -->
-    <link rel="stylesheet" href="/css/style.css?v=2.11.5">
+    <link rel="stylesheet" href="/css/style.css?v=2.11.6">
 </head>
 
 <body>
@@ -2153,7 +2153,7 @@
 
             <!-- Body Modal QA -->
             <div class="modal-body subcon-modal-body">
-                <!-- 5 KPI Ringkasan QA di Modal (Dinamis Sesuai Tab Bagian) -->
+                <!-- 4 KPI Ringkasan QA di Modal (Dinamis Sesuai Tab Bagian) -->
                 <div class="subcon-kpi-grid qa-kpi-grid">
                     <div class="subcon-kpi-card">
                         <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-clipboard-check"></i></div>
@@ -2185,18 +2185,10 @@
                             <div class="kpi-label" id="modalKpiQaRejectLbl">Ditolak / Ditahan</div>
                         </div>
                     </div>
-                    <div class="subcon-kpi-card">
-                        <div class="kpi-icon-mini" style="color: #6366f1;"><i
-                                class="fa-solid fa-file-invoice-dollar"></i></div>
-                        <div>
-                            <div class="kpi-num" style="color: #6366f1;" id="modalKpiQaExtra">0</div>
-                            <div class="kpi-label" id="modalKpiQaExtraLbl">Total PO Terkait</div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Navigasi Tab Bagian QA & Status Filter -->
-                <div class="subcon-detail-section" style="margin-top: 1rem;">
+                <div class="subcon-detail-section" style="margin-top: 0.6rem;">
                     <!-- Sub-Navbar: Tab Bagian (GRS Material, Subcon SCN, Accept BR) & Filter Status -->
                     <div class="modal-tab-nav-row">
                         <div class="tab-group-left">
@@ -2229,18 +2221,7 @@
 
                     <!-- PANEL 1: RELEASE MATERIAL GRS -->
                     <div class="subcon-tab-panel active" id="tabPanelQaGrs">
-                        <!-- Sub-View switcher for GRS (Rincian GRS vs Ringkasan PO) -->
-                        <div style="display: flex; align-items: center; gap: 8px; margin: 0.6rem 0 0.4rem;">
-                            <button class="filter-pill active" id="btnSubViewQaGrs" onclick="switchQaGrsSubView('grs')">
-                                <i class="fa-solid fa-list-check"></i> Rincian GRS
-                            </button>
-                            <button class="filter-pill" id="btnSubViewQaPo" onclick="switchQaGrsSubView('po')">
-                                <i class="fa-solid fa-file-invoice"></i> Ringkasan Per PO
-                            </button>
-                        </div>
-
-                        <!-- Sub-Panel 1A: Rincian GRS -->
-                        <div id="subPanelQaGrsRows" class="table-responsive">
+                        <div id="subPanelQaGrsRows" class="table-responsive" style="margin-top: 0.5rem;">
                             <table class="tickets-table subcon-table">
                                 <thead>
                                     <tr>
@@ -2288,53 +2269,6 @@
                                 <tbody id="qaGrsTableBody">
                                     <tr class="skeleton-row">
                                         <td colspan="11" class="text-center">Memuat data...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Sub-Panel 1B: Ringkasan Per PO -->
-                        <div id="subPanelQaPoRows" class="table-responsive" style="display: none;">
-                            <table class="tickets-table subcon-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 45px; text-align: center;">No</th>
-                                        <th class="sortable-th" onclick="sortQa('po', 'no_po')" data-sort-key="no_po">
-                                            No. PO <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th" onclick="sortQa('po', 'tanggal')"
-                                            data-sort-key="tanggal">
-                                            Tanggal <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th" onclick="sortQa('po', 'supplier')"
-                                            data-sort-key="supplier">
-                                            Supplier <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th text-center" onclick="sortQa('po', 'total_grs')"
-                                            data-sort-key="total_grs">
-                                            Total GRS <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th text-center" onclick="sortQa('po', 'grs_approve')"
-                                            data-sort-key="grs_approve">
-                                            Approved <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th text-center" onclick="sortQa('po', 'grs_pending')"
-                                            data-sort-key="grs_pending">
-                                            Pending <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th text-right" onclick="sortQa('po', 'persentase')"
-                                            data-sort-key="persentase">
-                                            Capaian % <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                        <th class="sortable-th text-center" onclick="sortQa('po', 'status_code')"
-                                            data-sort-key="status_code">
-                                            Status Release <i class="fa-solid fa-sort sort-icon"></i>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody id="qaPoTableBody">
-                                    <tr class="skeleton-row">
-                                        <td colspan="9" class="text-center">Memuat data...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -2389,16 +2323,6 @@
 
                     <!-- PANEL 3: ACCEPT BATCH RECORD (BR) -->
                     <div class="subcon-tab-panel" id="tabPanelQaAcceptBr" style="display: none;">
-                        <div
-                            style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 0.4rem; display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: #1e40af;">
-                            <i class="fa-solid fa-circle-info"
-                                style="font-size: 1.1rem; color: #3b82f6; flex-shrink: 0;"></i>
-                            <div>
-                                <strong>Catatan Rincian Accept BR:</strong> API Atena ERP menyediakan rincian untuk
-                                transaksi PRH yang <strong>belum di-accept Batch Record</strong> (outstanding).
-                                Transaksi yang sudah di-accept BR tercatat dalam total agregat KPI sistem.
-                            </div>
-                        </div>
                         <div class="table-responsive" style="margin-top: 0.5rem;">
                             <table class="tickets-table subcon-table" style="width: 100%;">
                                 <thead>
@@ -2434,7 +2358,7 @@
                                 </thead>
                                 <tbody id="qaAcceptBrTableBody">
                                     <tr class="skeleton-row">
-                                        <td colspan="12" class="text-center">Memuat data...</td>
+                                        <td colspan="13" class="text-center">Memuat data...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -3407,7 +3331,7 @@
             <!-- Body Modal Produksi -->
             <div class="modal-body subcon-modal-body">
                 <!-- KPI Ringkasan PP Sesuai Rentang Tanggal -->
-                <div class="subcon-kpi-grid">
+                <div class="subcon-kpi-grid logistik-kpi-grid">
                     <div class="subcon-kpi-card">
                         <div class="kpi-icon-mini text-primary"><i class="fa-solid fa-clipboard-list"></i></div>
                         <div>
@@ -4656,7 +4580,7 @@
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=2.11.5"></script>
+    <script src="/js/app.js?v=2.11.6"></script>
 </body>
 
 </html>

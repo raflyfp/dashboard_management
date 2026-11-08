@@ -4819,21 +4819,23 @@ function updateQaBagianTabUI() {
     const panelScn = document.getElementById('tabPanelQaScn');
     const panelBr = document.getElementById('tabPanelQaAcceptBr');
 
-    if (panelGrs) panelGrs.style.display = bagian === 'grsmaterial' ? 'block' : 'none';
-    if (panelScn) panelScn.style.display = bagian === 'scn' ? 'block' : 'none';
-    if (panelBr) panelBr.style.display = bagian === 'acceptbr' ? 'block' : 'none';
+    if (panelGrs) {
+        panelGrs.classList.toggle('active', bagian === 'grsmaterial');
+        panelGrs.style.display = bagian === 'grsmaterial' ? 'flex' : 'none';
+    }
+    if (panelScn) {
+        panelScn.classList.toggle('active', bagian === 'scn');
+        panelScn.style.display = bagian === 'scn' ? 'flex' : 'none';
+    }
+    if (panelBr) {
+        panelBr.classList.toggle('active', bagian === 'acceptbr');
+        panelBr.style.display = bagian === 'acceptbr' ? 'flex' : 'none';
+    }
 
-    // Sub-view switcher GRS
-    const isDetail = state.currentQaGrsSubView !== 'po';
+    // Pastikan Rincian GRS selalu aktif
+    state.currentQaGrsSubView = 'detail';
     const subRows = document.getElementById('subPanelQaGrsRows');
-    const subPo = document.getElementById('subPanelQaPoRows');
-    const btnSubGrs = document.getElementById('btnSubViewQaGrs');
-    const btnSubPo = document.getElementById('btnSubViewQaPo');
-
-    if (subRows) subRows.style.display = isDetail ? 'block' : 'none';
-    if (subPo) subPo.style.display = !isDetail ? 'block' : 'none';
-    if (btnSubGrs) btnSubGrs.classList.toggle('active', isDetail);
-    if (btnSubPo) btnSubPo.classList.toggle('active', !isDetail);
+    if (subRows) subRows.style.display = '';
 
     // Dynamic Title & Subtitle
     const titleEl = document.getElementById('qaModalTitle');

@@ -2679,9 +2679,14 @@ html, body {
 /* ====================================================================
    LAYOUT MODAL PRESISI: SCROLL HANYA DI DALAM TABEL, PREV/NEXT TETAP
    ==================================================================== */
-.modal-card {
-    height: 90vh !important;
-    max-height: 90vh !important;
+.qa-kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.modal-card,
+.modal-card-xl {
+    height: 92vh !important;
+    max-height: 92vh !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
@@ -2690,23 +2695,26 @@ html, body {
 
 .modal-header {
     flex-shrink: 0 !important;
+    padding: 0.7rem 1.25rem !important;
+    gap: 0.45rem !important;
 }
 
 .modal-footer {
     flex-shrink: 0 !important;
+    padding: 0.65rem 1.25rem !important;
 }
 
-/* Layout Modal & Responsif Tabel Scrollable (Produksi, HR, Purchasing, QA, Logistik, PBF) */
+/* Layout Modal Body: Tidak scroll di level modal-body agar tidak ada 2 scrollbar,
+   yang bisa di-scroll hanya .table-responsive di dalamnya */
 .modal-body,
 .subcon-modal-body {
     flex: 1 1 auto !important;
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    padding: 0.75rem 1.15rem !important;
-    gap: 0.4rem !important;
+    overflow: hidden !important;
+    padding: 0.65rem 1.15rem !important;
+    gap: 0.35rem !important;
     background: #ffffff !important;
 }
 
@@ -2719,43 +2727,85 @@ html, body {
 .pbf-kpi-grid,
 .modal-tab-nav-row,
 .subcon-filter-bar,
-.subcon-tabs {
+.subcon-tabs,
+.subcon-tabs-nav {
     flex-shrink: 0 !important;
-    margin-bottom: 0.15rem !important;
+    margin-bottom: 0.1rem !important;
 }
 
-/* Detail section & Tab Panel aktif mengisi ruang flex */
+/* Hilangkan scrollbar vertikal kecil di samping tab navigasi */
+.modal-tab-nav-row,
+.modal-tab-nav-row .tab-group-left,
+.subcon-tabs-nav {
+    overflow-y: hidden !important;
+}
+
+/* Kompakkan kartu KPI di dalam modal agar ruang tabel maksimal */
+.subcon-kpi-card {
+    padding: 0.55rem 0.8rem !important;
+    gap: 0.65rem !important;
+}
+
+/* Kompakkan chart section di modal Subcon agar tabel & Prev/Next tetap muat */
+#subconModal .subcon-chart-section {
+    padding: 0.5rem 0.85rem !important;
+    gap: 0.35rem !important;
+    flex-shrink: 0 !important;
+}
+
+#subconModal .subcon-chart-container {
+    height: 115px !important;
+}
+
+/* Detail section & Tab Panel aktif mengisi sisa ruang flex secara penuh */
 .subcon-detail-section {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 1 auto !important;
     min-height: 0 !important;
-    gap: 0.4rem !important;
+    overflow: hidden !important;
+    margin-top: 0.35rem !important;
+    gap: 0.35rem !important;
 }
 
-.subcon-tab-panel.active {
+.subcon-detail-section > div:first-child:not(.table-responsive):not(.subcon-tab-panel) {
+    flex-shrink: 0 !important;
+}
+
+/* Pastikan tab panel yang tidak aktif atau memiliki display:none benar-benar disembunyikan */
+.subcon-tab-panel:not(.active),
+.subcon-tab-panel[style*="display: none"],
+.subcon-tab-panel[style*="display:none"],
+.table-responsive[style*="display: none"],
+.table-responsive[style*="display:none"] {
+    display: none !important;
+}
+
+.subcon-tab-panel.active:not([style*="display: none"]):not([style*="display:none"]) {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 1 auto !important;
     min-height: 0 !important;
+    overflow: hidden !important;
+    margin-top: 0.25rem !important;
 }
 
-/* Tabel di dalam modal dapat di-scroll secara vertikal & horizontal */
-.table-responsive,
-.modal-body .table-responsive,
-.subcon-modal-body .table-responsive,
-.subcon-detail-section .table-responsive,
-.subcon-tab-panel .table-responsive {
+/* HANYA Tabel (.table-responsive) di dalam modal yang dapat di-scroll vertikal & horizontal */
+.modal-body .table-responsive:not([style*="display: none"]):not([style*="display:none"]),
+.subcon-modal-body .table-responsive:not([style*="display: none"]):not([style*="display:none"]),
+.subcon-detail-section .table-responsive:not([style*="display: none"]):not([style*="display:none"]),
+.subcon-tab-panel .table-responsive:not([style*="display: none"]):not([style*="display:none"]) {
     flex: 1 1 auto !important;
-    min-height: 220px !important;
-    max-height: 52vh !important;
+    min-height: 0 !important;
+    max-height: none !important;
     overflow-y: auto !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
     border: 1px solid var(--border-color, #e2e8f0) !important;
     border-radius: var(--radius-sm, 6px) !important;
     background: #ffffff !important;
-    margin-bottom: 0.2rem !important;
+    margin-top: 0.25rem !important;
+    margin-bottom: 0 !important;
     isolation: isolate !important;
     contain: paint;
 }
@@ -2771,11 +2821,173 @@ html, body {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Bar Pagination Prev / Next rapi di bawah tabel (Layering aman) */
+/* Bar Pagination Prev / Next tetap diam (pinned) di bawah tabel tanpa perlu scroll */
 .purchasing-pagination-bar {
     position: relative !important;
     z-index: 10 !important;
     background: #ffffff !important;
+    flex-shrink: 0 !important;
+    padding: 0.45rem 0.35rem 0.15rem 0.35rem !important;
+    margin-top: 0.3rem !important;
+}
+
+/* ====================================================================
+   OPTIMASI UI/UX TAMPILAN MOBILE (< 768px & < 480px)
+   Memastikan di layar HP semua kartu, filter, KPI, tabel scrollable,
+   dan tombol Prev/Next tampil proporsional, rapi, dan tidak terpotong.
+   ==================================================================== */
+@media (max-width: 768px) {
+    .modal-overlay {
+        padding: 0.25rem !important;
+    }
+
+    .modal-card,
+    .modal-card-xl,
+    #ticketModal .modal-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        border-radius: 10px !important;
+        margin: 0 !important;
+    }
+
+    .modal-header {
+        padding: 0.45rem 0.65rem !important;
+        gap: 0.35rem !important;
+    }
+
+    .subcon-filter-bar {
+        padding: 0.35rem 0.5rem !important;
+        margin-top: 0.15rem !important;
+    }
+
+    .modal-body,
+    .subcon-modal-body,
+    #ticketModal .modal-body {
+        padding: 0.45rem 0.6rem !important;
+        gap: 0.3rem !important;
+        overflow: hidden !important;
+    }
+
+    /* Di mobile, KPI Cards dibuat swipe horizontal 1 baris agar hemat tinggi layar
+       sehingga area tabel tetap luas dan Prev/Next tidak terdorong keluar */
+    .subcon-kpi-grid,
+    .qa-kpi-grid,
+    .purchasing-kpi-grid,
+    .logistik-kpi-grid,
+    .hr-kpi-grid,
+    .pbf-kpi-grid {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        gap: 6px !important;
+        margin-bottom: 0.15rem !important;
+        padding-bottom: 2px !important;
+    }
+
+    .subcon-kpi-grid::-webkit-scrollbar,
+    .qa-kpi-grid::-webkit-scrollbar,
+    .purchasing-kpi-grid::-webkit-scrollbar,
+    .logistik-kpi-grid::-webkit-scrollbar,
+    .hr-kpi-grid::-webkit-scrollbar,
+    .pbf-kpi-grid::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .subcon-kpi-card {
+        flex: 0 0 auto !important;
+        min-width: 132px !important;
+        padding: 5px 8px !important;
+        border-radius: 6px !important;
+        gap: 6px !important;
+    }
+
+    .subcon-kpi-card .kpi-icon-mini {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 0.75rem !important;
+    }
+
+    .subcon-kpi-card .kpi-num {
+        font-size: 0.95rem !important;
+        line-height: 1.1 !important;
+    }
+
+    .subcon-kpi-card .kpi-label {
+        font-size: 0.62rem !important;
+    }
+
+    /* Navigasi Tab & Filter Status di Mobile */
+    .modal-tab-nav-row {
+        margin-top: 0.15rem !important;
+        gap: 4px !important;
+    }
+
+    .modal-tab-nav-row .tab-group-left {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scrollbar-width: none !important;
+    }
+
+    .modal-tab-nav-row .tab-group-left::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .purchasing-select {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.72rem !important;
+    }
+
+    /* Pagination Bar di Mobile: Tetap 1 baris sejajar (Info kiri, Prev/Next kanan) */
+    .purchasing-pagination-bar {
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 0.35rem 0.2rem 0.1rem 0.2rem !important;
+        margin-top: 0.2rem !important;
+        gap: 6px !important;
+    }
+
+    .purchasing-pagination-bar > div:first-child,
+    .purchasing-pagination-bar .pagination-info-text {
+        font-size: 0.7rem !important;
+        line-height: 1.2 !important;
+    }
+
+    .purchasing-pagination-bar .filter-pill,
+    .purchasing-pagination-bar button {
+        height: 28px !important;
+        padding: 0 10px !important;
+        font-size: 0.72rem !important;
+        gap: 4px !important;
+    }
+
+    /* Modal Footer di Mobile: Ringkas 1 baris */
+    .modal-footer {
+        padding: 0.4rem 0.65rem !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    .modal-footer .modal-stats {
+        font-size: 0.65rem !important;
+        text-align: left !important;
+        line-height: 1.2 !important;
+    }
+
+    .modal-footer button {
+        width: auto !important;
+        min-width: 68px !important;
+        padding: 0.32rem 0.75rem !important;
+        font-size: 0.75rem !important;
+        flex-shrink: 0 !important;
+    }
 }
 
 
