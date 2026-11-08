@@ -4326,18 +4326,27 @@ function renderLogistikModalData(data) {
     const kpi = data.kpi || {};
     const meta = data.meta || {};
 
-    // 1. Tampilkan 5 KPI Utama Logistik
+    // 1. Tampilkan 5 KPI Utama Logistik (Berdasarkan Rincian Item Barang yang sudah terpenuhi)
     const elTotalOrder = document.getElementById('modalKpiLogistikTotalOrder');
+    const elSubOrder = document.getElementById('modalKpiLogistikSubOrder');
     const elTerpenuhi = document.getElementById('modalKpiLogistikTerpenuhi');
     const elBelum = document.getElementById('modalKpiLogistikBelum');
     const elPercent = document.getElementById('modalKpiLogistikPercent');
     const elTotalQty = document.getElementById('modalKpiLogistikTotalQtyOrder');
     const elTotalDn = document.getElementById('modalKpiLogistikTotalQtyDn');
 
-    if (elTotalOrder) elTotalOrder.textContent = Number(kpi.total_order || 0).toLocaleString('id-ID');
-    if (elTerpenuhi) elTerpenuhi.textContent = Number(kpi.order_terpenuhi || 0).toLocaleString('id-ID');
-    if (elBelum) elBelum.textContent = Number(kpi.order_belum_terpenuhi || 0).toLocaleString('id-ID');
-    if (elPercent) elPercent.textContent = `${kpi.persentase_selesai || 0}%`;
+    const totalItemVal = kpi.total_item !== undefined ? kpi.total_item : (kpi.total_order || 0);
+    const itemMemenuhiVal = kpi.item_memenuhi !== undefined ? kpi.item_memenuhi : (kpi.order_terpenuhi || 0);
+    const itemBelumVal = kpi.item_belum !== undefined ? kpi.item_belum : (kpi.order_belum_terpenuhi || 0);
+    const pctVal = totalItemVal > 0
+        ? Number(((itemMemenuhiVal / totalItemVal) * 100).toFixed(2))
+        : (kpi.persentase_selesai || 0);
+
+    if (elTotalOrder) elTotalOrder.textContent = Number(totalItemVal).toLocaleString('id-ID');
+    if (elSubOrder) elSubOrder.textContent = Number(kpi.total_order || 0).toLocaleString('id-ID');
+    if (elTerpenuhi) elTerpenuhi.textContent = Number(itemMemenuhiVal).toLocaleString('id-ID');
+    if (elBelum) elBelum.textContent = Number(itemBelumVal).toLocaleString('id-ID');
+    if (elPercent) elPercent.textContent = `${pctVal}%`;
     if (elTotalQty) elTotalQty.textContent = Number(kpi.total_jumlah || 0).toLocaleString('id-ID');
     if (elTotalDn) elTotalDn.textContent = Number(kpi.total_jumlah_dn || 0).toLocaleString('id-ID');
 

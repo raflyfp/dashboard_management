@@ -371,15 +371,22 @@ class LogistikService {
         const totalOrder = orderList.length;
         const orderTerpenuhi = orderList.filter(o => o.status_order_code === 'memenuhi').length;
         const orderBelum = orderList.filter(o => o.status_order_code === 'belum').length;
-        const persentaseOrder = totalOrder > 0 ? Number(((orderTerpenuhi / totalOrder) * 100).toFixed(1)) : 0;
+        const persentaseOrder = totalOrder > 0 ? Number(((orderTerpenuhi / totalOrder) * 100).toFixed(2)) : 0;
 
-        // KPI terpadu
+        const totalItem = items.length;
+        const persentaseItem = totalItem > 0
+            ? Number(((itemMemenuhi / totalItem) * 100).toFixed(2))
+            : (ringkasanKpi.persentase_selesai ?? persentaseOrder);
+
+        // KPI terpadu (Persentase utama berdasarkan Rincian Item Barang yang sudah terpenuhi)
         const kpi = {
             total_order: ringkasanKpi.total_order ?? totalOrder,
             order_terpenuhi: ringkasanKpi.order_terpenuhi ?? orderTerpenuhi,
             order_belum_terpenuhi: ringkasanKpi.order_belum_terpenuhi ?? orderBelum,
-            persentase_selesai: ringkasanKpi.persentase_selesai ?? persentaseOrder,
-            total_item: items.length,
+            persentase_order: ringkasanKpi.persentase_selesai ?? persentaseOrder,
+            persentase_selesai: persentaseItem,
+            persentase_item: persentaseItem,
+            total_item: totalItem,
             item_memenuhi: itemMemenuhi,
             item_belum: itemBelum,
             total_jumlah: totalJumlah,
@@ -470,7 +477,7 @@ class LogistikService {
     }
 
     /**
-     * Ringkasan KPI untuk kartu utama dashboard
+     * Ringkasan KPI untuk kartu utama dashboard (Berdasarkan Rincian Barang Terpenuhi)
      */
     async getSummary(force = false, customDates = null) {
         const { today, monthStart } = (customDates && customDates.tglawal)
@@ -480,19 +487,25 @@ class LogistikService {
                 : getDateParams();
 
         try {
-            // Ambil Hari Ini dan Bulan Ini secara paralel
+            // Ambil data lengkap (termasuk rincian barang) Hari Ini dan Bulan Ini secara paralel
             const [resToday, resMonth] = await Promise.allSettled([
-                this.fetchRingkasan({ tglawal: today, tglakhir: today }),
-                this.fetchRingkasan({ tglawal: monthStart, tglakhir: today })
+                this.fetchData(force, { tglawal: today, tglakhir: today }),
+                this.fetchData(force, { tglawal: monthStart, tglakhir: today })
             ]);
 
-            const todayData = resToday.status === 'fulfilled' ? resToday.value : {
-                total_order: 0, order_terpenuhi: 0, order_belum_terpenuhi: 0, persentase_selesai: 0
+            const emptyKpi = {
+                total_item: 0, item_memenuhi: 0, item_belum: 0,
+                total_order: 0, order_terpenuhi: 0, order_belum_terpenuhi: 0,
+                persentase_selesai: 0, persentase_order: 0
             };
 
-            const monthData = resMonth.status === 'fulfilled' ? resMonth.value : {
-                total_order: 0, order_terpenuhi: 0, order_belum_terpenuhi: 0, persentase_selesai: 0
-            };
+            const todayData = resToday.status === 'fulfilled' && resToday.value?.kpi
+                ? resToday.value.kpi
+                : emptyKpi;
+
+            const monthData = resMonth.status === 'fulfilled' && resMonth.value?.kpi
+                ? resMonth.value.kpi
+                : emptyKpi;
 
             // Simpan data bulan ini ke disk jika berhasil
             if (resMonth.status === 'fulfilled') {
@@ -505,10 +518,14 @@ class LogistikService {
             return {
                 success: true,
                 kpi: {
+                    total_item: monthData.total_item,
+                    item_memenuhi: monthData.item_memenuhi,
+                    item_belum: monthData.item_belum,
                     total_order: monthData.total_order,
                     order_terpenuhi: monthData.order_terpenuhi,
                     order_belum_terpenuhi: monthData.order_belum_terpenuhi,
                     persentase_selesai: monthData.persentase_selesai,
+                    persentase_order: monthData.persentase_order,
                 },
                 today: todayData,
                 month: monthData,
@@ -529,7 +546,7 @@ class LogistikService {
 
             return {
                 success: false,
-                kpi: { total_order: 0, order_terpenuhi: 0, order_belum_terpenuhi: 0, persentase_selesai: 0 },
+                kpi: { total_item: 0, item_memenuhi: 0, item_belum: 0, total_order: 0, order_terpenuhi: 0, order_belum_terpenuhi: 0, persentase_selesai: 0 },
                 error: error.message
             };
         }
