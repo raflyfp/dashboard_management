@@ -3396,14 +3396,14 @@ function updatePurchasingSortHeaders(viewMode) {
 // ====================================================================
 
 const PRODUKSI_BAGIAN_MAP = {
-    stentor: { name: 'Produksi Finishing', judul: 'Penyelesaian PP Stentor', unit: 'Meter / PCS', icon: 'fa-industry' },
-    antiseptik: { name: 'Produksi Antiseptik', judul: 'Penyelesaian PP Packing', unit: 'Botol / PCS', icon: 'fa-pump-medical' },
-    cw: { name: 'Produksi CW', judul: 'Penyelesaian PP CW Packing', unit: 'PCS', icon: 'fa-prescription-bottle' },
-    sizing: { name: 'Produksi Sizing', judul: 'Penyelesaian PP Sizing', unit: 'Meter / Beam', icon: 'fa-ruler-combined' },
-    poligyp: { name: 'Produksi Poligyp', judul: 'Penyelesaian PP Poligyp Packing', unit: 'Roll / PCS', icon: 'fa-bandage' },
-    ironing: { name: 'Produksi Ironing', judul: 'Penyelesaian PP Ironing', unit: 'PCS / Meter', icon: 'fa-shirt' },
-    surgicalmesin: { name: 'Produksi Surgical Mesin', judul: 'Penyelesaian PP Surgical Mesin', unit: 'PCS / Box', icon: 'fa-gears' },
-    surgicalpacking: { name: 'Produksi Surgical Packing', judul: 'Penyelesaian PP Surgical Packing', unit: 'Box / Karton', icon: 'fa-box-tissue' }
+    stentor: { name: 'Produksi Finishing', judul: 'Penyelesaian PP Stentor', tahap: 'STENTOR', unit: 'Meter / PCS', icon: 'fa-industry' },
+    antiseptik: { name: 'Produksi Antiseptik', judul: 'Penyelesaian PP Packing', tahap: 'PACKING', unit: 'Botol / PCS', icon: 'fa-pump-medical' },
+    cw: { name: 'Produksi CW', judul: 'Penyelesaian PP CW Packing', tahap: 'CW PACKING', unit: 'PCS', icon: 'fa-prescription-bottle' },
+    sizing: { name: 'Produksi Sizing', judul: 'Penyelesaian PP Sizing', tahap: 'SIZING', unit: 'Meter / Beam', icon: 'fa-ruler-combined' },
+    poligyp: { name: 'Produksi Poligyp', judul: 'Penyelesaian PP Poligyp Packing', tahap: 'POLIGYP PACKING', unit: 'Roll / PCS', icon: 'fa-bandage' },
+    ironing: { name: 'Produksi Ironing', judul: 'Penyelesaian PP Ironing', tahap: 'IRONING', unit: 'PCS / Meter', icon: 'fa-shirt' },
+    surgicalmesin: { name: 'Produksi Surgical Mesin', judul: 'Penyelesaian PP Surgical Mesin', tahap: 'SURGICAL MESIN', unit: 'PCS / Box', icon: 'fa-gears' },
+    surgicalpacking: { name: 'Produksi Surgical Packing', judul: 'Penyelesaian PP Surgical Packing', tahap: 'SURGICAL PACKING', unit: 'Box / Karton', icon: 'fa-box-tissue' }
 };
 
 /**
@@ -3842,12 +3842,18 @@ function renderProduksiUI(payload) {
     }
 
     // Filter Search
+    const defaultTahap = (PRODUKSI_BAGIAN_MAP[payload.bagian] && PRODUKSI_BAGIAN_MAP[payload.bagian].tahap)
+        || cfg.tahap
+        || (ringkasan.judul ? ringkasan.judul.replace(/^Penyelesaian PP\s+/i, '').toUpperCase() : '');
+
     if (state.produksiSearchQuery) {
         const q = state.produksiSearchQuery;
         rows = rows.filter(r => {
+            const tahapStr = r.tahap_pekerjaan || defaultTahap || r.divisi || '';
             return String(r.nomor_pp || '').toLowerCase().includes(q) ||
                 String(r.nama_barang || '').toLowerCase().includes(q) ||
                 String(r.kode_barang || '').toLowerCase().includes(q) ||
+                String(tahapStr).toLowerCase().includes(q) ||
                 String(r.divisi || '').toLowerCase().includes(q);
         });
     }
@@ -3921,11 +3927,13 @@ function renderProduksiUI(payload) {
                 ? `<span style="font-size: 0.75rem;">${r.plan_tk} / <b>${r.actual_tk}</b></span>`
                 : '-';
 
+            const tahapPekerjaan = r.tahap_pekerjaan || r.nama_tahap || r.tahap || r.pekerjaan || r.mesin || r.sub_bagian || defaultTahap || r.divisi || '-';
+
             html += `
                 <tr>
                     <td class="text-center" style="color: var(--text-muted); font-size: 0.8rem;">${no}</td>
                     <td><strong style="color: var(--sna-blue); font-family: var(--font-mono);">${r.nomor_pp || '-'}</strong></td>
-                    <td><span class="skeleton-pill" style="padding: 2px 8px; font-size: 0.72rem; font-weight: 600; background: #f1f5f9; border-radius: 4px;">${r.divisi || '-'}</span></td>
+                    <td><span class="skeleton-pill" style="padding: 2px 8px; font-size: 0.72rem; font-weight: 600; background: #f1f5f9; border-radius: 4px;">${tahapPekerjaan}</span></td>
                     <td style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted);">${r.kode_barang || '-'}</td>
                     <td><strong>${r.nama_barang || '-'}</strong></td>
                     <td class="text-center">${periodeStr}</td>
@@ -5521,7 +5529,7 @@ function renderQaAcceptBrTable(list) {
     if (!list || list.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="12" class="subcon-empty-row">
+                <td colspan="13" class="subcon-empty-row">
                     <i class="fa-solid fa-file-circle-check" style="font-size: 2rem; color: #cbd5e1;"></i>
                     <div style="margin-top: 8px;">Semua Transaksi PRH Sudah Memiliki Batch Record!</div>
                 </td>
@@ -5548,6 +5556,12 @@ function renderQaAcceptBrTable(list) {
             ? '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;"><i class="fa-solid fa-triangle-exclamation"></i> BELUM ADA BR</span>'
             : '<span class="service-status-pill status-live"><i class="fa-solid fa-check"></i> SUDAH ADA BR</span>';
 
+        const userAccept = (item.user_accept || '').trim();
+        const tglAccept = item.tgl_accept_label || item.tgl_accept || '';
+        const acceptCell = (userAccept && userAccept !== '-' || tglAccept && tglAccept !== '-')
+            ? `<div style="line-height: 1.25;"><strong style="color: #0f172a; font-size: 0.78rem;">${userAccept || '-'}</strong><br><span class="font-mono" style="font-size: 0.72rem; color: #64748b;">${tglAccept || '-'}</span></div>`
+            : '<span style="color: #94a3b8;">-</span>';
+
         html += `
             <tr>
                 <td class="text-center font-mono" style="color: #64748b;">${startIdx + idx + 1}</td>
@@ -5561,6 +5575,7 @@ function renderQaAcceptBrTable(list) {
                 <td class="text-center font-mono" style="font-size: 0.8rem;">${item.batch || '-'}</td>
                 <td class="text-right font-mono">${Number(item.jumlah || 0).toLocaleString('id-ID')}</td>
                 <td style="font-size: 0.8rem; color: #64748b;">${item.user_entry || '-'}</td>
+                <td class="text-center">${acceptCell}</td>
                 <td class="text-center">${badge}</td>
             </tr>
         `;

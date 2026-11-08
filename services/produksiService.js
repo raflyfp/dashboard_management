@@ -31,14 +31,14 @@ if (!fs.existsSync(CACHE_DIR)) {
 
 // Daftar 8 Lini Produksi resmi dari Atena ERP
 const BAGIAN_CONFIG = [
-    { key: 'stentor', code: 'PROD_FINISHING', name: 'Produksi Finishing', unit: 'Meter / PCS', icon: 'industry' },
-    { key: 'antiseptik', code: 'PROD_ANTISEPTIK', name: 'Produksi Antiseptik', unit: 'Botol / PCS', icon: 'pump-medical' },
-    { key: 'cw', code: 'PROD_CW', name: 'Produksi CW', unit: 'PCS', icon: 'prescription-bottle' },
-    { key: 'sizing', code: 'PROD_SIZING', name: 'Produksi Sizing', unit: 'Meter / Beam', icon: 'ruler-combined' },
-    { key: 'poligyp', code: 'PROD_POLIGYP', name: 'Produksi Poligyp', unit: 'Roll / PCS', icon: 'bandage' },
-    { key: 'ironing', code: 'PROD_IRONING', name: 'Produksi Ironing', unit: 'PCS / Meter', icon: 'shirt' },
-    { key: 'surgicalmesin', code: 'PROD_SURGICAL_MESIN', name: 'Produksi Surgical Mesin', unit: 'PCS / Box', icon: 'gears' },
-    { key: 'surgicalpacking', code: 'PROD_SURGICAL_PACKING', name: 'Produksi Surgical Packing', unit: 'Box / Karton', icon: 'box-tissue' }
+    { key: 'stentor', code: 'PROD_FINISHING', name: 'Produksi Finishing', tahap: 'STENTOR', unit: 'Meter / PCS', icon: 'industry' },
+    { key: 'antiseptik', code: 'PROD_ANTISEPTIK', name: 'Produksi Antiseptik', tahap: 'PACKING', unit: 'Botol / PCS', icon: 'pump-medical' },
+    { key: 'cw', code: 'PROD_CW', name: 'Produksi CW', tahap: 'CW PACKING', unit: 'PCS', icon: 'prescription-bottle' },
+    { key: 'sizing', code: 'PROD_SIZING', name: 'Produksi Sizing', tahap: 'SIZING', unit: 'Meter / Beam', icon: 'ruler-combined' },
+    { key: 'poligyp', code: 'PROD_POLIGYP', name: 'Produksi Poligyp', tahap: 'POLIGYP PACKING', unit: 'Roll / PCS', icon: 'bandage' },
+    { key: 'ironing', code: 'PROD_IRONING', name: 'Produksi Ironing', tahap: 'IRONING', unit: 'PCS / Meter', icon: 'shirt' },
+    { key: 'surgicalmesin', code: 'PROD_SURGICAL_MESIN', name: 'Produksi Surgical Mesin', tahap: 'SURGICAL MESIN', unit: 'PCS / Box', icon: 'gears' },
+    { key: 'surgicalpacking', code: 'PROD_SURGICAL_PACKING', name: 'Produksi Surgical Packing', tahap: 'SURGICAL PACKING', unit: 'Box / Karton', icon: 'box-tissue' }
 ];
 
 /**
@@ -512,9 +512,19 @@ class ProduksiService {
                 })
             ]);
 
-            const rows = detailRes.status === 'fulfilled' && detailRes.value?.success && Array.isArray(detailRes.value.data?.rows)
+            const rawRows = detailRes.status === 'fulfilled' && detailRes.value?.success && Array.isArray(detailRes.value.data?.rows)
                 ? detailRes.value.data.rows
                 : [];
+
+            const tahapLabel = foundByCode?.tahap
+                || (detailRes.status === 'fulfilled' && detailRes.value?.data?.judul
+                    ? String(detailRes.value.data.judul).replace(/^Penyelesaian PP\s+/i, '').toUpperCase()
+                    : '');
+
+            const rows = rawRows.map(r => ({
+                ...r,
+                tahap_pekerjaan: r.tahap_pekerjaan || r.nama_tahap || r.tahap || r.pekerjaan || r.mesin || r.sub_bagian || tahapLabel || r.divisi || '-'
+            }));
 
             const summaryRange = summaryRangeRes.status === 'fulfilled' && summaryRangeRes.value?.success
                 ? summaryRangeRes.value.data
@@ -579,7 +589,8 @@ class ProduksiService {
                 const nama = String(r.nama_barang || '').toLowerCase();
                 const kode = String(r.kode_barang || '').toLowerCase();
                 const divisi = String(r.divisi || '').toLowerCase();
-                return noPp.includes(q) || nama.includes(q) || kode.includes(q) || divisi.includes(q);
+                const tahap = String(r.tahap_pekerjaan || detailData.config?.tahap || '').toLowerCase();
+                return noPp.includes(q) || nama.includes(q) || kode.includes(q) || divisi.includes(q) || tahap.includes(q);
             });
         }
 
