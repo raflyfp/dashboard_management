@@ -65,7 +65,7 @@ const RING_CIRCUMFERENCE = 251.32;
 
 // Konfigurasi State Aplikasi
 const state = {
-    refreshInterval: 15,    // Interval refresh bawaan (detik)
+    refreshInterval: 30,    // Interval refresh bawaan (detik)
     retryInterval: 5,       // Interval retry cepat saat error / reconnect (detik)
     countdownTimer: 15,     // Hitung mundur detik
     timerId: null,          // Referensi interval timer

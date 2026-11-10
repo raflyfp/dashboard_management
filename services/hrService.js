@@ -31,6 +31,7 @@ if (!fs.existsSync(CACHE_DIR)) {
 // In-memory cache & state
 const cache = {
     summary: { data: null, timestamp: 0 },
+    summaryMap: new Map(), // key: cacheKey -> { data, timestamp }
     detailCache: new Map(), // key: bagian_tglawal_tglakhir
     authToken: null,
     tokenExpiresAt: 0,
@@ -458,17 +459,44 @@ class HrService {
                 : getDateParams();
 
         const isCurrentMonth = customDates ? customDates.isCurrentMonth !== false : true;
+        const cacheKey = customDates
+            ? `${customDates.tahun || 'cur'}_${String(customDates.bulan || 'cur').padStart(2, '0')}_${isCurrentMonth ? 'today' : 'month'}`
+            : 'default';
+        const now = Date.now();
+        // 60 detik untuk bulan ini, 1 jam untuk bulan historis (karena data lampau tidak berubah)
+        const ttl = isCurrentMonth ? CACHE_TTL_MS : (60 * 60 * 1000);
+
+        // 1. Cek In-Memory Cache (Respons Instan 0ms)
+        if (!force && cache.summaryMap && cache.summaryMap.has(cacheKey)) {
+            const cached = cache.summaryMap.get(cacheKey);
+            if (now - cached.timestamp < ttl) {
+                return cached.data;
+            }
+        }
+
         const todayParams = { tglawal: today, tglakhir: today };
         const monthParams = { tglawal: monthStart, tglakhir: today };
 
         try {
-            // Ambil data Hari Ini dan Bulan Ini secara paralel dari Atena ERP
-            const [todayTk, todayMkt, monthTk, monthMkt] = await Promise.all([
-                this.fetchRingkasan('tksna', todayParams),
-                this.fetchRingkasan('marketing', todayParams),
-                this.fetchRingkasan('tksna', monthParams),
-                this.fetchRingkasan('marketing', monthParams)
-            ]);
+            // Optimasi: Hanya query yang relevan dengan tampilan aktif
+            // Bulan ini -> hanya butuh data Hari Ini (TK SNA & Marketing)
+            // Bulan historis -> hanya butuh data Bulan tersebut (TK SNA & Marketing)
+            let todayTk = { total_jadwal: 0, jadwal_sesuai: 0, jadwal_tidak_sesuai: 0, total_karyawan: 0, persentase: 0 };
+            let todayMkt = { total_jadwal: 0, jadwal_sesuai: 0, jadwal_tidak_sesuai: 0, total_karyawan: 0, persentase: 0 };
+            let monthTk = { total_jadwal: 0, jadwal_sesuai: 0, jadwal_tidak_sesuai: 0, total_karyawan: 0, persentase: 0 };
+            let monthMkt = { total_jadwal: 0, jadwal_sesuai: 0, jadwal_tidak_sesuai: 0, total_karyawan: 0, persentase: 0 };
+
+            if (isCurrentMonth) {
+                [todayTk, todayMkt] = await Promise.all([
+                    this.fetchRingkasan('tksna', todayParams),
+                    this.fetchRingkasan('marketing', todayParams)
+                ]);
+            } else {
+                [monthTk, monthMkt] = await Promise.all([
+                    this.fetchRingkasan('tksna', monthParams),
+                    this.fetchRingkasan('marketing', monthParams)
+                ]);
+            }
 
             // Metrik Hari Ini (Today)
             const todayTotalJadwal = (todayTk.total_jadwal || 0) + (todayMkt.total_jadwal || 0);
@@ -484,7 +512,7 @@ class HrService {
             const monthTotalKaryawan = (monthTk.total_karyawan || 0) + (monthMkt.total_karyawan || 0);
             const monthPersen = monthTotalJadwal > 0 ? Number(((monthJadwalSesuai / monthTotalJadwal) * 100).toFixed(1)) : 0;
 
-            // Jika periode aktif adalah bulan berjalan, tampilkan data HARI INI pada card utama
+            // Tampilkan data sesuai mode aktif
             const activeTotal = isCurrentMonth ? todayTotalJadwal : monthTotalJadwal;
             const activeSesuai = isCurrentMonth ? todayJadwalSesuai : monthJadwalSesuai;
             const activeTidakSesuai = isCurrentMonth ? todayJadwalTidakSesuai : monthJadwalTidakSesuai;
@@ -534,11 +562,16 @@ class HrService {
 
             cache.summary.data = summaryPayload;
             cache.summary.timestamp = Date.now();
+            if (!cache.summaryMap) cache.summaryMap = new Map();
+            cache.summaryMap.set(cacheKey, { data: summaryPayload, timestamp: Date.now() });
             savePersistentCache(summaryPayload);
             return summaryPayload;
         } catch (err) {
             console.error('[HR GET SUMMARY ERROR]:', err.message);
+            if (cache.summaryMap?.has(cacheKey)) return cache.summaryMap.get(cacheKey).data;
             if (cache.summary.data) return cache.summary.data;
+            const persistent = loadPersistentCache();
+            if (persistent) return persistent;
             throw err;
         }
     }

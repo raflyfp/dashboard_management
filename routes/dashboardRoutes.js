@@ -32,6 +32,7 @@ const cache = {
     tickets: new Map(),
 };
 const CACHE_TTL_MS = config.cacheTtlSeconds * 1000;
+const inFlightFetches = new Map(); // key: YYYY_MM -> Promise<result> (Request Coalescing / Deduplication)
 
 // Melacak status koneksi terakhir ke API Ticketing untuk pemberitahuan di console server
 let lastApiStatus = null;
@@ -103,8 +104,862 @@ router.get('/config', (req, res) => {
  * GET /api/dashboard/stats
  * Mengumpulkan data dari API ticketing & API subcon serta modul lainnya
  */
+/**
+ * Helper: Mengambil data dari seluruh 12 modul secara paralel dan menyusun payload dashboard
+ */
+async function buildDashboardStats(customDates, forceRefresh = false) {
+    // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi, Logistik, QA, WH FG & WH Mat secara paralel
+    const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled, pbfSettled, hrSettled, devSettled, dcSettled] = await Promise.allSettled([
+        ticketingService.getSummary(forceRefresh, customDates),
+        subconService.getMonitoringToday(forceRefresh, customDates),
+        purchasingService.getSummary(forceRefresh, customDates),
+        produksiService.getRingkasanAll(forceRefresh, customDates),
+        logistikService.getSummary(forceRefresh, customDates),
+        qaService.getSummary(forceRefresh, customDates),
+        whFgService.getSummary(forceRefresh, customDates),
+        whMatService.getSummary(forceRefresh, customDates),
+        pbfService.getSummary(forceRefresh, customDates),
+        hrService.getSummary(forceRefresh, customDates),
+        developmentService.getSummary(forceRefresh, customDates),
+        dcService.getSummary(forceRefresh, customDates)
+    ]);
+
+    // Update live API health status
+    apiHealthService.updateModuleStatus('purchasing', purchasingSettled.status === 'fulfilled' && purchasingSettled.value?.success !== false, 0, purchasingSettled.reason?.message);
+    apiHealthService.updateModuleStatus('produksi', produksiSettled.status === 'fulfilled', 0, produksiSettled.reason?.message);
+    apiHealthService.updateModuleStatus('logistik', logistikSettled.status === 'fulfilled', 0, logistikSettled.reason?.message);
+    apiHealthService.updateModuleStatus('qa', qaSettled.status === 'fulfilled', 0, qaSettled.reason?.message);
+    apiHealthService.updateModuleStatus('whFg', whFgSettled.status === 'fulfilled', 0, whFgSettled.reason?.message);
+    apiHealthService.updateModuleStatus('whMat', whMatSettled.status === 'fulfilled', 0, whMatSettled.reason?.message);
+    apiHealthService.updateModuleStatus('pbf', pbfSettled && pbfSettled.status === 'fulfilled', 0, pbfSettled?.reason?.message);
+    apiHealthService.updateModuleStatus('hr', hrSettled && hrSettled.status === 'fulfilled', 0, hrSettled?.reason?.message);
+
+    let apiData = null;
+    if (ticketingSettled.status === 'fulfilled') {
+        apiData = ticketingSettled.value;
+        if (lastApiStatus !== 'online') {
+            const timeStr = new Date().toLocaleTimeString('id-ID');
+            console.log(`[${timeStr}] ✅ [API TICKETING]: Berhasil terhubung & sinkronisasi data dari ${config.ticketing.url}`);
+            lastApiStatus = 'online';
+        }
+    } else {
+        console.error(`❌ [API TICKETING ERROR]: ${ticketingSettled.reason?.message}`);
+    }
+
+    let subconData = null;
+    if (subconSettled.status === 'fulfilled') {
+        subconData = subconSettled.value;
+    } else {
+        console.error(`❌ [API SUBCON ERROR]: ${subconSettled.reason?.message}`);
+    }
+
+    let purchasingData = null;
+    if (purchasingSettled.status === 'fulfilled') {
+        purchasingData = purchasingSettled.value;
+    } else {
+        console.error(`❌ [API PURCHASING ERROR]: ${purchasingSettled.reason?.message}`);
+    }
+    const purchasingKpi = purchasingData?.kpi || {};
+
+    let produksiData = null;
+    if (produksiSettled.status === 'fulfilled') {
+        produksiData = produksiSettled.value?.data || null;
+    } else {
+        console.error(`❌ [API PRODUKSI ERROR]: ${produksiSettled.reason?.message}`);
+    }
+    const prodModules = produksiData?.modules || {};
+    const prodKpi = produksiData?.kpi || {};
+
+    let logistikData = null;
+    if (logistikSettled.status === 'fulfilled') {
+        logistikData = logistikSettled.value;
+    } else {
+        console.error(`❌ [API LOGISTIK ERROR]: ${logistikSettled.reason?.message}`);
+    }
+    const logistikKpi = logistikData?.kpi || {};
+
+    let qaData = null;
+    if (qaSettled.status === 'fulfilled') {
+        qaData = qaSettled.value;
+    } else {
+        console.error(`❌ [API QA ERROR]: ${qaSettled.reason?.message}`);
+    }
+    const qaKpi = qaData?.kpi || {};
+
+    let whFgData = null;
+    if (whFgSettled.status === 'fulfilled') {
+        whFgData = whFgSettled.value;
+    } else {
+        console.error(`❌ [API WH FG ERROR]: ${whFgSettled.reason?.message}`);
+    }
+    const whFgKpi = whFgData?.kpi || {};
+
+    let whMatData = null;
+    if (whMatSettled.status === 'fulfilled') {
+        whMatData = whMatSettled.value;
+    } else {
+        console.error(`❌ [API WH MAT ERROR]: ${whMatSettled.reason?.message}`);
+    }
+    const whMatKpi = whMatData?.kpi || {};
+
+    let pbfData = null;
+    if (pbfSettled && pbfSettled.status === 'fulfilled') {
+        pbfData = pbfSettled.value;
+    } else if (pbfSettled && pbfSettled.reason) {
+        console.error(`❌ [API PBF ERROR]: ${pbfSettled.reason?.message}`);
+    }
+    const pbfKpi = pbfData?.kpi || {};
+
+    let hrData = null;
+    if (hrSettled && hrSettled.status === 'fulfilled') {
+        hrData = hrSettled.value;
+    } else if (hrSettled && hrSettled.reason) {
+        console.error(`❌ [API HR ERROR]: ${hrSettled.reason?.message}`);
+    }
+    const hrKpi = hrData?.kpi || {};
+
+    let devData = null;
+    if (devSettled && devSettled.status === 'fulfilled') {
+        devData = devSettled.value;
+    } else if (devSettled && devSettled.reason) {
+        console.error(`❌ [DEV SERVICE ERROR]: ${devSettled.reason?.message}`);
+    }
+    const devKpi = devData?.kpi || {};
+
+    let dcData = null;
+    if (dcSettled && dcSettled.status === 'fulfilled') {
+        dcData = dcSettled.value;
+    } else if (dcSettled && dcSettled.reason) {
+        console.error(`❌ [DC SERVICE ERROR]: ${dcSettled.reason?.message}`);
+    }
+    const dcKpi = dcData?.kpi || {};
+
+    const summaryData = apiData?.data || {};
+    const rawCards = summaryData.layanan_monitoring || {};
+    if (Object.keys(rawCards).length === 0 && Array.isArray(summaryData.per_layanan)) {
+        summaryData.per_layanan.forEach(item => {
+            if (item?.kode) rawCards[item.kode] = item;
+        });
+    }
+
+    const subconRaw = subconData?.data || {};
+    const subconKpi = subconRaw.kpi || {};
+    const subconList = subconRaw.per_subcon || [];
+    const subconFirst = subconList[0] || {};
+
+    // 3. Susunan 10 Modul Layanan (Sesuai Kebutuhan Manajemen SNA Medika)
+    const servicesResult = {
+        // --- Modul dari Ticketing (Aktif & Live) ---
+        GA: {
+            no: 1,
+            kode: 'GA',
+            nama: 'Layanan GA',
+            kategori: 'layanan',
+            kategori_label: 'Layanan Utama & Live',
+            data_ditampilkan: 'Penyelesaian permintaan layanan sarpras',
+            sub_nama: 'Gedung & Sarpras',
+            icon: 'building-user',
+            sumber_data: 'Aplikasi ticketing (total masuk vs total selesai)',
+            sumber: 'Ticketing',
+            is_active: true,
+            metric_labels: { total: 'Total Masuk', selesai: 'Selesai', belum: 'Belum' },
+            unit: 'Tiket',
+            total_tiket: rawCards.GA?.total_tiket ?? 0,
+            selesai: rawCards.GA?.selesai ?? 0,
+            belum_selesai: rawCards.GA?.belum_selesai ?? 0,
+            ditolak: rawCards.GA?.ditolak ?? 0,
+            total_efektif: Math.max(0, (rawCards.GA?.total_tiket ?? 0) - (rawCards.GA?.ditolak ?? 0)),
+            persentase_selesai: hitungPersentase(
+                rawCards.GA?.selesai ?? 0,
+                rawCards.GA?.total_tiket ?? 0,
+                rawCards.GA?.ditolak ?? 0
+            ),
+        },
+        TK: {
+            no: 2,
+            kode: 'TK',
+            nama: 'Layanan Teknik / Mekanik',
+            kategori: 'layanan',
+            kategori_label: 'Layanan Utama & Live',
+            data_ditampilkan: 'Penyelesaian permintaan layanan mekanik',
+            sub_nama: 'Mesin & Utilitas Mekanik',
+            icon: 'screwdriver-wrench',
+            sumber_data: 'Aplikasi ticketing (total masuk vs total selesai)',
+            sumber: 'Ticketing',
+            is_active: true,
+            metric_labels: { total: 'Total Masuk', selesai: 'Selesai', belum: 'Belum' },
+            unit: 'Tiket',
+            total_tiket: rawCards.TK?.total_tiket ?? 0,
+            selesai: rawCards.TK?.selesai ?? 0,
+            belum_selesai: rawCards.TK?.belum_selesai ?? 0,
+            ditolak: rawCards.TK?.ditolak ?? 0,
+            total_efektif: Math.max(0, (rawCards.TK?.total_tiket ?? 0) - (rawCards.TK?.ditolak ?? 0)),
+            persentase_selesai: hitungPersentase(
+                rawCards.TK?.selesai ?? 0,
+                rawCards.TK?.total_tiket ?? 0,
+                rawCards.TK?.ditolak ?? 0
+            ),
+        },
+        IT: {
+            no: 3,
+            kode: 'IT',
+            nama: 'Layanan IT',
+            kategori: 'layanan',
+            kategori_label: 'Layanan Utama & Live',
+            data_ditampilkan: 'Penyelesaian permintaan layanan IT',
+            sub_nama: 'Software, Jaringan & Hardware',
+            icon: 'laptop-code',
+            sumber_data: 'Aplikasi ticketing (total masuk vs total selesai)',
+            sumber: 'Ticketing',
+            is_active: true,
+            metric_labels: { total: 'Total Masuk', selesai: 'Selesai', belum: 'Belum' },
+            unit: 'Tiket',
+            total_tiket: rawCards.IT?.total_tiket ?? 0,
+            selesai: rawCards.IT?.selesai ?? 0,
+            belum_selesai: rawCards.IT?.belum_selesai ?? 0,
+            ditolak: rawCards.IT?.ditolak ?? 0,
+            total_efektif: Math.max(0, (rawCards.IT?.total_tiket ?? 0) - (rawCards.IT?.ditolak ?? 0)),
+            persentase_selesai: hitungPersentase(
+                rawCards.IT?.selesai ?? 0,
+                rawCards.IT?.total_tiket ?? 0,
+                rawCards.IT?.ditolak ?? 0
+            ),
+        },
+
+        // ==============================================================
+        // 4. LINI PRODUKSI ATENA (LIVE REST API)
+        // ==============================================================
+        PROD_FINISHING: {
+            no: 4,
+            kode: 'PROD_FINISHING',
+            nama: 'Produksi Finishing',
+            kategori: 'produksi',
+            kategori_label: 'Lini Produksi Atena',
+            data_ditampilkan: 'Penyelesaian PP',
+            sub_nama: 'PP Stentor vs Hasil Actual',
+            sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+            sumber: 'Atena ERP',
+            catatan: 'Perbandingan PP Stentor dengan hasil aktual harian',
+            icon: 'industry',
+            is_active: prodModules.PROD_FINISHING ? Boolean(prodModules.PROD_FINISHING.is_active) : false,
+            metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+            unit: prodModules.PROD_FINISHING?.unit || 'Meter / PCS',
+            total_tiket: prodModules.PROD_FINISHING?.total_tiket ?? 0,
+            selesai: prodModules.PROD_FINISHING?.selesai ?? 0,
+            belum_selesai: prodModules.PROD_FINISHING?.belum_selesai ?? 0,
+            persentase_selesai: prodModules.PROD_FINISHING?.persentase_selesai ?? 0,
+            bagian: 'stentor',
+            tglawal: prodModules.PROD_FINISHING?.tglawal,
+            tglakhir: prodModules.PROD_FINISHING?.tglakhir,
+            today: prodModules.PROD_FINISHING?.today,
+            month: prodModules.PROD_FINISHING?.month,
+            today_total: prodModules.PROD_FINISHING?.today_total ?? 0,
+            today_selesai: prodModules.PROD_FINISHING?.today_selesai ?? 0,
+            today_belum: prodModules.PROD_FINISHING?.today_belum ?? 0,
+            today_persentase: prodModules.PROD_FINISHING?.today_persentase ?? 0,
+            month_total: prodModules.PROD_FINISHING?.month_total ?? 0,
+            month_selesai: prodModules.PROD_FINISHING?.month_selesai ?? 0,
+            month_belum: prodModules.PROD_FINISHING?.month_belum ?? 0,
+            month_persentase: prodModules.PROD_FINISHING?.month_persentase ?? 0,
+        },
+        PROD_ANTISEPTIK: {
+            no: 5,
+            kode: 'PROD_ANTISEPTIK',
+            nama: 'Produksi Antiseptik',
+            kategori: 'produksi',
+            kategori_label: 'Lini Produksi Atena',
+            data_ditampilkan: 'Penyelesaian PP',
+            sub_nama: 'PP Antis Packing vs Hasil Actual',
+            sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+            sumber: 'Atena ERP',
+            catatan: 'Perbandingan PP Antis Packing dengan hasil aktual',
+            icon: 'bottle-droplet',
+            is_active: prodModules.PROD_ANTISEPTIK ? Boolean(prodModules.PROD_ANTISEPTIK.is_active) : false,
+            metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+            unit: prodModules.PROD_ANTISEPTIK?.unit || 'Botol / PCS',
+            total_tiket: prodModules.PROD_ANTISEPTIK?.total_tiket ?? 0,
+            selesai: prodModules.PROD_ANTISEPTIK?.selesai ?? 0,
+            belum_selesai: prodModules.PROD_ANTISEPTIK?.belum_selesai ?? 0,
+            persentase_selesai: prodModules.PROD_ANTISEPTIK?.persentase_selesai ?? 0,
+            bagian: 'antiseptik',
+            tglawal: prodModules.PROD_ANTISEPTIK?.tglawal,
+            tglakhir: prodModules.PROD_ANTISEPTIK?.tglakhir,
+            today: prodModules.PROD_ANTISEPTIK?.today,
+            month: prodModules.PROD_ANTISEPTIK?.month,
+            today_total: prodModules.PROD_ANTISEPTIK?.today_total ?? 0,
+            today_selesai: prodModules.PROD_ANTISEPTIK?.today_selesai ?? 0,
+            today_belum: prodModules.PROD_ANTISEPTIK?.today_belum ?? 0,
+            today_persentase: prodModules.PROD_ANTISEPTIK?.today_persentase ?? 0,
+            month_total: prodModules.PROD_ANTISEPTIK?.month_total ?? 0,
+            month_selesai: prodModules.PROD_ANTISEPTIK?.month_selesai ?? 0,
+            month_belum: prodModules.PROD_ANTISEPTIK?.month_belum ?? 0,
+            month_persentase: prodModules.PROD_ANTISEPTIK?.month_persentase ?? 0,
+        },
+        PROD_CW: {
+            no: 6,
+            kode: 'PROD_CW',
+            nama: 'Produksi CW',
+            kategori: 'produksi',
+            kategori_label: 'Lini Produksi Atena',
+            data_ditampilkan: 'Penyelesaian PP',
+            sub_nama: 'PP CW Packing vs Hasil Actual',
+            sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+            sumber: 'Atena ERP',
+            catatan: 'Perbandingan PP CW Packing dengan hasil aktual',
+            icon: 'box-open',
+            is_active: prodModules.PROD_CW ? Boolean(prodModules.PROD_CW.is_active) : false,
+            metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+            unit: prodModules.PROD_CW?.unit || 'PCS',
+            total_tiket: prodModules.PROD_CW?.total_tiket ?? 0,
+            selesai: prodModules.PROD_CW?.selesai ?? 0,
+            belum_selesai: prodModules.PROD_CW?.belum_selesai ?? 0,
+            persentase_selesai: prodModules.PROD_CW?.persentase_selesai ?? 0,
+            bagian: 'cw',
+            tglawal: prodModules.PROD_CW?.tglawal,
+            tglakhir: prodModules.PROD_CW?.tglakhir,
+            today: prodModules.PROD_CW?.today,
+            month: prodModules.PROD_CW?.month,
+            today_total: prodModules.PROD_CW?.today_total ?? 0,
+            today_selesai: prodModules.PROD_CW?.today_selesai ?? 0,
+            today_belum: prodModules.PROD_CW?.today_belum ?? 0,
+            today_persentase: prodModules.PROD_CW?.today_persentase ?? 0,
+            month_total: prodModules.PROD_CW?.month_total ?? 0,
+            month_selesai: prodModules.PROD_CW?.month_selesai ?? 0,
+            month_belum: prodModules.PROD_CW?.month_belum ?? 0,
+            month_persentase: prodModules.PROD_CW?.month_persentase ?? 0,
+        },
+        PROD_SIZING: {
+            no: 7,
+            kode: 'PROD_SIZING',
+            nama: 'Produksi Sizing',
+            kategori: 'produksi',
+            kategori_label: 'Lini Produksi Atena',
+            data_ditampilkan: 'Penyelesaian PP',
+            sub_nama: 'PP Sizing vs Hasil Actual',
+            sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+            sumber: 'Atena ERP',
+            catatan: 'Perbandingan PP Sizing dengan hasil aktual',
+            icon: 'scroll',
+            is_active: prodModules.PROD_SIZING ? Boolean(prodModules.PROD_SIZING.is_active) : false,
+            metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+            unit: prodModules.PROD_SIZING?.unit || 'Meter / Beam',
+            total_tiket: prodModules.PROD_SIZING?.total_tiket ?? 0,
+            selesai: prodModules.PROD_SIZING?.selesai ?? 0,
+            belum_selesai: prodModules.PROD_SIZING?.belum_selesai ?? 0,
+            persentase_selesai: prodModules.PROD_SIZING?.persentase_selesai ?? 0,
+            bagian: 'sizing',
+            tglawal: prodModules.PROD_SIZING?.tglawal,
+            tglakhir: prodModules.PROD_SIZING?.tglakhir,
+            today: prodModules.PROD_SIZING?.today,
+            month: prodModules.PROD_SIZING?.month,
+            today_total: prodModules.PROD_SIZING?.today_total ?? 0,
+            today_selesai: prodModules.PROD_SIZING?.today_selesai ?? 0,
+            today_belum: prodModules.PROD_SIZING?.today_belum ?? 0,
+            today_persentase: prodModules.PROD_SIZING?.today_persentase ?? 0,
+            month_total: prodModules.PROD_SIZING?.month_total ?? 0,
+            month_selesai: prodModules.PROD_SIZING?.month_selesai ?? 0,
+            month_belum: prodModules.PROD_SIZING?.month_belum ?? 0,
+            month_persentase: prodModules.PROD_SIZING?.month_persentase ?? 0,
+        },
+        PROD_POLIGYP: {
+            no: 8,
+            kode: 'PROD_POLIGYP',
+            nama: 'Produksi Poligyp',
+            kategori: 'produksi',
+            kategori_label: 'Lini Produksi Atena',
+            data_ditampilkan: 'Penyelesaian PP',
+            sub_nama: 'PP Poligyp Packing vs Hasil Actual',
+            sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+            sumber: 'Atena ERP',
+            catatan: 'Perbandingan PP Poligyp Packing dengan hasil aktual',
+            icon: 'bandage',
+            is_active: prodModules.PROD_POLIGYP ? Boolean(prodModules.PROD_POLIGYP.is_active) : false,
+            metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+            unit: prodModules.PROD_POLIGYP?.unit || 'Roll / PCS',
+            total_tiket: prodModules.PROD_POLIGYP?.total_tiket ?? 0,
+            selesai: prodModules.PROD_POLIGYP?.selesai ?? 0,
+            belum_selesai: prodModules.PROD_POLIGYP?.belum_selesai ?? 0,
+            persentase_selesai: prodModules.PROD_POLIGYP?.persentase_selesai ?? 0,
+            bagian: 'poligyp',
+            tglawal: prodModules.PROD_POLIGYP?.tglawal,
+            tglakhir: prodModules.PROD_POLIGYP?.tglakhir,
+            today: prodModules.PROD_POLIGYP?.today,
+            month: prodModules.PROD_POLIGYP?.month,
+            today_total: prodModules.PROD_POLIGYP?.today_total ?? 0,
+            today_selesai: prodModules.PROD_POLIGYP?.today_selesai ?? 0,
+            today_belum: prodModules.PROD_POLIGYP?.today_belum ?? 0,
+            today_persentase: prodModules.PROD_POLIGYP?.today_persentase ?? 0,
+            month_total: prodModules.PROD_POLIGYP?.month_total ?? 0,
+            month_selesai: prodModules.PROD_POLIGYP?.month_selesai ?? 0,
+            month_belum: prodModules.PROD_POLIGYP?.month_belum ?? 0,
+            month_persentase: prodModules.PROD_POLIGYP?.month_persentase ?? 0,
+        },
+        PROD_IRONING: {
+            no: 10,
+            kode: 'PROD_IRONING',
+            nama: 'Produksi Ironing',
+            kategori: 'produksi',
+            kategori_label: 'Lini Produksi Atena',
+            data_ditampilkan: 'Penyelesaian PP',
+            sub_nama: 'PP Ironing vs Hasil Actual',
+            sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+            sumber: 'Atena ERP',
+            catatan: 'Perbandingan PP Ironing dengan hasil aktual',
+            icon: 'temperature-high',
+            is_active: prodModules.PROD_IRONING ? Boolean(prodModules.PROD_IRONING.is_active) : false,
+            metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+            unit: prodModules.PROD_IRONING?.unit || 'PCS / Meter',
+            total_tiket: prodModules.PROD_IRONING?.total_tiket ?? 0,
+            selesai: prodModules.PROD_IRONING?.selesai ?? 0,
+            belum_selesai: prodModules.PROD_IRONING?.belum_selesai ?? 0,
+            persentase_selesai: prodModules.PROD_IRONING?.persentase_selesai ?? 0,
+            bagian: 'ironing',
+            tglawal: prodModules.PROD_IRONING?.tglawal,
+            tglakhir: prodModules.PROD_IRONING?.tglakhir,
+            today: prodModules.PROD_IRONING?.today,
+            month: prodModules.PROD_IRONING?.month,
+            today_total: prodModules.PROD_IRONING?.today_total ?? 0,
+            today_selesai: prodModules.PROD_IRONING?.today_selesai ?? 0,
+            today_belum: prodModules.PROD_IRONING?.today_belum ?? 0,
+            today_persentase: prodModules.PROD_IRONING?.today_persentase ?? 0,
+            month_total: prodModules.PROD_IRONING?.month_total ?? 0,
+            month_selesai: prodModules.PROD_IRONING?.month_selesai ?? 0,
+            month_belum: prodModules.PROD_IRONING?.month_belum ?? 0,
+            month_persentase: prodModules.PROD_IRONING?.month_persentase ?? 0,
+        },
+        PROD_SURGICAL_MESIN: {
+            no: 11,
+            kode: 'PROD_SURGICAL_MESIN',
+            nama: 'Produksi Surgical Mesin',
+            kategori: 'produksi',
+            kategori_label: 'Lini Produksi Atena',
+            data_ditampilkan: 'Penyelesaian PP',
+            sub_nama: 'PP Surgical Mesin vs Hasil Actual',
+            sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+            sumber: 'Atena ERP',
+            catatan: 'Perbandingan PP Surgical Mesin dengan hasil aktual',
+            icon: 'gears',
+            is_active: prodModules.PROD_SURGICAL_MESIN ? Boolean(prodModules.PROD_SURGICAL_MESIN.is_active) : false,
+            metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+            unit: prodModules.PROD_SURGICAL_MESIN?.unit || 'PCS / Box',
+            total_tiket: prodModules.PROD_SURGICAL_MESIN?.total_tiket ?? 0,
+            selesai: prodModules.PROD_SURGICAL_MESIN?.selesai ?? 0,
+            belum_selesai: prodModules.PROD_SURGICAL_MESIN?.belum_selesai ?? 0,
+            persentase_selesai: prodModules.PROD_SURGICAL_MESIN?.persentase_selesai ?? 0,
+            bagian: 'surgicalmesin',
+            tglawal: prodModules.PROD_SURGICAL_MESIN?.tglawal,
+            tglakhir: prodModules.PROD_SURGICAL_MESIN?.tglakhir,
+            today: prodModules.PROD_SURGICAL_MESIN?.today,
+            month: prodModules.PROD_SURGICAL_MESIN?.month,
+            today_total: prodModules.PROD_SURGICAL_MESIN?.today_total ?? 0,
+            today_selesai: prodModules.PROD_SURGICAL_MESIN?.today_selesai ?? 0,
+            today_belum: prodModules.PROD_SURGICAL_MESIN?.today_belum ?? 0,
+            today_persentase: prodModules.PROD_SURGICAL_MESIN?.today_persentase ?? 0,
+            month_total: prodModules.PROD_SURGICAL_MESIN?.month_total ?? 0,
+            month_selesai: prodModules.PROD_SURGICAL_MESIN?.month_selesai ?? 0,
+            month_belum: prodModules.PROD_SURGICAL_MESIN?.month_belum ?? 0,
+            month_persentase: prodModules.PROD_SURGICAL_MESIN?.month_persentase ?? 0,
+        },
+        PROD_SURGICAL_PACKING: {
+            no: 12,
+            kode: 'PROD_SURGICAL_PACKING',
+            nama: 'Produksi Surgical Packing',
+            kategori: 'produksi',
+            kategori_label: 'Lini Produksi Atena',
+            data_ditampilkan: 'Penyelesaian PP',
+            sub_nama: 'PP Surgical Packing vs Hasil Actual',
+            sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
+            sumber: 'Atena ERP',
+            catatan: 'Perbandingan PP Surgical Packing dengan hasil aktual',
+            icon: 'boxes-stacked',
+            is_active: prodModules.PROD_SURGICAL_PACKING ? Boolean(prodModules.PROD_SURGICAL_PACKING.is_active) : false,
+            metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
+            unit: prodModules.PROD_SURGICAL_PACKING?.unit || 'Box / Karton',
+            total_tiket: prodModules.PROD_SURGICAL_PACKING?.total_tiket ?? 0,
+            selesai: prodModules.PROD_SURGICAL_PACKING?.selesai ?? 0,
+            belum_selesai: prodModules.PROD_SURGICAL_PACKING?.belum_selesai ?? 0,
+            persentase_selesai: prodModules.PROD_SURGICAL_PACKING?.persentase_selesai ?? 0,
+            bagian: 'surgicalpacking',
+            tglawal: prodModules.PROD_SURGICAL_PACKING?.tglawal,
+            tglakhir: prodModules.PROD_SURGICAL_PACKING?.tglakhir,
+            today: prodModules.PROD_SURGICAL_PACKING?.today,
+            month: prodModules.PROD_SURGICAL_PACKING?.month,
+            today_total: prodModules.PROD_SURGICAL_PACKING?.today_total ?? 0,
+            today_selesai: prodModules.PROD_SURGICAL_PACKING?.today_selesai ?? 0,
+            today_belum: prodModules.PROD_SURGICAL_PACKING?.today_belum ?? 0,
+            today_persentase: prodModules.PROD_SURGICAL_PACKING?.today_persentase ?? 0,
+            month_total: prodModules.PROD_SURGICAL_PACKING?.month_total ?? 0,
+            month_selesai: prodModules.PROD_SURGICAL_PACKING?.month_selesai ?? 0,
+            month_belum: prodModules.PROD_SURGICAL_PACKING?.month_belum ?? 0,
+            month_persentase: prodModules.PROD_SURGICAL_PACKING?.month_persentase ?? 0,
+        },
+
+        // ==============================================================
+        // 5. SUPPLY CHAIN, QA & GUDANG (LIVE ATENA REST API)
+        // ==============================================================
+        PURCHASING: {
+            no: 12,
+            kode: 'PURCHASING',
+            nama: 'Purchasing',
+            kategori: 'supply_chain',
+            kategori_label: 'Supply Chain & Gudang',
+            data_ditampilkan: 'Pemenuhan PR Mat & PR Non Mat',
+            sub_nama: 'PR Material & PR Non-Mat Atena',
+            sumber_data: 'Atena ERP REST API (PemenuhanPR)',
+            sumber: 'Atena ERP',
+            catatan: 'Pemenuhan Purchase Requisition Material & Non-Material',
+            icon: 'cart-shopping',
+            is_active: true,
+            metric_labels: { total: 'Total PR', selesai: 'Terpenuhi', belum: 'Belum' },
+            unit: 'PR',
+            total_tiket: purchasingKpi.total_pr ?? 0,
+            selesai: purchasingKpi.pr_terpenuhi ?? 0,
+            belum_selesai: purchasingKpi.pr_belum ?? 0,
+            ditolak: 0,
+            total_efektif: purchasingKpi.total_pr ?? 0,
+            persentase_selesai: purchasingKpi.persentase_selesai ?? 0,
+            total_item: purchasingKpi.total_item ?? 0,
+            persentase_material: purchasingKpi.material?.persentase ?? 0,
+            persentase_non_material: purchasingKpi.non_material?.persentase ?? 0,
+            material: purchasingKpi.material || {},
+            non_material: purchasingKpi.non_material || {},
+            total_qty_request: purchasingKpi.total_qty_request ?? 0,
+            total_qty_po: purchasingKpi.total_qty_po ?? 0,
+            total_qty_grs: purchasingKpi.total_qty_grs ?? 0,
+            total_qty_os: purchasingKpi.total_qty_os ?? 0,
+        },
+        QA: {
+            no: 13,
+            kode: 'QA',
+            nama: 'QA (Quality Assurance)',
+            kategori: 'support_qa',
+            kategori_label: 'HR, Dokumen & Mutu',
+            data_ditampilkan: 'Release Material (GRS) & Release Produk Jadi (SCN, BR)',
+            sub_nama: 'Release Material & Produk Jadi',
+            sumber_data: 'Atena ERP REST API (ReleaseQA)',
+            sumber: 'Atena ERP',
+            catatan: 'Release Material GRS, Sample Test SCN Subcon, dan Accept Batch Record (BR)',
+            icon: 'clipboard-check',
+            is_active: Boolean((qaKpi.total_dokumen ?? qaKpi.total_grs ?? 0) > 0),
+            metric_labels: { total: 'Total Dokumen', selesai: 'Released', belum: 'Pending' },
+            unit: 'Dokumen',
+            total_tiket: qaKpi.total_dokumen ?? qaKpi.total_grs ?? 0,
+            selesai: qaKpi.total_selesai ?? qaKpi.grs_approve ?? 0,
+            belum_selesai: qaKpi.total_belum ?? qaKpi.grs_belum_approve ?? 0,
+            ditolak: qaKpi.total_ditolak ?? 0,
+            total_efektif: qaKpi.total_dokumen ?? 0,
+            persentase_selesai: qaKpi.persentase_selesai ?? qaKpi.persentase ?? 0,
+            total_grs: qaKpi.total_grs ?? 0,
+            grs_approve: qaKpi.grs_approve ?? 0,
+            total_scn: qaKpi.total_scn ?? 0,
+            scn_release: qaKpi.scn_sudah_release ?? 0,
+            total_br: qaKpi.total_br ?? 0,
+            br_belum: qaKpi.br_belum ?? 0,
+            grs: qaKpi.grs || {},
+            scn: qaKpi.scn || {},
+            acceptbr: qaKpi.acceptbr || {},
+            kpi: qaKpi,
+        },
+        LOGISTIK: {
+            no: 14,
+            kode: 'LOGISTIK',
+            nama: 'Logistik',
+            kategori: 'supply_chain',
+            kategori_label: 'Supply Chain & Gudang',
+            data_ditampilkan: 'Pemenuhan Order',
+            sub_nama: 'Realisasi Pengiriman Pesanan',
+            sumber_data: 'Atena ERP REST API (PemenuhanOrder)',
+            sumber: 'Atena ERP',
+            catatan: 'Pemenuhan rincian barang order pengiriman',
+            icon: 'truck-fast',
+            is_active: true,
+            metric_labels: { total: 'Total Barang', selesai: 'Terpenuhi', belum: 'Belum' },
+            unit: 'Item',
+            total_tiket: logistikKpi.total_item ?? logistikKpi.total_order ?? 0,
+            selesai: logistikKpi.item_memenuhi ?? logistikKpi.order_terpenuhi ?? 0,
+            belum_selesai: logistikKpi.item_belum ?? logistikKpi.order_belum_terpenuhi ?? 0,
+            ditolak: 0,
+            total_efektif: logistikKpi.total_item ?? logistikKpi.total_order ?? 0,
+            persentase_selesai: logistikKpi.persentase_selesai ?? 0,
+            total_item: logistikKpi.total_item ?? 0,
+            item_memenuhi: logistikKpi.item_memenuhi ?? 0,
+            item_belum: logistikKpi.item_belum ?? 0,
+            total_order: logistikKpi.total_order ?? 0,
+            order_terpenuhi: logistikKpi.order_terpenuhi ?? 0,
+            order_belum_terpenuhi: logistikKpi.order_belum_terpenuhi ?? 0,
+            today: logistikData?.today || {},
+            month: logistikData?.month || {},
+            today_total: logistikData?.today?.total_item ?? logistikData?.today?.total_order ?? 0,
+            today_selesai: logistikData?.today?.item_memenuhi ?? logistikData?.today?.order_terpenuhi ?? 0,
+            today_belum: logistikData?.today?.item_belum ?? logistikData?.today?.order_belum_terpenuhi ?? 0,
+            today_persentase: logistikData?.today?.persentase_selesai ?? 0,
+            month_total: logistikData?.month?.total_item ?? logistikData?.month?.total_order ?? 0,
+            month_selesai: logistikData?.month?.item_memenuhi ?? logistikData?.month?.order_terpenuhi ?? 0,
+            month_belum: logistikData?.month?.item_belum ?? logistikData?.month?.order_belum_terpenuhi ?? 0,
+            month_persentase: logistikData?.month?.persentase_selesai ?? 0,
+        },
+        WH_FG: {
+            no: 15,
+            kode: 'WH_FG',
+            nama: 'WH FG (Gudang Jadi)',
+            kategori: 'supply_chain',
+            kategori_label: 'Supply Chain & Gudang',
+            data_ditampilkan: 'Penyelesaian DR',
+            sub_nama: 'Delivery Receipt Barang Jadi',
+            sumber_data: 'Atena ERP REST API (PenyelesaianDR)',
+            sumber: 'Atena ERP',
+            catatan: 'Penyelesaian Delivery Receipt (DR) Barang Jadi ke Delivery Note (DN)',
+            icon: 'warehouse',
+            is_active: Boolean(whFgKpi.total_dr > 0 || (whFgData && whFgData.success)),
+            metric_labels: { total: 'Total DR', selesai: 'Sudah DN', belum: 'Belum DN' },
+            unit: 'DR',
+            total_tiket: whFgKpi.total_dr ?? 0,
+            selesai: whFgKpi.dr_sudah_dn ?? 0,
+            belum_selesai: whFgKpi.dr_belum_dn ?? 0,
+            persentase_selesai: whFgKpi.persentase_selesai ?? 0,
+            today: whFgData?.today || {},
+            month: whFgData?.month || {},
+            today_total: whFgData?.today?.total_dr ?? 0,
+            today_selesai: whFgData?.today?.dr_sudah_dn ?? 0,
+            today_belum: whFgData?.today?.dr_belum_dn ?? 0,
+            today_persentase: whFgData?.today?.persentase_selesai ?? 0,
+            month_total: whFgData?.month?.total_dr ?? 0,
+            month_selesai: whFgData?.month?.dr_sudah_dn ?? 0,
+            month_belum: whFgData?.month?.dr_belum_dn ?? 0,
+            month_persentase: whFgData?.month?.persentase_selesai ?? 0,
+        },
+        WH_MAT: {
+            no: 16,
+            kode: 'WH_MAT',
+            nama: 'WH Mat (Gudang Bahan)',
+            kategori: 'supply_chain',
+            kategori_label: 'Supply Chain & Gudang',
+            data_ditampilkan: 'Pemenuhan DR & MR',
+            sub_nama: 'DR Paskot & MR Bahan (MR +1)',
+            sumber_data: 'Atena ERP REST API (PemenuhanWHMat)',
+            sumber: 'Atena ERP',
+            catatan: 'Realisasi DR lain & DR customer paskot serta realisasi permintaan bahan (MR)',
+            icon: 'dolly',
+            is_active: Boolean(whMatKpi.total_mr > 0 || (whMatData && whMatData.success)),
+            metric_labels: { total: 'Total MR', selesai: 'Terpenuhi', belum: 'Belum' },
+            unit: 'MR',
+            total_tiket: whMatKpi.total_mr ?? 0,
+            selesai: whMatKpi.mr_terpenuhi ?? 0,
+            belum_selesai: whMatKpi.mr_belum_terpenuhi ?? 0,
+            persentase_selesai: whMatData?.persentase_selesai ?? whMatKpi.persentase_selesai ?? 0,
+            persentase_mr: whMatData?.persentase_mr ?? whMatKpi.persentase_mr ?? (whMatData?.month?.persentase_selesai ?? 0),
+            persentase_dr: whMatData?.persentase_dr ?? whMatKpi.persentase_dr ?? (whMatData?.dr_month?.persentase_selesai ?? 0),
+            today: whMatData?.today || {},
+            month: whMatData?.month || {},
+            today_total: whMatData?.today?.total_mr ?? 0,
+            today_selesai: whMatData?.today?.mr_terpenuhi ?? 0,
+            today_belum: whMatData?.today?.mr_belum_terpenuhi ?? 0,
+            today_persentase: whMatData?.today?.persentase_selesai ?? 0,
+            month_total: whMatData?.month?.total_mr ?? 0,
+            month_selesai: whMatData?.month?.mr_terpenuhi ?? 0,
+            month_belum: whMatData?.month?.mr_belum_terpenuhi ?? 0,
+            month_persentase: whMatData?.persentase_selesai ?? whMatKpi.persentase_selesai ?? 0,
+            mr: whMatData?.month || {},
+            dr: whMatKpi.dr || whMatData?.dr_month || {},
+        },
+        PBF: {
+            no: 17,
+            kode: 'PBF',
+            nama: 'PBF (Distribusi)',
+            kategori: 'supply_chain',
+            kategori_label: 'Supply Chain & Gudang',
+            data_ditampilkan: 'Pemenuhan Order +7 Hari',
+            sub_nama: 'Fulfillment Sales Order (SO) PBF Farmasi',
+            sumber_data: 'Atena ERP REST API (PemenuhanOrderPBF)',
+            sumber: 'Atena ERP',
+            catatan: 'Pemenuhan Sales Order (SO) Distribusi Farmasi Atena ERP',
+            icon: 'prescription-bottle-medical',
+            is_active: Boolean((pbfKpi.total_order ?? 0) > 0 || (pbfData?.today_total ?? 0) > 0),
+            metric_labels: { total: 'Total Order', selesai: 'Memenuhi', belum: 'Belum' },
+            unit: 'Order',
+            total_tiket: pbfKpi.total_order ?? 0,
+            selesai: pbfKpi.order_memenuhi ?? 0,
+            belum_selesai: pbfKpi.order_belum_memenuhi ?? 0,
+            ditolak: 0,
+            total_efektif: pbfKpi.total_order ?? 0,
+            persentase_selesai: pbfKpi.persentase_selesai ?? pbfKpi.persentase ?? 0,
+            today_total: pbfData?.today_total ?? 0,
+            today_selesai: pbfData?.today_selesai ?? 0,
+            today_belum: pbfData?.today_belum ?? 0,
+            today_persentase: pbfData?.today_persentase ?? 0,
+            month_total: pbfData?.month_total ?? pbfKpi.total_order ?? 0,
+            month_selesai: pbfData?.month_selesai ?? pbfKpi.order_memenuhi ?? 0,
+            month_belum: pbfData?.month_belum ?? pbfKpi.order_belum_memenuhi ?? 0,
+            month_persentase: pbfData?.month_persentase ?? pbfKpi.persentase ?? 0,
+            kpi: pbfKpi,
+        },
+
+        // --- Modul Pengerjaan Barang Subcon (Aktif & Live E-Subcon API) ---
+        SUBCON: {
+            no: 18,
+            kode: 'SUBCON',
+            nama: 'Pengerjaan Subcon',
+            kategori: 'layanan',
+            kategori_label: 'Layanan Utama & Live',
+            data_ditampilkan: 'Monitoring Hasil Produksi Pengerjaan Subcon',
+            sub_nama: 'Mitra & Pengemasan',
+            icon: 'boxes-packing',
+            sumber_data: 'E-Subcon (https://www.snam110.dpdns.org/e-subcon)',
+            sumber: 'E-Subcon',
+            is_active: true,
+            is_production_metric: true, // Menandakan card memakai Hasil Produksi PCS
+            total_output_pcs: subconKpi.total_output_pcs ?? 0,
+            total_output_pcs_formatted: Number(subconKpi.total_output_pcs ?? 0).toLocaleString('id-ID'),
+            total_durasi: subconKpi.total_durasi_formatted || '0 Menit',
+            total_transaksi: subconKpi.total_transaksi ?? 0,
+            total_subcon: subconKpi.total_subcon_aktif ?? subconList.length ?? 1,
+            total_karyawan: subconKpi.total_karyawan_aktif ?? 0,
+            sudah_mengisi: subconKpi.sudah_mengisi ?? 0,
+            belum_mengisi: subconKpi.belum_mengisi ?? 0,
+            subcon_nama: subconFirst.nama_lokasi || 'SIMAN',
+            persentase_selesai: subconKpi.persentase_pengisian ?? (subconKpi.total_karyawan_aktif ? Number(((subconKpi.sudah_mengisi / subconKpi.total_karyawan_aktif) * 100).toFixed(1)) : 0),
+        },
+
+        // ==============================================================
+        // 6. MODUL STANDBY / BELUM AKTIF (DILETAKKAN DI BAWAH SENDIRI)
+        // ==============================================================
+        HR: {
+            no: 19,
+            kode: 'HR',
+            nama: 'Kehadiran Karyawan (HR)',
+            kategori: 'support_qa',
+            kategori_label: 'HR, Dokumen & Mutu',
+            data_ditampilkan: 'Presensi Kehadiran Karyawan vs Jadwal Plan',
+            sub_nama: 'TK SNA & Marketing (Non-SNAM)',
+            sumber_data: 'Atena ERP REST API (KehadiranTK)',
+            sumber: 'Atena ERP',
+            catatan: 'Kehadiran aktual karyawan dibandingkan jadwal kerja plan',
+            icon: 'users-line',
+            is_active: true,
+            metric_labels: { total: 'Total Jadwal', selesai: 'Sesuai Plan', belum: 'Tidak Sesuai' },
+            unit: 'Jadwal',
+            total: hrKpi.total_jadwal || 0,
+            total_tiket: hrKpi.total_jadwal || 0,
+            selesai: hrKpi.jadwal_sesuai || 0,
+            belum_selesai: hrKpi.jadwal_tidak_sesuai || 0,
+            total_karyawan: hrKpi.total_karyawan || 0,
+            persentase_selesai: hrKpi.persentase || 0,
+            today: hrKpi.today || {},
+            month: hrKpi.month || {},
+            sub_metrics: {
+                tksna: hrKpi.tksna,
+                marketing: hrKpi.marketing
+            }
+        },
+        DC: {
+            no: 20,
+            kode: 'DC',
+            nama: 'DC (Document Control)',
+            kategori: 'support_qa',
+            kategori_label: 'HR, Dokumen & Mutu',
+            data_ditampilkan: 'Penyelesaian Pengerjaan Dokumen',
+            sub_nama: 'Aplikasi Paperless (Pengajuan vs Pengesahan)',
+            sumber_data: 'REST API Paperless (PenyelesaianDokumen)',
+            sumber: 'Paperless',
+            catatan: 'Penyelesaian pengerjaan pengajuan dan pengesahan dokumen Paperless',
+            icon: 'file-signature',
+            is_active: true,
+            metric_labels: { total: 'Total Masuk', selesai: 'Disahkan', belum: 'Proses' },
+            unit: 'Dokumen',
+            total: dcData?.total ?? dcKpi.total ?? 0,
+            total_tiket: dcData?.total ?? dcKpi.total ?? 0,
+            selesai: dcData?.selesai ?? dcKpi.selesai ?? 0,
+            belum_selesai: dcData?.belum ?? dcKpi.belum ?? 0,
+            persentase_selesai: dcData?.persentase ?? dcKpi.persentase ?? 0,
+            tglawal: dcData?.tglawal,
+            tglakhir: dcData?.tglakhir,
+            kpi: dcKpi,
+            meta: dcData,
+        },
+        DEVELOPMENT: {
+            no: 21,
+            kode: 'DEVELOPMENT',
+            nama: 'Development (R&D)',
+            kategori: 'supply_chain',
+            kategori_label: 'Supply Chain & Gudang',
+            data_ditampilkan: 'Penyelesaian BOM H+2 dari Permintaan',
+            sub_nama: 'SLA Pembuatan BOM Maks H+2',
+            sumber_data: 'Google Spreadsheet (List Permintaan BOM)',
+            sumber: 'Google Spreadsheet',
+            catatan: 'Penyelesaian Bill of Materials (BOM) paling lambat H+2 setelah permintaan masuk',
+            icon: 'compass-drafting',
+            is_active: true,
+            metric_labels: { total: 'Req BOM', selesai: 'Selesai', belum: 'Belum' },
+            unit: 'Item BOM',
+            total: devKpi.total ?? 0,
+            total_tiket: devKpi.total ?? 0,
+            selesai: devKpi.selesai ?? 0,
+            belum_selesai: devKpi.belum ?? 0,
+            persentase_selesai: devKpi.persentase ?? 0,
+            baru_count: devKpi.baru_count ?? 0,
+            perubahan_count: devKpi.perubahan_count ?? 0,
+            urgent_count: devKpi.urgent_count ?? 0,
+            on_time_count: devKpi.on_time_count ?? 0,
+            overdue_count: devKpi.overdue_count ?? 0,
+            today: devKpi.today || {},
+            month: devKpi.month || {},
+            kpi: devKpi,
+        }
+    };
+
+    // Alias backward compatibility untuk kode lama jika masih ada yang mengakses
+    servicesResult.ESYS = servicesResult.PURCHASING;
+    servicesResult.SIMRS = servicesResult.LOGISTIK;
+    servicesResult.FARMASI = servicesResult.HR;
+    servicesResult.LAB = servicesResult.PROD_FINISHING;
+    servicesResult.BILLING = servicesResult.PROD_ANTISEPTIK;
+    servicesResult.SDM = servicesResult.DC;
+
+    // 4. Hitung Akumulasi Global KPI (Persentase mengecualikan tiket ditolak)
+    const totalSemua = servicesResult.IT.total_tiket + servicesResult.TK.total_tiket + servicesResult.GA.total_tiket;
+    const totalSelesai = servicesResult.IT.selesai + servicesResult.TK.selesai + servicesResult.GA.selesai;
+    const totalBelum = servicesResult.IT.belum_selesai + servicesResult.TK.belum_selesai + servicesResult.GA.belum_selesai;
+    const totalDitolak = servicesResult.IT.ditolak + servicesResult.TK.ditolak + servicesResult.GA.ditolak;
+    const totalEfektifGlobal = Math.max(0, totalSemua - totalDitolak);
+    const persentaseGlobal = hitungPersentase(totalSelesai, totalSemua, totalDitolak);
+
+    // Sanitasi tiket perlu_perhatian agar kategori 'biasa' menjadi tanda strip '-'
+    const sanitizedPerluPerhatian = (summaryData.perlu_perhatian || []).map(item => ({
+        ...item,
+        kategori: sanitasiKategori(item.kategori)
+    }));
+
+    const result = {
+        success: true,
+        server_time: apiData?.server_time || new Date().toISOString(),
+        kpi_global: {
+            total_tiket: totalSemua,
+            total_selesai: totalSelesai,
+            total_belum_selesai: totalBelum,
+            total_ditolak: totalDitolak,
+            total_efektif: totalEfektifGlobal,
+            persentase_selesai: persentaseGlobal,
+            total_aktif: summaryData.kpi?.total_tiket_aktif ?? summaryData.total_tiket_aktif ?? 0,
+        },
+        kpi_produksi: prodKpi,
+        kpi_purchasing: purchasingKpi,
+        kpi_logistik: logistikKpi,
+        kpi_wh_fg: whFgKpi,
+        kpi_wh_mat: whMatKpi,
+        layanan: servicesResult,
+        perlu_perhatian: sanitizedPerluPerhatian,
+        periode: customDates,
+        api_status: apiHealthService.getStatusSummary(),
+    };
+
+    return result;
+}
+
+/**
+ * GET /api/dashboard/stats
+ * Endpoint utama statistik dashboard dengan Stale-While-Revalidate (SWR) & Request Coalescing
+ */
 router.get('/stats', async (req, res) => {
-    const now = Date.now();
     const forceRefresh = req.query.force === 'true';
 
     // Parse bulan & tahun dari query jika ada
@@ -130,900 +985,108 @@ router.get('/stats', async (req, res) => {
     };
 
     const cacheKey = `${selectedYear}_${monthStr}`;
+    const now = Date.now();
+    // TTL: 60 detik untuk bulan berjalan, 1 jam untuk bulan historis (data masa lalu tidak berubah)
+    const ttlMs = isCurrentMonth ? Math.max(config.cacheTtlSeconds * 1000, 60000) : (60 * 60 * 1000);
 
-    // 1. Cek Cache internal per periode bulan & tahun
+    // 1. Cek Cache Internal (Stale-While-Revalidate untuk respons instan < 50ms)
     if (!forceRefresh && cache.statsMap?.has(cacheKey)) {
         const cachedItem = cache.statsMap.get(cacheKey);
-        if (now - cachedItem.timestamp < CACHE_TTL_MS) {
+        const age = now - cachedItem.timestamp;
+
+        // Jika cache masih fresh, kembalikan langsung seketika
+        if (age < ttlMs) {
             return res.json({
                 ...cachedItem.data,
                 _cached: true,
-                _cache_age_seconds: Math.round((now - cachedItem.timestamp) / 1000)
+                _cache_age_seconds: Math.round(age / 1000)
             });
         }
+
+        // Jika cache sudah stale, KEMBALIKAN DATA LAMA LANGSUNG (User tidak menunggu 20 detik!)
+        // Dan jalankan sinkronisasi baru secara asynchronous di background
+        if (!inFlightFetches.has(cacheKey)) {
+            const bgPromise = buildDashboardStats(customDates, false)
+                .then(newResult => {
+                    const writeTime = Date.now();
+                    cache.statsMap.set(cacheKey, { data: newResult, timestamp: writeTime });
+                    cache.stats.data = newResult;
+                    cache.stats.timestamp = writeTime;
+                })
+                .catch(err => {
+                    console.warn(`[BG FETCH STATS ${cacheKey} ERROR]:`, err.message);
+                })
+                .finally(() => {
+                    inFlightFetches.delete(cacheKey);
+                });
+            inFlightFetches.set(cacheKey, bgPromise);
+        }
+
+        return res.json({
+            ...cachedItem.data,
+            _cached: true,
+            _stale: true,
+            _cache_age_seconds: Math.round(age / 1000)
+        });
     }
 
+    // 2. Jika belum ada cache sama sekali atau dipaksa forceRefresh:
+    // Gunakan Request Coalescing (Deduplikasi) agar request bersamaan tidak melipatgandakan query
     try {
-        // 2. Ambil data dari Layanan Ticketing, Subcon, Purchasing, Produksi, Logistik, QA, WH FG & WH Mat secara paralel
-        const [ticketingSettled, subconSettled, purchasingSettled, produksiSettled, logistikSettled, qaSettled, whFgSettled, whMatSettled, pbfSettled, hrSettled, devSettled, dcSettled] = await Promise.allSettled([
-            ticketingService.getSummary(forceRefresh, customDates),
-            subconService.getMonitoringToday(forceRefresh, customDates),
-            purchasingService.getSummary(forceRefresh, customDates),
-            produksiService.getRingkasanAll(forceRefresh, customDates),
-            logistikService.getSummary(forceRefresh, customDates),
-            qaService.getSummary(forceRefresh, customDates),
-            whFgService.getSummary(forceRefresh, customDates),
-            whMatService.getSummary(forceRefresh, customDates),
-            pbfService.getSummary(forceRefresh, customDates),
-            hrService.getSummary(forceRefresh, customDates),
-            developmentService.getSummary(forceRefresh, customDates),
-            dcService.getSummary(forceRefresh, customDates)
-        ]);
-
-                // Update live API health status
-        apiHealthService.updateModuleStatus('purchasing', purchasingSettled.status === 'fulfilled' && purchasingSettled.value?.success !== false, 0, purchasingSettled.reason?.message);
-        apiHealthService.updateModuleStatus('produksi', produksiSettled.status === 'fulfilled', 0, produksiSettled.reason?.message);
-        apiHealthService.updateModuleStatus('logistik', logistikSettled.status === 'fulfilled', 0, logistikSettled.reason?.message);
-        apiHealthService.updateModuleStatus('qa', qaSettled.status === 'fulfilled', 0, qaSettled.reason?.message);
-        apiHealthService.updateModuleStatus('whFg', whFgSettled.status === 'fulfilled', 0, whFgSettled.reason?.message);
-        apiHealthService.updateModuleStatus('whMat', whMatSettled.status === 'fulfilled', 0, whMatSettled.reason?.message);
-        apiHealthService.updateModuleStatus('pbf', pbfSettled && pbfSettled.status === 'fulfilled', 0, pbfSettled?.reason?.message);
-        apiHealthService.updateModuleStatus('hr', hrSettled && hrSettled.status === 'fulfilled', 0, hrSettled?.reason?.message);
-
-        let apiData = null;
-        if (ticketingSettled.status === 'fulfilled') {
-            apiData = ticketingSettled.value;
-            if (lastApiStatus !== 'online') {
-                const timeStr = new Date().toLocaleTimeString('id-ID');
-                console.log(`[${timeStr}] ✅ [API TICKETING]: Berhasil terhubung & sinkronisasi data dari ${config.ticketing.url}`);
-                lastApiStatus = 'online';
-            }
-        } else {
-            console.error(`❌ [API TICKETING ERROR]: ${ticketingSettled.reason?.message}`);
+        let fetchPromise = inFlightFetches.get(cacheKey);
+        if (!fetchPromise) {
+            fetchPromise = buildDashboardStats(customDates, forceRefresh)
+                .then(result => {
+                    const writeTime = Date.now();
+                    cache.statsMap.set(cacheKey, { data: result, timestamp: writeTime });
+                    cache.stats.data = result;
+                    cache.stats.timestamp = writeTime;
+                    return result;
+                })
+                .finally(() => {
+                    inFlightFetches.delete(cacheKey);
+                });
+            inFlightFetches.set(cacheKey, fetchPromise);
         }
 
-        let subconData = null;
-        if (subconSettled.status === 'fulfilled') {
-            subconData = subconSettled.value;
-        } else {
-            console.error(`❌ [API SUBCON ERROR]: ${subconSettled.reason?.message}`);
-        }
-
-        let purchasingData = null;
-        if (purchasingSettled.status === 'fulfilled') {
-            purchasingData = purchasingSettled.value;
-        } else {
-            console.error(`❌ [API PURCHASING ERROR]: ${purchasingSettled.reason?.message}`);
-        }
-        const purchasingKpi = purchasingData?.kpi || {};
-
-        let produksiData = null;
-        if (produksiSettled.status === 'fulfilled') {
-            produksiData = produksiSettled.value?.data || null;
-        } else {
-            console.error(`❌ [API PRODUKSI ERROR]: ${produksiSettled.reason?.message}`);
-        }
-        const prodModules = produksiData?.modules || {};
-        const prodKpi = produksiData?.kpi || {};
-
-        let logistikData = null;
-        if (logistikSettled.status === 'fulfilled') {
-            logistikData = logistikSettled.value;
-        } else {
-            console.error(`❌ [API LOGISTIK ERROR]: ${logistikSettled.reason?.message}`);
-        }
-        const logistikKpi = logistikData?.kpi || {};
-
-        let qaData = null;
-        if (qaSettled.status === 'fulfilled') {
-            qaData = qaSettled.value;
-        } else {
-            console.error(`❌ [API QA ERROR]: ${qaSettled.reason?.message}`);
-        }
-        const qaKpi = qaData?.kpi || {};
-
-        let whFgData = null;
-        if (whFgSettled.status === 'fulfilled') {
-            whFgData = whFgSettled.value;
-        } else {
-            console.error(`❌ [API WH FG ERROR]: ${whFgSettled.reason?.message}`);
-        }
-        const whFgKpi = whFgData?.kpi || {};
-
-        let whMatData = null;
-        if (whMatSettled.status === 'fulfilled') {
-            whMatData = whMatSettled.value;
-        } else {
-            console.error(`❌ [API WH MAT ERROR]: ${whMatSettled.reason?.message}`);
-        }
-        const whMatKpi = whMatData?.kpi || {};
-
-        let pbfData = null;
-        if (pbfSettled && pbfSettled.status === 'fulfilled') {
-            pbfData = pbfSettled.value;
-        } else if (pbfSettled && pbfSettled.reason) {
-            console.error(`❌ [API PBF ERROR]: ${pbfSettled.reason?.message}`);
-        }
-        const pbfKpi = pbfData?.kpi || {};
-
-        let hrData = null;
-        if (hrSettled && hrSettled.status === 'fulfilled') {
-            hrData = hrSettled.value;
-        } else if (hrSettled && hrSettled.reason) {
-            console.error(`❌ [API HR ERROR]: ${hrSettled.reason?.message}`);
-        }
-        const hrKpi = hrData?.kpi || {};
-
-        let devData = null;
-        if (devSettled && devSettled.status === 'fulfilled') {
-            devData = devSettled.value;
-        } else if (devSettled && devSettled.reason) {
-            console.error(`❌ [DEV SERVICE ERROR]: ${devSettled.reason?.message}`);
-        }
-        const devKpi = devData?.kpi || {};
-
-        let dcData = null;
-        if (dcSettled && dcSettled.status === 'fulfilled') {
-            dcData = dcSettled.value;
-        } else if (dcSettled && dcSettled.reason) {
-            console.error(`❌ [DC SERVICE ERROR]: ${dcSettled.reason?.message}`);
-        }
-        const dcKpi = dcData?.kpi || {};
-
-        const summaryData = apiData?.data || {};
-        const rawCards = summaryData.layanan_monitoring || {};
-        if (Object.keys(rawCards).length === 0 && Array.isArray(summaryData.per_layanan)) {
-            summaryData.per_layanan.forEach(item => {
-                if (item?.kode) rawCards[item.kode] = item;
-            });
-        }
-
-        const subconRaw = subconData?.data || {};
-        const subconKpi = subconRaw.kpi || {};
-        const subconList = subconRaw.per_subcon || [];
-        const subconFirst = subconList[0] || {};
-
-        // 3. Susunan 10 Modul Layanan (Sesuai Kebutuhan Manajemen SNA Medika)
-        const servicesResult = {
-            // --- Modul dari Ticketing (Aktif & Live) ---
-            GA: {
-                no: 1,
-                kode: 'GA',
-                nama: 'Layanan GA',
-                kategori: 'layanan',
-                kategori_label: 'Layanan Utama & Live',
-                data_ditampilkan: 'Penyelesaian permintaan layanan sarpras',
-                sub_nama: 'Gedung & Sarpras',
-                icon: 'building-user',
-                sumber_data: 'Aplikasi ticketing (total masuk vs total selesai)',
-                sumber: 'Ticketing',
-                is_active: true,
-                metric_labels: { total: 'Total Masuk', selesai: 'Selesai', belum: 'Belum' },
-                unit: 'Tiket',
-                total_tiket: rawCards.GA?.total_tiket ?? 0,
-                selesai: rawCards.GA?.selesai ?? 0,
-                belum_selesai: rawCards.GA?.belum_selesai ?? 0,
-                ditolak: rawCards.GA?.ditolak ?? 0,
-                total_efektif: Math.max(0, (rawCards.GA?.total_tiket ?? 0) - (rawCards.GA?.ditolak ?? 0)),
-                persentase_selesai: hitungPersentase(
-                    rawCards.GA?.selesai ?? 0,
-                    rawCards.GA?.total_tiket ?? 0,
-                    rawCards.GA?.ditolak ?? 0
-                ),
-            },
-            TK: {
-                no: 2,
-                kode: 'TK',
-                nama: 'Layanan Teknik / Mekanik',
-                kategori: 'layanan',
-                kategori_label: 'Layanan Utama & Live',
-                data_ditampilkan: 'Penyelesaian permintaan layanan mekanik',
-                sub_nama: 'Mesin & Utilitas Mekanik',
-                icon: 'screwdriver-wrench',
-                sumber_data: 'Aplikasi ticketing (total masuk vs total selesai)',
-                sumber: 'Ticketing',
-                is_active: true,
-                metric_labels: { total: 'Total Masuk', selesai: 'Selesai', belum: 'Belum' },
-                unit: 'Tiket',
-                total_tiket: rawCards.TK?.total_tiket ?? 0,
-                selesai: rawCards.TK?.selesai ?? 0,
-                belum_selesai: rawCards.TK?.belum_selesai ?? 0,
-                ditolak: rawCards.TK?.ditolak ?? 0,
-                total_efektif: Math.max(0, (rawCards.TK?.total_tiket ?? 0) - (rawCards.TK?.ditolak ?? 0)),
-                persentase_selesai: hitungPersentase(
-                    rawCards.TK?.selesai ?? 0,
-                    rawCards.TK?.total_tiket ?? 0,
-                    rawCards.TK?.ditolak ?? 0
-                ),
-            },
-            IT: {
-                no: 3,
-                kode: 'IT',
-                nama: 'Layanan IT',
-                kategori: 'layanan',
-                kategori_label: 'Layanan Utama & Live',
-                data_ditampilkan: 'Penyelesaian permintaan layanan IT',
-                sub_nama: 'Software, Jaringan & Hardware',
-                icon: 'laptop-code',
-                sumber_data: 'Aplikasi ticketing (total masuk vs total selesai)',
-                sumber: 'Ticketing',
-                is_active: true,
-                metric_labels: { total: 'Total Masuk', selesai: 'Selesai', belum: 'Belum' },
-                unit: 'Tiket',
-                total_tiket: rawCards.IT?.total_tiket ?? 0,
-                selesai: rawCards.IT?.selesai ?? 0,
-                belum_selesai: rawCards.IT?.belum_selesai ?? 0,
-                ditolak: rawCards.IT?.ditolak ?? 0,
-                total_efektif: Math.max(0, (rawCards.IT?.total_tiket ?? 0) - (rawCards.IT?.ditolak ?? 0)),
-                persentase_selesai: hitungPersentase(
-                    rawCards.IT?.selesai ?? 0,
-                    rawCards.IT?.total_tiket ?? 0,
-                    rawCards.IT?.ditolak ?? 0
-                ),
-            },
-
-            // ==============================================================
-            // 4. LINI PRODUKSI ATENA (LIVE REST API)
-            // ==============================================================
-            PROD_FINISHING: {
-                no: 4,
-                kode: 'PROD_FINISHING',
-                nama: 'Produksi Finishing',
-                kategori: 'produksi',
-                kategori_label: 'Lini Produksi Atena',
-                data_ditampilkan: 'Penyelesaian PP',
-                sub_nama: 'PP Stentor vs Hasil Actual',
-                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
-                sumber: 'Atena ERP',
-                catatan: 'Perbandingan PP Stentor dengan hasil aktual harian',
-                icon: 'industry',
-                is_active: prodModules.PROD_FINISHING ? Boolean(prodModules.PROD_FINISHING.is_active) : false,
-                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: prodModules.PROD_FINISHING?.unit || 'Meter / PCS',
-                total_tiket: prodModules.PROD_FINISHING?.total_tiket ?? 0,
-                selesai: prodModules.PROD_FINISHING?.selesai ?? 0,
-                belum_selesai: prodModules.PROD_FINISHING?.belum_selesai ?? 0,
-                persentase_selesai: prodModules.PROD_FINISHING?.persentase_selesai ?? 0,
-                bagian: 'stentor',
-                tglawal: prodModules.PROD_FINISHING?.tglawal,
-                tglakhir: prodModules.PROD_FINISHING?.tglakhir,
-                today: prodModules.PROD_FINISHING?.today,
-                month: prodModules.PROD_FINISHING?.month,
-                today_total: prodModules.PROD_FINISHING?.today_total ?? 0,
-                today_selesai: prodModules.PROD_FINISHING?.today_selesai ?? 0,
-                today_belum: prodModules.PROD_FINISHING?.today_belum ?? 0,
-                today_persentase: prodModules.PROD_FINISHING?.today_persentase ?? 0,
-                month_total: prodModules.PROD_FINISHING?.month_total ?? 0,
-                month_selesai: prodModules.PROD_FINISHING?.month_selesai ?? 0,
-                month_belum: prodModules.PROD_FINISHING?.month_belum ?? 0,
-                month_persentase: prodModules.PROD_FINISHING?.month_persentase ?? 0,
-            },
-            PROD_ANTISEPTIK: {
-                no: 5,
-                kode: 'PROD_ANTISEPTIK',
-                nama: 'Produksi Antiseptik',
-                kategori: 'produksi',
-                kategori_label: 'Lini Produksi Atena',
-                data_ditampilkan: 'Penyelesaian PP',
-                sub_nama: 'PP Antis Packing vs Hasil Actual',
-                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
-                sumber: 'Atena ERP',
-                catatan: 'Perbandingan PP Antis Packing dengan hasil aktual',
-                icon: 'bottle-droplet',
-                is_active: prodModules.PROD_ANTISEPTIK ? Boolean(prodModules.PROD_ANTISEPTIK.is_active) : false,
-                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: prodModules.PROD_ANTISEPTIK?.unit || 'Botol / PCS',
-                total_tiket: prodModules.PROD_ANTISEPTIK?.total_tiket ?? 0,
-                selesai: prodModules.PROD_ANTISEPTIK?.selesai ?? 0,
-                belum_selesai: prodModules.PROD_ANTISEPTIK?.belum_selesai ?? 0,
-                persentase_selesai: prodModules.PROD_ANTISEPTIK?.persentase_selesai ?? 0,
-                bagian: 'antiseptik',
-                tglawal: prodModules.PROD_ANTISEPTIK?.tglawal,
-                tglakhir: prodModules.PROD_ANTISEPTIK?.tglakhir,
-                today: prodModules.PROD_ANTISEPTIK?.today,
-                month: prodModules.PROD_ANTISEPTIK?.month,
-                today_total: prodModules.PROD_ANTISEPTIK?.today_total ?? 0,
-                today_selesai: prodModules.PROD_ANTISEPTIK?.today_selesai ?? 0,
-                today_belum: prodModules.PROD_ANTISEPTIK?.today_belum ?? 0,
-                today_persentase: prodModules.PROD_ANTISEPTIK?.today_persentase ?? 0,
-                month_total: prodModules.PROD_ANTISEPTIK?.month_total ?? 0,
-                month_selesai: prodModules.PROD_ANTISEPTIK?.month_selesai ?? 0,
-                month_belum: prodModules.PROD_ANTISEPTIK?.month_belum ?? 0,
-                month_persentase: prodModules.PROD_ANTISEPTIK?.month_persentase ?? 0,
-            },
-            PROD_CW: {
-                no: 6,
-                kode: 'PROD_CW',
-                nama: 'Produksi CW',
-                kategori: 'produksi',
-                kategori_label: 'Lini Produksi Atena',
-                data_ditampilkan: 'Penyelesaian PP',
-                sub_nama: 'PP CW Packing vs Hasil Actual',
-                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
-                sumber: 'Atena ERP',
-                catatan: 'Perbandingan PP CW Packing dengan hasil aktual',
-                icon: 'box-open',
-                is_active: prodModules.PROD_CW ? Boolean(prodModules.PROD_CW.is_active) : false,
-                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: prodModules.PROD_CW?.unit || 'PCS',
-                total_tiket: prodModules.PROD_CW?.total_tiket ?? 0,
-                selesai: prodModules.PROD_CW?.selesai ?? 0,
-                belum_selesai: prodModules.PROD_CW?.belum_selesai ?? 0,
-                persentase_selesai: prodModules.PROD_CW?.persentase_selesai ?? 0,
-                bagian: 'cw',
-                tglawal: prodModules.PROD_CW?.tglawal,
-                tglakhir: prodModules.PROD_CW?.tglakhir,
-                today: prodModules.PROD_CW?.today,
-                month: prodModules.PROD_CW?.month,
-                today_total: prodModules.PROD_CW?.today_total ?? 0,
-                today_selesai: prodModules.PROD_CW?.today_selesai ?? 0,
-                today_belum: prodModules.PROD_CW?.today_belum ?? 0,
-                today_persentase: prodModules.PROD_CW?.today_persentase ?? 0,
-                month_total: prodModules.PROD_CW?.month_total ?? 0,
-                month_selesai: prodModules.PROD_CW?.month_selesai ?? 0,
-                month_belum: prodModules.PROD_CW?.month_belum ?? 0,
-                month_persentase: prodModules.PROD_CW?.month_persentase ?? 0,
-            },
-            PROD_SIZING: {
-                no: 7,
-                kode: 'PROD_SIZING',
-                nama: 'Produksi Sizing',
-                kategori: 'produksi',
-                kategori_label: 'Lini Produksi Atena',
-                data_ditampilkan: 'Penyelesaian PP',
-                sub_nama: 'PP Sizing vs Hasil Actual',
-                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
-                sumber: 'Atena ERP',
-                catatan: 'Perbandingan PP Sizing dengan hasil aktual',
-                icon: 'scroll',
-                is_active: prodModules.PROD_SIZING ? Boolean(prodModules.PROD_SIZING.is_active) : false,
-                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: prodModules.PROD_SIZING?.unit || 'Meter / Beam',
-                total_tiket: prodModules.PROD_SIZING?.total_tiket ?? 0,
-                selesai: prodModules.PROD_SIZING?.selesai ?? 0,
-                belum_selesai: prodModules.PROD_SIZING?.belum_selesai ?? 0,
-                persentase_selesai: prodModules.PROD_SIZING?.persentase_selesai ?? 0,
-                bagian: 'sizing',
-                tglawal: prodModules.PROD_SIZING?.tglawal,
-                tglakhir: prodModules.PROD_SIZING?.tglakhir,
-                today: prodModules.PROD_SIZING?.today,
-                month: prodModules.PROD_SIZING?.month,
-                today_total: prodModules.PROD_SIZING?.today_total ?? 0,
-                today_selesai: prodModules.PROD_SIZING?.today_selesai ?? 0,
-                today_belum: prodModules.PROD_SIZING?.today_belum ?? 0,
-                today_persentase: prodModules.PROD_SIZING?.today_persentase ?? 0,
-                month_total: prodModules.PROD_SIZING?.month_total ?? 0,
-                month_selesai: prodModules.PROD_SIZING?.month_selesai ?? 0,
-                month_belum: prodModules.PROD_SIZING?.month_belum ?? 0,
-                month_persentase: prodModules.PROD_SIZING?.month_persentase ?? 0,
-            },
-            PROD_POLIGYP: {
-                no: 8,
-                kode: 'PROD_POLIGYP',
-                nama: 'Produksi Poligyp',
-                kategori: 'produksi',
-                kategori_label: 'Lini Produksi Atena',
-                data_ditampilkan: 'Penyelesaian PP',
-                sub_nama: 'PP Poligyp Packing vs Hasil Actual',
-                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
-                sumber: 'Atena ERP',
-                catatan: 'Perbandingan PP Poligyp Packing dengan hasil aktual',
-                icon: 'bandage',
-                is_active: prodModules.PROD_POLIGYP ? Boolean(prodModules.PROD_POLIGYP.is_active) : false,
-                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: prodModules.PROD_POLIGYP?.unit || 'Roll / PCS',
-                total_tiket: prodModules.PROD_POLIGYP?.total_tiket ?? 0,
-                selesai: prodModules.PROD_POLIGYP?.selesai ?? 0,
-                belum_selesai: prodModules.PROD_POLIGYP?.belum_selesai ?? 0,
-                persentase_selesai: prodModules.PROD_POLIGYP?.persentase_selesai ?? 0,
-                bagian: 'poligyp',
-                tglawal: prodModules.PROD_POLIGYP?.tglawal,
-                tglakhir: prodModules.PROD_POLIGYP?.tglakhir,
-                today: prodModules.PROD_POLIGYP?.today,
-                month: prodModules.PROD_POLIGYP?.month,
-                today_total: prodModules.PROD_POLIGYP?.today_total ?? 0,
-                today_selesai: prodModules.PROD_POLIGYP?.today_selesai ?? 0,
-                today_belum: prodModules.PROD_POLIGYP?.today_belum ?? 0,
-                today_persentase: prodModules.PROD_POLIGYP?.today_persentase ?? 0,
-                month_total: prodModules.PROD_POLIGYP?.month_total ?? 0,
-                month_selesai: prodModules.PROD_POLIGYP?.month_selesai ?? 0,
-                month_belum: prodModules.PROD_POLIGYP?.month_belum ?? 0,
-                month_persentase: prodModules.PROD_POLIGYP?.month_persentase ?? 0,
-            },
-            PROD_IRONING: {
-                no: 10,
-                kode: 'PROD_IRONING',
-                nama: 'Produksi Ironing',
-                kategori: 'produksi',
-                kategori_label: 'Lini Produksi Atena',
-                data_ditampilkan: 'Penyelesaian PP',
-                sub_nama: 'PP Ironing vs Hasil Actual',
-                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
-                sumber: 'Atena ERP',
-                catatan: 'Perbandingan PP Ironing dengan hasil aktual',
-                icon: 'temperature-high',
-                is_active: prodModules.PROD_IRONING ? Boolean(prodModules.PROD_IRONING.is_active) : false,
-                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: prodModules.PROD_IRONING?.unit || 'PCS / Meter',
-                total_tiket: prodModules.PROD_IRONING?.total_tiket ?? 0,
-                selesai: prodModules.PROD_IRONING?.selesai ?? 0,
-                belum_selesai: prodModules.PROD_IRONING?.belum_selesai ?? 0,
-                persentase_selesai: prodModules.PROD_IRONING?.persentase_selesai ?? 0,
-                bagian: 'ironing',
-                tglawal: prodModules.PROD_IRONING?.tglawal,
-                tglakhir: prodModules.PROD_IRONING?.tglakhir,
-                today: prodModules.PROD_IRONING?.today,
-                month: prodModules.PROD_IRONING?.month,
-                today_total: prodModules.PROD_IRONING?.today_total ?? 0,
-                today_selesai: prodModules.PROD_IRONING?.today_selesai ?? 0,
-                today_belum: prodModules.PROD_IRONING?.today_belum ?? 0,
-                today_persentase: prodModules.PROD_IRONING?.today_persentase ?? 0,
-                month_total: prodModules.PROD_IRONING?.month_total ?? 0,
-                month_selesai: prodModules.PROD_IRONING?.month_selesai ?? 0,
-                month_belum: prodModules.PROD_IRONING?.month_belum ?? 0,
-                month_persentase: prodModules.PROD_IRONING?.month_persentase ?? 0,
-            },
-            PROD_SURGICAL_MESIN: {
-                no: 11,
-                kode: 'PROD_SURGICAL_MESIN',
-                nama: 'Produksi Surgical Mesin',
-                kategori: 'produksi',
-                kategori_label: 'Lini Produksi Atena',
-                data_ditampilkan: 'Penyelesaian PP',
-                sub_nama: 'PP Surgical Mesin vs Hasil Actual',
-                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
-                sumber: 'Atena ERP',
-                catatan: 'Perbandingan PP Surgical Mesin dengan hasil aktual',
-                icon: 'gears',
-                is_active: prodModules.PROD_SURGICAL_MESIN ? Boolean(prodModules.PROD_SURGICAL_MESIN.is_active) : false,
-                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: prodModules.PROD_SURGICAL_MESIN?.unit || 'PCS / Box',
-                total_tiket: prodModules.PROD_SURGICAL_MESIN?.total_tiket ?? 0,
-                selesai: prodModules.PROD_SURGICAL_MESIN?.selesai ?? 0,
-                belum_selesai: prodModules.PROD_SURGICAL_MESIN?.belum_selesai ?? 0,
-                persentase_selesai: prodModules.PROD_SURGICAL_MESIN?.persentase_selesai ?? 0,
-                bagian: 'surgicalmesin',
-                tglawal: prodModules.PROD_SURGICAL_MESIN?.tglawal,
-                tglakhir: prodModules.PROD_SURGICAL_MESIN?.tglakhir,
-                today: prodModules.PROD_SURGICAL_MESIN?.today,
-                month: prodModules.PROD_SURGICAL_MESIN?.month,
-                today_total: prodModules.PROD_SURGICAL_MESIN?.today_total ?? 0,
-                today_selesai: prodModules.PROD_SURGICAL_MESIN?.today_selesai ?? 0,
-                today_belum: prodModules.PROD_SURGICAL_MESIN?.today_belum ?? 0,
-                today_persentase: prodModules.PROD_SURGICAL_MESIN?.today_persentase ?? 0,
-                month_total: prodModules.PROD_SURGICAL_MESIN?.month_total ?? 0,
-                month_selesai: prodModules.PROD_SURGICAL_MESIN?.month_selesai ?? 0,
-                month_belum: prodModules.PROD_SURGICAL_MESIN?.month_belum ?? 0,
-                month_persentase: prodModules.PROD_SURGICAL_MESIN?.month_persentase ?? 0,
-            },
-            PROD_SURGICAL_PACKING: {
-                no: 12,
-                kode: 'PROD_SURGICAL_PACKING',
-                nama: 'Produksi Surgical Packing',
-                kategori: 'produksi',
-                kategori_label: 'Lini Produksi Atena',
-                data_ditampilkan: 'Penyelesaian PP',
-                sub_nama: 'PP Surgical Packing vs Hasil Actual',
-                sumber_data: 'Atena ERP REST API (PenyelesaianPP)',
-                sumber: 'Atena ERP',
-                catatan: 'Perbandingan PP Surgical Packing dengan hasil aktual',
-                icon: 'boxes-stacked',
-                is_active: prodModules.PROD_SURGICAL_PACKING ? Boolean(prodModules.PROD_SURGICAL_PACKING.is_active) : false,
-                metric_labels: { total: 'Target PP', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: prodModules.PROD_SURGICAL_PACKING?.unit || 'Box / Karton',
-                total_tiket: prodModules.PROD_SURGICAL_PACKING?.total_tiket ?? 0,
-                selesai: prodModules.PROD_SURGICAL_PACKING?.selesai ?? 0,
-                belum_selesai: prodModules.PROD_SURGICAL_PACKING?.belum_selesai ?? 0,
-                persentase_selesai: prodModules.PROD_SURGICAL_PACKING?.persentase_selesai ?? 0,
-                bagian: 'surgicalpacking',
-                tglawal: prodModules.PROD_SURGICAL_PACKING?.tglawal,
-                tglakhir: prodModules.PROD_SURGICAL_PACKING?.tglakhir,
-                today: prodModules.PROD_SURGICAL_PACKING?.today,
-                month: prodModules.PROD_SURGICAL_PACKING?.month,
-                today_total: prodModules.PROD_SURGICAL_PACKING?.today_total ?? 0,
-                today_selesai: prodModules.PROD_SURGICAL_PACKING?.today_selesai ?? 0,
-                today_belum: prodModules.PROD_SURGICAL_PACKING?.today_belum ?? 0,
-                today_persentase: prodModules.PROD_SURGICAL_PACKING?.today_persentase ?? 0,
-                month_total: prodModules.PROD_SURGICAL_PACKING?.month_total ?? 0,
-                month_selesai: prodModules.PROD_SURGICAL_PACKING?.month_selesai ?? 0,
-                month_belum: prodModules.PROD_SURGICAL_PACKING?.month_belum ?? 0,
-                month_persentase: prodModules.PROD_SURGICAL_PACKING?.month_persentase ?? 0,
-            },
-
-            // ==============================================================
-            // 5. SUPPLY CHAIN, QA & GUDANG (LIVE ATENA REST API)
-            // ==============================================================
-            PURCHASING: {
-                no: 12,
-                kode: 'PURCHASING',
-                nama: 'Purchasing',
-                kategori: 'supply_chain',
-                kategori_label: 'Supply Chain & Gudang',
-                data_ditampilkan: 'Pemenuhan PR Mat & PR Non Mat',
-                sub_nama: 'PR Material & PR Non-Mat Atena',
-                sumber_data: 'Atena ERP REST API (PemenuhanPR)',
-                sumber: 'Atena ERP',
-                catatan: 'Pemenuhan Purchase Requisition Material & Non-Material',
-                icon: 'cart-shopping',
-                is_active: true,
-                metric_labels: { total: 'Total PR', selesai: 'Terpenuhi', belum: 'Belum' },
-                unit: 'PR',
-                total_tiket: purchasingKpi.total_pr ?? 0,
-                selesai: purchasingKpi.pr_terpenuhi ?? 0,
-                belum_selesai: purchasingKpi.pr_belum ?? 0,
-                ditolak: 0,
-                total_efektif: purchasingKpi.total_pr ?? 0,
-                persentase_selesai: purchasingKpi.persentase_selesai ?? 0,
-                total_item: purchasingKpi.total_item ?? 0,
-                persentase_material: purchasingKpi.material?.persentase ?? 0,
-                persentase_non_material: purchasingKpi.non_material?.persentase ?? 0,
-                material: purchasingKpi.material || {},
-                non_material: purchasingKpi.non_material || {},
-                total_qty_request: purchasingKpi.total_qty_request ?? 0,
-                total_qty_po: purchasingKpi.total_qty_po ?? 0,
-                total_qty_grs: purchasingKpi.total_qty_grs ?? 0,
-                total_qty_os: purchasingKpi.total_qty_os ?? 0,
-            },
-            QA: {
-                no: 13,
-                kode: 'QA',
-                nama: 'QA (Quality Assurance)',
-                kategori: 'support_qa',
-                kategori_label: 'HR, Dokumen & Mutu',
-                data_ditampilkan: 'Release Material (GRS) & Release Produk Jadi (SCN, BR)',
-                sub_nama: 'Release Material & Produk Jadi',
-                sumber_data: 'Atena ERP REST API (ReleaseQA)',
-                sumber: 'Atena ERP',
-                catatan: 'Release Material GRS, Sample Test SCN Subcon, dan Accept Batch Record (BR)',
-                icon: 'clipboard-check',
-                is_active: Boolean((qaKpi.total_dokumen ?? qaKpi.total_grs ?? 0) > 0),
-                metric_labels: { total: 'Total Dokumen', selesai: 'Released', belum: 'Pending' },
-                unit: 'Dokumen',
-                total_tiket: qaKpi.total_dokumen ?? qaKpi.total_grs ?? 0,
-                selesai: qaKpi.total_selesai ?? qaKpi.grs_approve ?? 0,
-                belum_selesai: qaKpi.total_belum ?? qaKpi.grs_belum_approve ?? 0,
-                ditolak: qaKpi.total_ditolak ?? 0,
-                total_efektif: qaKpi.total_dokumen ?? 0,
-                persentase_selesai: qaKpi.persentase_selesai ?? qaKpi.persentase ?? 0,
-                total_grs: qaKpi.total_grs ?? 0,
-                grs_approve: qaKpi.grs_approve ?? 0,
-                total_scn: qaKpi.total_scn ?? 0,
-                scn_release: qaKpi.scn_sudah_release ?? 0,
-                total_br: qaKpi.total_br ?? 0,
-                br_belum: qaKpi.br_belum ?? 0,
-                grs: qaKpi.grs || {},
-                scn: qaKpi.scn || {},
-                acceptbr: qaKpi.acceptbr || {},
-                kpi: qaKpi,
-            },
-            LOGISTIK: {
-                no: 14,
-                kode: 'LOGISTIK',
-                nama: 'Logistik',
-                kategori: 'supply_chain',
-                kategori_label: 'Supply Chain & Gudang',
-                data_ditampilkan: 'Pemenuhan Order',
-                sub_nama: 'Realisasi Pengiriman Pesanan',
-                sumber_data: 'Atena ERP REST API (PemenuhanOrder)',
-                sumber: 'Atena ERP',
-                catatan: 'Pemenuhan rincian barang order pengiriman',
-                icon: 'truck-fast',
-                is_active: true,
-                metric_labels: { total: 'Total Barang', selesai: 'Terpenuhi', belum: 'Belum' },
-                unit: 'Item',
-                total_tiket: logistikKpi.total_item ?? logistikKpi.total_order ?? 0,
-                selesai: logistikKpi.item_memenuhi ?? logistikKpi.order_terpenuhi ?? 0,
-                belum_selesai: logistikKpi.item_belum ?? logistikKpi.order_belum_terpenuhi ?? 0,
-                ditolak: 0,
-                total_efektif: logistikKpi.total_item ?? logistikKpi.total_order ?? 0,
-                persentase_selesai: logistikKpi.persentase_selesai ?? 0,
-                total_item: logistikKpi.total_item ?? 0,
-                item_memenuhi: logistikKpi.item_memenuhi ?? 0,
-                item_belum: logistikKpi.item_belum ?? 0,
-                total_order: logistikKpi.total_order ?? 0,
-                order_terpenuhi: logistikKpi.order_terpenuhi ?? 0,
-                order_belum_terpenuhi: logistikKpi.order_belum_terpenuhi ?? 0,
-                today: logistikData?.today || {},
-                month: logistikData?.month || {},
-                today_total: logistikData?.today?.total_item ?? logistikData?.today?.total_order ?? 0,
-                today_selesai: logistikData?.today?.item_memenuhi ?? logistikData?.today?.order_terpenuhi ?? 0,
-                today_belum: logistikData?.today?.item_belum ?? logistikData?.today?.order_belum_terpenuhi ?? 0,
-                today_persentase: logistikData?.today?.persentase_selesai ?? 0,
-                month_total: logistikData?.month?.total_item ?? logistikData?.month?.total_order ?? 0,
-                month_selesai: logistikData?.month?.item_memenuhi ?? logistikData?.month?.order_terpenuhi ?? 0,
-                month_belum: logistikData?.month?.item_belum ?? logistikData?.month?.order_belum_terpenuhi ?? 0,
-                month_persentase: logistikData?.month?.persentase_selesai ?? 0,
-            },
-            WH_FG: {
-                no: 15,
-                kode: 'WH_FG',
-                nama: 'WH FG (Gudang Jadi)',
-                kategori: 'supply_chain',
-                kategori_label: 'Supply Chain & Gudang',
-                data_ditampilkan: 'Penyelesaian DR',
-                sub_nama: 'Delivery Receipt Barang Jadi',
-                sumber_data: 'Atena ERP REST API (PenyelesaianDR)',
-                sumber: 'Atena ERP',
-                catatan: 'Penyelesaian Delivery Receipt (DR) Barang Jadi ke Delivery Note (DN)',
-                icon: 'warehouse',
-                is_active: Boolean(whFgKpi.total_dr > 0 || (whFgData && whFgData.success)),
-                metric_labels: { total: 'Total DR', selesai: 'Sudah DN', belum: 'Belum DN' },
-                unit: 'DR',
-                total_tiket: whFgKpi.total_dr ?? 0,
-                selesai: whFgKpi.dr_sudah_dn ?? 0,
-                belum_selesai: whFgKpi.dr_belum_dn ?? 0,
-                persentase_selesai: whFgKpi.persentase_selesai ?? 0,
-                today: whFgData?.today || {},
-                month: whFgData?.month || {},
-                today_total: whFgData?.today?.total_dr ?? 0,
-                today_selesai: whFgData?.today?.dr_sudah_dn ?? 0,
-                today_belum: whFgData?.today?.dr_belum_dn ?? 0,
-                today_persentase: whFgData?.today?.persentase_selesai ?? 0,
-                month_total: whFgData?.month?.total_dr ?? 0,
-                month_selesai: whFgData?.month?.dr_sudah_dn ?? 0,
-                month_belum: whFgData?.month?.dr_belum_dn ?? 0,
-                month_persentase: whFgData?.month?.persentase_selesai ?? 0,
-            },
-            WH_MAT: {
-                no: 16,
-                kode: 'WH_MAT',
-                nama: 'WH Mat (Gudang Bahan)',
-                kategori: 'supply_chain',
-                kategori_label: 'Supply Chain & Gudang',
-                data_ditampilkan: 'Pemenuhan DR & MR',
-                sub_nama: 'DR Paskot & MR Bahan (MR +1)',
-                sumber_data: 'Atena ERP REST API (PemenuhanWHMat)',
-                sumber: 'Atena ERP',
-                catatan: 'Realisasi DR lain & DR customer paskot serta realisasi permintaan bahan (MR)',
-                icon: 'dolly',
-                is_active: Boolean(whMatKpi.total_mr > 0 || (whMatData && whMatData.success)),
-                metric_labels: { total: 'Total MR', selesai: 'Terpenuhi', belum: 'Belum' },
-                unit: 'MR',
-                total_tiket: whMatKpi.total_mr ?? 0,
-                selesai: whMatKpi.mr_terpenuhi ?? 0,
-                belum_selesai: whMatKpi.mr_belum_terpenuhi ?? 0,
-                persentase_selesai: whMatData?.persentase_selesai ?? whMatKpi.persentase_selesai ?? 0,
-                persentase_mr: whMatData?.persentase_mr ?? whMatKpi.persentase_mr ?? (whMatData?.month?.persentase_selesai ?? 0),
-                persentase_dr: whMatData?.persentase_dr ?? whMatKpi.persentase_dr ?? (whMatData?.dr_month?.persentase_selesai ?? 0),
-                today: whMatData?.today || {},
-                month: whMatData?.month || {},
-                today_total: whMatData?.today?.total_mr ?? 0,
-                today_selesai: whMatData?.today?.mr_terpenuhi ?? 0,
-                today_belum: whMatData?.today?.mr_belum_terpenuhi ?? 0,
-                today_persentase: whMatData?.today?.persentase_selesai ?? 0,
-                month_total: whMatData?.month?.total_mr ?? 0,
-                month_selesai: whMatData?.month?.mr_terpenuhi ?? 0,
-                month_belum: whMatData?.month?.mr_belum_terpenuhi ?? 0,
-                month_persentase: whMatData?.persentase_selesai ?? whMatKpi.persentase_selesai ?? 0,
-                mr: whMatData?.month || {},
-                dr: whMatKpi.dr || whMatData?.dr_month || {},
-            },
-            PBF: {
-                no: 17,
-                kode: 'PBF',
-                nama: 'PBF (Distribusi)',
-                kategori: 'supply_chain',
-                kategori_label: 'Supply Chain & Gudang',
-                data_ditampilkan: 'Pemenuhan Order +7 Hari',
-                sub_nama: 'Fulfillment Sales Order (SO) PBF Farmasi',
-                sumber_data: 'Atena ERP REST API (PemenuhanOrderPBF)',
-                sumber: 'Atena ERP',
-                catatan: 'Pemenuhan Sales Order (SO) Distribusi Farmasi Atena ERP',
-                icon: 'prescription-bottle-medical',
-                is_active: Boolean((pbfKpi.total_order ?? 0) > 0 || (pbfData?.today_total ?? 0) > 0),
-                metric_labels: { total: 'Total Order', selesai: 'Memenuhi', belum: 'Belum' },
-                unit: 'Order',
-                total_tiket: pbfKpi.total_order ?? 0,
-                selesai: pbfKpi.order_memenuhi ?? 0,
-                belum_selesai: pbfKpi.order_belum_memenuhi ?? 0,
-                ditolak: 0,
-                total_efektif: pbfKpi.total_order ?? 0,
-                persentase_selesai: pbfKpi.persentase_selesai ?? pbfKpi.persentase ?? 0,
-                today_total: pbfData?.today_total ?? 0,
-                today_selesai: pbfData?.today_selesai ?? 0,
-                today_belum: pbfData?.today_belum ?? 0,
-                today_persentase: pbfData?.today_persentase ?? 0,
-                month_total: pbfData?.month_total ?? pbfKpi.total_order ?? 0,
-                month_selesai: pbfData?.month_selesai ?? pbfKpi.order_memenuhi ?? 0,
-                month_belum: pbfData?.month_belum ?? pbfKpi.order_belum_memenuhi ?? 0,
-                month_persentase: pbfData?.month_persentase ?? pbfKpi.persentase ?? 0,
-                kpi: pbfKpi,
-            },
-
-            // --- Modul Pengerjaan Barang Subcon (Aktif & Live E-Subcon API) ---
-            SUBCON: {
-                no: 18,
-                kode: 'SUBCON',
-                nama: 'Pengerjaan Subcon',
-                kategori: 'layanan',
-                kategori_label: 'Layanan Utama & Live',
-                data_ditampilkan: 'Monitoring Hasil Produksi Pengerjaan Subcon',
-                sub_nama: 'Mitra & Pengemasan',
-                icon: 'boxes-packing',
-                sumber_data: 'E-Subcon (https://www.snam110.dpdns.org/e-subcon)',
-                sumber: 'E-Subcon',
-                is_active: true,
-                is_production_metric: true, // Menandakan card memakai Hasil Produksi PCS
-                total_output_pcs: subconKpi.total_output_pcs ?? 0,
-                total_output_pcs_formatted: Number(subconKpi.total_output_pcs ?? 0).toLocaleString('id-ID'),
-                total_durasi: subconKpi.total_durasi_formatted || '0 Menit',
-                total_transaksi: subconKpi.total_transaksi ?? 0,
-                total_subcon: subconKpi.total_subcon_aktif ?? subconList.length ?? 1,
-                total_karyawan: subconKpi.total_karyawan_aktif ?? 0,
-                sudah_mengisi: subconKpi.sudah_mengisi ?? 0,
-                belum_mengisi: subconKpi.belum_mengisi ?? 0,
-                subcon_nama: subconFirst.nama_lokasi || 'SIMAN',
-                persentase_selesai: subconKpi.persentase_pengisian ?? (subconKpi.total_karyawan_aktif ? Number(((subconKpi.sudah_mengisi / subconKpi.total_karyawan_aktif) * 100).toFixed(1)) : 0),
-            },
-
-            // ==============================================================
-            // 6. MODUL STANDBY / BELUM AKTIF (DILETAKKAN DI BAWAH SENDIRI)
-            // ==============================================================
-            HR: {
-                no: 19,
-                kode: 'HR',
-                nama: 'Kehadiran Karyawan (HR)',
-                kategori: 'support_qa',
-                kategori_label: 'HR, Dokumen & Mutu',
-                data_ditampilkan: 'Presensi Kehadiran Karyawan vs Jadwal Plan',
-                sub_nama: 'TK SNA & Marketing (Non-SNAM)',
-                sumber_data: 'Atena ERP REST API (KehadiranTK)',
-                sumber: 'Atena ERP',
-                catatan: 'Kehadiran aktual karyawan dibandingkan jadwal kerja plan',
-                icon: 'users-line',
-                is_active: true,
-                metric_labels: { total: 'Total Jadwal', selesai: 'Sesuai Plan', belum: 'Tidak Sesuai' },
-                unit: 'Jadwal',
-                total: hrKpi.total_jadwal || 0,
-                total_tiket: hrKpi.total_jadwal || 0,
-                selesai: hrKpi.jadwal_sesuai || 0,
-                belum_selesai: hrKpi.jadwal_tidak_sesuai || 0,
-                total_karyawan: hrKpi.total_karyawan || 0,
-                persentase_selesai: hrKpi.persentase || 0,
-                today: hrKpi.today || {},
-                month: hrKpi.month || {},
-                sub_metrics: {
-                    tksna: hrKpi.tksna,
-                    marketing: hrKpi.marketing
-                }
-            },
-            DC: {
-                no: 20,
-                kode: 'DC',
-                nama: 'DC (Document Control)',
-                kategori: 'support_qa',
-                kategori_label: 'HR, Dokumen & Mutu',
-                data_ditampilkan: 'Penyelesaian Pengerjaan Dokumen',
-                sub_nama: 'Aplikasi Paperless (Pengajuan vs Pengesahan)',
-                sumber_data: 'REST API Paperless (PenyelesaianDokumen)',
-                sumber: 'Paperless',
-                catatan: 'Penyelesaian pengerjaan pengajuan dan pengesahan dokumen Paperless',
-                icon: 'file-signature',
-                is_active: true,
-                metric_labels: { total: 'Total Masuk', selesai: 'Disahkan', belum: 'Proses' },
-                unit: 'Dokumen',
-                total: dcData?.total ?? dcKpi.total ?? 0,
-                total_tiket: dcData?.total ?? dcKpi.total ?? 0,
-                selesai: dcData?.selesai ?? dcKpi.selesai ?? 0,
-                belum_selesai: dcData?.belum ?? dcKpi.belum ?? 0,
-                persentase_selesai: dcData?.persentase ?? dcKpi.persentase ?? 0,
-                tglawal: dcData?.tglawal,
-                tglakhir: dcData?.tglakhir,
-                kpi: dcKpi,
-                meta: dcData,
-            },
-            DEVELOPMENT: {
-                no: 21,
-                kode: 'DEVELOPMENT',
-                nama: 'Development (R&D)',
-                kategori: 'supply_chain',
-                kategori_label: 'Supply Chain & Gudang',
-                data_ditampilkan: 'Penyelesaian BOM H+2 dari Permintaan',
-                sub_nama: 'SLA Pembuatan BOM Maks H+2',
-                sumber_data: 'Google Spreadsheet (List Permintaan BOM)',
-                sumber: 'Google Spreadsheet',
-                catatan: 'Penyelesaian Bill of Materials (BOM) paling lambat H+2 setelah permintaan masuk',
-                icon: 'compass-drafting',
-                is_active: true,
-                metric_labels: { total: 'Req BOM', selesai: 'Selesai', belum: 'Belum' },
-                unit: 'Item BOM',
-                total: devKpi.total ?? 0,
-                total_tiket: devKpi.total ?? 0,
-                selesai: devKpi.selesai ?? 0,
-                belum_selesai: devKpi.belum ?? 0,
-                persentase_selesai: devKpi.persentase ?? 0,
-                baru_count: devKpi.baru_count ?? 0,
-                perubahan_count: devKpi.perubahan_count ?? 0,
-                urgent_count: devKpi.urgent_count ?? 0,
-                on_time_count: devKpi.on_time_count ?? 0,
-                overdue_count: devKpi.overdue_count ?? 0,
-                today: devKpi.today || {},
-                month: devKpi.month || {},
-                kpi: devKpi,
-            }
-        };
-
-        // Alias backward compatibility untuk kode lama jika masih ada yang mengakses
-        servicesResult.ESYS = servicesResult.PURCHASING;
-        servicesResult.SIMRS = servicesResult.LOGISTIK;
-        servicesResult.FARMASI = servicesResult.HR;
-        servicesResult.LAB = servicesResult.PROD_FINISHING;
-        servicesResult.BILLING = servicesResult.PROD_ANTISEPTIK;
-        servicesResult.SDM = servicesResult.DC;
-
-        // 4. Hitung Akumulasi Global KPI (Persentase mengecualikan tiket ditolak)
-        const totalSemua = servicesResult.IT.total_tiket + servicesResult.TK.total_tiket + servicesResult.GA.total_tiket;
-        const totalSelesai = servicesResult.IT.selesai + servicesResult.TK.selesai + servicesResult.GA.selesai;
-        const totalBelum = servicesResult.IT.belum_selesai + servicesResult.TK.belum_selesai + servicesResult.GA.belum_selesai;
-        const totalDitolak = servicesResult.IT.ditolak + servicesResult.TK.ditolak + servicesResult.GA.ditolak;
-        const totalEfektifGlobal = Math.max(0, totalSemua - totalDitolak);
-        const persentaseGlobal = hitungPersentase(totalSelesai, totalSemua, totalDitolak);
-
-        // Sanitasi tiket perlu_perhatian agar kategori 'biasa' menjadi tanda strip '-'
-        const sanitizedPerluPerhatian = (summaryData.perlu_perhatian || []).map(item => ({
-            ...item,
-            kategori: sanitasiKategori(item.kategori)
-        }));
-
-        const result = {
-            success: true,
-            server_time: apiData?.server_time || new Date().toISOString(),
-            kpi_global: {
-                total_tiket: totalSemua,
-                total_selesai: totalSelesai,
-                total_belum_selesai: totalBelum,
-                total_ditolak: totalDitolak,
-                total_efektif: totalEfektifGlobal,
-                persentase_selesai: persentaseGlobal,
-                total_aktif: summaryData.kpi?.total_tiket_aktif ?? summaryData.total_tiket_aktif ?? 0,
-            },
-            kpi_produksi: prodKpi,
-            kpi_purchasing: purchasingKpi,
-            kpi_logistik: logistikKpi,
-            kpi_wh_fg: whFgKpi,
-            kpi_wh_mat: whMatKpi,
-            layanan: servicesResult,
-            perlu_perhatian: sanitizedPerluPerhatian,
-            periode: customDates,
-            api_status: apiHealthService.getStatusSummary(),
-        };
-
-        // Simpan ke Cache
-        cache.statsMap.set(cacheKey, { data: result, timestamp: now });
-        cache.stats.data = result;
-        cache.stats.timestamp = now;
-
+        const result = await fetchPromise;
         return res.json({ ...result, _cached: false });
 
     } catch (error) {
         const timeStr = new Date().toLocaleTimeString('id-ID');
         if (lastApiStatus !== 'offline') {
-            console.error(`[${timeStr}] ❌ [API TICKETING TERPUTUS]: Gagal terhubung ke API (${error.message})`);
+            console.error(`[${timeStr}] ❌ [API TERPUTUS]: Gagal terhubung ke API (${error.message})`);
             lastApiStatus = 'offline';
-        } else {
-            console.error(`[${timeStr}] ⚠️ [API TICKETING RETRY]: Masih gagal menghubungi server (${error.message})`);
         }
 
-        // Fallback: Kirim data cache lama jika API luar sedang tidak merespon
+        // Fallback: Kirim data cache cadangan jika server luar sedang lambat/gagal
+        if (cache.statsMap?.has(cacheKey)) {
+            return res.json({
+                ...cache.statsMap.get(cacheKey).data,
+                _cached: true,
+                _warning: 'Menggunakan data cadangan: Server ERP sedang sibuk',
+            });
+        }
         if (cache.stats.data) {
             return res.json({
                 ...cache.stats.data,
                 _cached: true,
-                _warning: 'Menggunakan data cadangan: Server ticketing sedang sibuk',
+                _warning: 'Menggunakan data cadangan: Server ERP sedang sibuk',
             });
         }
 
         return res.status(502).json({
             success: false,
-            message: 'Gagal terhubung ke API Ticketing. Pastikan Laravel aktif.',
+            message: 'Gagal terhubung ke API. Server ERP sedang sibuk.',
             error: error.message
         });
     }
 });
 
+
 /**
  * GET /api/dashboard/tickets
- * Mengambil daftar tiket spesifik
+ * Mengambil daftar tiket per layanan (IT, Teknik, GA, dll)
  */
 router.get('/tickets', async (req, res) => {
     const { service, status = 'all', limit = 'all', force } = req.query;
