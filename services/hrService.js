@@ -205,6 +205,8 @@ class HrService {
                     total_jadwal: totalJadwal,
                     jadwal_sesuai: jadwalSesuai,
                     jadwal_tidak_sesuai: jadwalTidakSesuai,
+                    sesuai: jadwalSesuai,
+                    tidak_sesuai: jadwalTidakSesuai,
                     persentase: persentase,
                 };
             }
@@ -390,6 +392,8 @@ class HrService {
             total_jadwal: totalJadwal || ringkasanKpi.total_jadwal || 0,
             jadwal_sesuai: totalSesuai || ringkasanKpi.jadwal_sesuai || 0,
             jadwal_tidak_sesuai: totalTidakSesuai || ringkasanKpi.jadwal_tidak_sesuai || 0,
+            sesuai: totalSesuai || ringkasanKpi.jadwal_sesuai || 0,
+            tidak_sesuai: totalTidakSesuai || ringkasanKpi.jadwal_tidak_sesuai || 0,
             total_karyawan: karyawanSet.size || ringkasanKpi.total_karyawan || 0,
             persentase: persentase,
             total_alpha: totalAlpha,

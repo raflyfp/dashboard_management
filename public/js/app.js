@@ -7657,10 +7657,10 @@ function renderHrModalData(data) {
     if (!data) return;
 
     const kpi = data.kpi || {};
-    const totalJadwal = kpi.total_jadwal || 0;
-    const sesuai = kpi.sesuai || 0;
-    const tidakSesuai = kpi.tidak_sesuai || 0;
-    const totalKaryawan = kpi.total_karyawan || 0;
+    const totalJadwal = kpi.total_jadwal ?? 0;
+    const sesuai = kpi.jadwal_sesuai ?? kpi.sesuai ?? 0;
+    const tidakSesuai = kpi.jadwal_tidak_sesuai ?? kpi.tidak_sesuai ?? 0;
+    const totalKaryawan = kpi.total_karyawan ?? 0;
 
     const elTotalJadwal = document.getElementById('hrModalKpiTotalJadwal');
     const elSesuai = document.getElementById('hrModalKpiSesuai');
