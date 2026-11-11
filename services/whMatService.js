@@ -73,6 +73,78 @@ function formatShortDate(dateStr) {
 }
 
 /**
+ * Ekstrak tanggal MR dari nomor transaksi (Format: MR.YYMMDD.xxxx)
+ */
+function getTglMr(noTrans) {
+    if (!noTrans) return null;
+    const m = String(noTrans).match(/^MR\.(\d{2})(\d{2})(\d{2})\./i);
+    if (m) {
+        return `20${m[1]}-${m[2]}-${m[3]}`;
+    }
+    return null;
+}
+
+/**
+ * Tambah hari kerja (Senin-Jumat), tidak menghitung Sabtu dan Minggu
+ */
+function addWorkingDays(dateStr, days = 1) {
+    const d = new Date(dateStr + 'T00:00:00');
+    let added = 0;
+    while (added < days) {
+        d.setDate(d.getDate() + 1);
+        const dayOfWeek = d.getDay(); // 0: Minggu, 6: Sabtu
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            added++;
+        }
+    }
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Hitung batas waktu pengiriman:
+ * Batas waktu = tanggal paling akhir antara (Hari MR + 1 hari kerja) atau (tgl_kirim)
+ * Note: Sabtu & Minggu tidak dihitung
+ */
+function getBatasKirim(tglKirim, noTrans) {
+    const tglMr = getTglMr(noTrans);
+    let mrPlus1 = null;
+    if (tglMr) {
+        mrPlus1 = addWorkingDays(tglMr, 1);
+    }
+    const cleanKirim = String(tglKirim || '').split(' ')[0].trim();
+    if (mrPlus1 && cleanKirim) {
+        return mrPlus1 > cleanKirim ? mrPlus1 : cleanKirim;
+    }
+    return cleanKirim || mrPlus1;
+}
+
+/**
+ * Hitung status lead time Permintaan Bahan (MR):
+ * Aturan: Realisasi permintaan bahan (hari MR +1 atau sesuai tanggal kirim), Sabtu & Minggu tidak dihitung
+ * - Belum ada tgl_transfer -> BELUM KIRIM
+ * - tgl_transfer <= batas pengiriman -> TEPAT WAKTU
+ * - tgl_transfer > batas pengiriman  -> TERLAMBAT
+ */
+function getLeadtimeStatus(tglKirim, tglTransfer, noTrans = '') {
+    const tf = String(tglTransfer || '').trim();
+    if (!tf || tf === '-' || tf === 'null' || tf === 'undefined') {
+        return 'BELUM KIRIM';
+    }
+    const batas = getBatasKirim(tglKirim, noTrans);
+    if (!batas) {
+        return 'TEPAT WAKTU';
+    }
+    const dateTf = tf.split(' ')[0];
+    if (dateTf <= batas) {
+        return 'TEPAT WAKTU';
+    }
+    return 'TERLAMBAT';
+}
+
+/**
  * Helper mendapatkan parameter tanggal hari ini dan awal bulan
  */
 function getDateParams(customMonth, customYear) {
@@ -283,16 +355,22 @@ class WhMatService {
                 const items = [];
 
                 if (bagian === 'permintaanbahan') {
-                    rows.forEach((r, idx) => {
+                    // Filter out baris MR yang ditutup/dibatalkan tanpa item valid (status === 'DITUTUP' && !status_mr)
+                    // agar total MR dokumen sinkron dengan ringkasan Atena ERP (153 MR)
+                    const validRows = rows.filter(r => !(r.status === 'DITUTUP' && !r.status_mr));
+                    validRows.forEach((r, idx) => {
                         const statusMrRaw = String(r.status_mr || '').toUpperCase().trim();
                         const isTerpenuhi = statusMrRaw === 'TERPENUHI';
+                        const hasTtf = Boolean(r.no_terima && String(r.no_terima).trim() !== '' && String(r.no_terima).trim() !== '-');
                         const jml = Number(r.jml || 0);
                         const terpenuhi = Number(r.terpenuhi || 0);
                         const sisa = Number(r.sisa || 0);
-                        const jmlTerima = Number(r.jml_terima || 0);
                         const progress = jml > 0
                             ? Math.min(100, Number(((terpenuhi / jml) * 100).toFixed(1)))
                             : (terpenuhi > 0 ? 100 : 0);
+
+                        // Status lead time dihitung dari tgl_transfer vs batas waktu (Hari MR +1 kerja / tgl_kirim)
+                        const leadtime = getLeadtimeStatus(r.tgl_kirim, r.tgl_transfer, r.no_trans);
 
                         items.push({
                             no: idx + 1,
@@ -312,10 +390,11 @@ class WhMatService {
                             tgl_transfer: r.tgl_transfer || '',
                             tgl_transfer_label: formatShortDate(r.tgl_transfer),
                             no_terima: r.no_terima || '-',
-                            tgl_terima: r.tgl_terima || '',
-                            tgl_terima_label: formatShortDate(r.tgl_terima),
-                            jml_terima: jmlTerima,
-                            status: r.status || 'BELUM DITERIMA',
+                            is_ttf: hasTtf,
+                            status_ttf: hasTtf ? 'SUDAH' : 'BELUM',
+                            status_code_ttf: hasTtf ? 'sudah' : 'belum',
+                            leadtime: leadtime,
+                            status: leadtime,
                             status_mr: isTerpenuhi ? 'TERPENUHI' : 'BELUM TERPENUHI',
                             status_code: isTerpenuhi ? 'terpenuhi' : 'belum',
                             progress_percent: progress,
@@ -409,15 +488,15 @@ class WhMatService {
                         lokasi_tujuan: it.lokasi_tujuan,
                         tgl_transfer: it.tgl_transfer,
                         tgl_transfer_label: it.tgl_transfer_label,
-                        tgl_terima: it.tgl_terima,
-                        tgl_terima_label: it.tgl_terima_label,
+                        no_terima: it.no_terima || '-',
                         total_item: 0,
                         jml: 0,
                         terpenuhi: 0,
                         sisa: 0,
                         has_terlambat: false,
-                        has_belum_terima: false,
+                        has_belum_kirim: false,
                         all_terpenuhi: true,
+                        all_ttf: true,
                     });
                 }
                 const entry = mrMap.get(key);
@@ -425,23 +504,23 @@ class WhMatService {
                 entry.jml += it.jml;
                 entry.terpenuhi += it.terpenuhi;
                 entry.sisa += it.sisa;
-                if (it.status === 'TERLAMBAT') entry.has_terlambat = true;
-                if (it.status === 'BELUM DITERIMA') entry.has_belum_terima = true;
+                if (it.leadtime === 'TERLAMBAT' || it.status === 'TERLAMBAT') entry.has_terlambat = true;
+                if (it.leadtime === 'BELUM KIRIM' || it.status === 'BELUM KIRIM') entry.has_belum_kirim = true;
                 if (it.status_code !== 'terpenuhi') entry.all_terpenuhi = false;
+                if (!it.is_ttf) entry.all_ttf = false;
                 if (!entry.tgl_transfer && it.tgl_transfer) {
                     entry.tgl_transfer = it.tgl_transfer;
                     entry.tgl_transfer_label = it.tgl_transfer_label;
                 }
-                if (!entry.tgl_terima && it.tgl_terima) {
-                    entry.tgl_terima = it.tgl_terima;
-                    entry.tgl_terima_label = it.tgl_terima_label;
+                if ((!entry.no_terima || entry.no_terima === '-') && it.no_terima && it.no_terima !== '-') {
+                    entry.no_terima = it.no_terima;
                 }
             });
 
             mrMap.forEach(m => {
                 let leadtime = 'TEPAT WAKTU';
                 if (m.has_terlambat) leadtime = 'TERLAMBAT';
-                else if (m.has_belum_terima) leadtime = 'BELUM DITERIMA';
+                else if (m.has_belum_kirim || !m.tgl_transfer) leadtime = 'BELUM KIRIM';
 
                 summaryByDoc.push({
                     no_trans: m.no_trans,
@@ -451,8 +530,7 @@ class WhMatService {
                     lokasi_tujuan: m.lokasi_tujuan,
                     tgl_transfer: m.tgl_transfer,
                     tgl_transfer_label: m.tgl_transfer_label,
-                    tgl_terima: m.tgl_terima,
-                    tgl_terima_label: m.tgl_terima_label,
+                    no_terima: m.no_terima || '-',
                     total_item: m.total_item,
                     jml: m.jml,
                     terpenuhi: m.terpenuhi,
@@ -461,6 +539,8 @@ class WhMatService {
                     status: leadtime,
                     status_mr: m.all_terpenuhi ? 'TERPENUHI' : 'BELUM TERPENUHI',
                     status_code: m.all_terpenuhi ? 'terpenuhi' : 'belum',
+                    status_ttf: m.all_ttf ? 'SUDAH' : 'BELUM',
+                    status_code_ttf: m.all_ttf ? 'sudah' : 'belum',
                 });
             });
         } else {
@@ -525,11 +605,21 @@ class WhMatService {
             });
         }
 
+        const tepatWaktuCount = summaryByDoc.filter(d => d.leadtime === 'TEPAT WAKTU').length;
+        const belumKirimCount = summaryByDoc.filter(d => d.leadtime === 'BELUM KIRIM').length;
+        const terlambatCount = summaryByDoc.filter(d => d.leadtime === 'TERLAMBAT').length;
+        const leadtimePercent = totalTrans > 0 ? Number(((tepatWaktuCount / totalTrans) * 100).toFixed(2)) : 0;
+
         const kpi = bagian === 'permintaanbahan' ? {
-            total_mr: ringkasanKpi.total_mr ?? totalTrans,
-            mr_terpenuhi: ringkasanKpi.mr_terpenuhi ?? 0,
-            mr_belum_terpenuhi: ringkasanKpi.mr_belum_terpenuhi ?? 0,
-            persentase_selesai: ringkasanKpi.persentase_selesai ?? 0,
+            total_mr: totalTrans || (ringkasanKpi.total_mr ?? 0),
+            mr_terpenuhi: ringkasanKpi.mr_terpenuhi ?? countSelesai,
+            mr_belum_terpenuhi: ringkasanKpi.mr_belum_terpenuhi ?? countBelum,
+            mr_tepat_waktu: tepatWaktuCount,
+            mr_belum_kirim: belumKirimCount,
+            mr_terlambat: terlambatCount,
+            persentase_selesai: leadtimePercent,
+            persentase_leadtime: leadtimePercent,
+            persentase_mr: leadtimePercent,
             total_dokumen: totalTrans,
             total_item: items.length,
             total_jml: totalJml,
@@ -610,12 +700,13 @@ class WhMatService {
                 : getDateParams();
 
         try {
-            // Ambil MR (Permintaan Bahan) & DR untuk Hari Ini dan Bulan Ini secara paralel
-            const [mrTodayRes, mrMonthRes, drTodayRes, drMonthRes] = await Promise.allSettled([
+            // Ambil MR & DR ringkasan serta detail MR bulan ini untuk menghitung persentase ketepatan waktu
+            const [mrTodayRes, mrMonthRes, drTodayRes, drMonthRes, mrDetailsMonthRes] = await Promise.allSettled([
                 this.fetchRingkasan('permintaanbahan', { tglawal: today, tglakhir: today }),
                 this.fetchRingkasan('permintaanbahan', { tglawal: monthStart, tglakhir: today }),
                 this.fetchRingkasan('dr', { tglawal: today, tglakhir: today }),
-                this.fetchRingkasan('dr', { tglawal: monthStart, tglakhir: today })
+                this.fetchRingkasan('dr', { tglawal: monthStart, tglakhir: today }),
+                this.fetchDetails('permintaanbahan', { tglawal: monthStart, tglakhir: today })
             ]);
 
             const mrToday = mrTodayRes.status === 'fulfilled' ? mrTodayRes.value : {
@@ -634,12 +725,34 @@ class WhMatService {
                 total_dr: 0, dr_sudah_dn: 0, dr_belum_dn: 0, persentase_selesai: 0
             };
 
-            const pctMr = Number(mrMonth.persentase_selesai || 0);
+            // Hitung persentase MR berdasarkan Tepat Waktu dibanding Total MR (Lead Time Permintaan Bahan)
+            let mrTepatWaktu = 0;
+            let mrBelumKirim = 0;
+            let mrTerlambat = 0;
+            let mrTotalDocs = mrMonth.total_mr || 0;
+            let pctMr = Number(mrMonth.persentase_selesai || 0);
+
+            if (mrDetailsMonthRes.status === 'fulfilled' && Array.isArray(mrDetailsMonthRes.value) && mrDetailsMonthRes.value.length > 0) {
+                const aggregatedMr = this.aggregateData('permintaanbahan', mrDetailsMonthRes.value, mrMonth);
+                if (aggregatedMr.summary_by_doc && aggregatedMr.summary_by_doc.length > 0) {
+                    mrTotalDocs = aggregatedMr.summary_by_doc.length;
+                    mrTepatWaktu = aggregatedMr.summary_by_doc.filter(d => d.leadtime === 'TEPAT WAKTU').length;
+                    mrBelumKirim = aggregatedMr.summary_by_doc.filter(d => d.leadtime === 'BELUM KIRIM').length;
+                    mrTerlambat = aggregatedMr.summary_by_doc.filter(d => d.leadtime === 'TERLAMBAT').length;
+                    pctMr = mrTotalDocs > 0 ? Number(((mrTepatWaktu / mrTotalDocs) * 100).toFixed(2)) : 0;
+                    mrMonth.total_mr = mrTotalDocs;
+                    mrMonth.mr_tepat_waktu = mrTepatWaktu;
+                    mrMonth.mr_belum_kirim = mrBelumKirim;
+                    mrMonth.mr_terlambat = mrTerlambat;
+                    mrMonth.persentase_selesai = pctMr;
+                }
+            }
+
             const pctDr = Number(drMonth.persentase_selesai || 0);
             let avgPersentase = 0;
-            if (mrMonth.total_mr > 0 && drMonth.total_dr > 0) {
+            if (mrTotalDocs > 0 && drMonth.total_dr > 0) {
                 avgPersentase = Number(((pctMr + pctDr) / 2).toFixed(2));
-            } else if (mrMonth.total_mr > 0) {
+            } else if (mrTotalDocs > 0) {
                 avgPersentase = pctMr;
             } else if (drMonth.total_dr > 0) {
                 avgPersentase = pctDr;
@@ -648,9 +761,12 @@ class WhMatService {
             const payload = {
                 success: true,
                 kpi: {
-                    total_mr: mrMonth.total_mr,
+                    total_mr: mrTotalDocs,
                     mr_terpenuhi: mrMonth.mr_terpenuhi,
                     mr_belum_terpenuhi: mrMonth.mr_belum_terpenuhi,
+                    mr_tepat_waktu: mrTepatWaktu,
+                    mr_belum_kirim: mrBelumKirim,
+                    mr_terlambat: mrTerlambat,
                     persentase_mr: pctMr,
                     persentase_dr: pctDr,
                     persentase_selesai: avgPersentase,

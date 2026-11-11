@@ -6343,8 +6343,8 @@ function updateWhMatBagianTabs(bagian) {
 
     if (isMr) {
         if (lblTotal) lblTotal.textContent = 'Total MR';
-        if (lblSelesai) lblSelesai.textContent = 'Terpenuhi';
-        if (lblBelum) lblBelum.textContent = 'Belum Terpenuhi';
+        if (lblSelesai) lblSelesai.textContent = 'Tepat Waktu';
+        if (lblBelum) lblBelum.textContent = 'Belum / Terlambat';
         if (lblQty) lblQty.textContent = 'Total Qty Diminta';
         if (lblRealisasi) lblRealisasi.textContent = 'Total Qty Realisasi';
     } else {
@@ -6572,14 +6572,25 @@ function renderWhMatModalData(data) {
     const elTotalQty = document.getElementById('modalKpiWhMatTotalQty');
     const elTotalRealisasi = document.getElementById('modalKpiWhMatTotalQtyRealisasi');
 
-    const totalCount = isMr ? (kpi.total_mr ?? 0) : (kpi.total_dr ?? 0);
-    const selesaiCount = isMr ? (kpi.mr_terpenuhi ?? 0) : (kpi.dr_sudah_dn ?? 0);
-    const belumCount = isMr ? (kpi.mr_belum_terpenuhi ?? 0) : (kpi.dr_belum_dn ?? 0);
+    const rawDocs = data.summary_by_doc || [];
+    const rawItems = data.items || [];
+
+    const totalCount = isMr ? (rawDocs.length || kpi.total_mr || 0) : (kpi.total_dr ?? 0);
+    const tepatWaktuCount = isMr ? rawDocs.filter(d => d.leadtime === 'TEPAT WAKTU').length : 0;
+    const selesaiCount = isMr ? (tepatWaktuCount || kpi.mr_tepat_waktu || kpi.mr_terpenuhi || 0) : (kpi.dr_sudah_dn ?? 0);
+    const tidakTepatCount = isMr ? (totalCount - selesaiCount) : (kpi.dr_belum_dn ?? 0);
+    const belumCount = isMr ? tidakTepatCount : (kpi.dr_belum_dn ?? 0);
+
+    // Hitung persentase MR berdasarkan Tepat Waktu dibanding Total MR (Lead Time Permintaan Bahan)
+    let percentVal = kpi.persentase_selesai || 0;
+    if (isMr && totalCount > 0) {
+        percentVal = Number(((selesaiCount / totalCount) * 100).toFixed(2));
+    }
 
     if (elTotal) elTotal.textContent = Number(totalCount).toLocaleString('id-ID');
     if (elSelesai) elSelesai.textContent = Number(selesaiCount).toLocaleString('id-ID');
     if (elBelum) elBelum.textContent = Number(belumCount).toLocaleString('id-ID');
-    if (elPercent) elPercent.textContent = `${kpi.persentase_selesai || 0}%`;
+    if (elPercent) elPercent.textContent = `${percentVal}%`;
     if (elTotalQty) elTotalQty.textContent = Number(Math.round(kpi.total_jml || 0)).toLocaleString('id-ID');
     if (elTotalRealisasi) elTotalRealisasi.textContent = Number(Math.round(kpi.total_terpenuhi || 0)).toLocaleString('id-ID');
 
@@ -6587,9 +6598,6 @@ function renderWhMatModalData(data) {
     if (lastSyncEl && data.meta?.sync_time) {
         lastSyncEl.textContent = `Sinkron: ${new Date(data.meta.sync_time).toLocaleTimeString('id-ID')}`;
     }
-
-    const rawDocs = data.summary_by_doc || [];
-    const rawItems = data.items || [];
 
     // Update Badges on Sub-view buttons & Tabs
     if (isMr) {
@@ -6614,13 +6622,19 @@ function renderWhMatModalData(data) {
     if (isMr) {
         if (state.whMatMrSubView === 'doc') {
             let filtered = rawDocs.filter(doc => {
+                const isSudah = doc.status_code_ttf === 'sudah' || doc.status_ttf === 'SUDAH' || doc.status_code === 'terpenuhi';
+                if (st === 'sudah' && !isSudah) return false;
+                if (st === 'belum' && isSudah) return false;
                 if (st === 'terpenuhi' && doc.status_code !== 'terpenuhi') return false;
-                if (st === 'belum' && doc.status_code !== 'belum') return false;
+                if (st === 'tepat_waktu' && doc.leadtime !== 'TEPAT WAKTU') return false;
+                if (st === 'belum_kirim' && doc.leadtime !== 'BELUM KIRIM') return false;
+                if (st === 'terlambat' && doc.leadtime !== 'TERLAMBAT') return false;
                 if (!q) return true;
                 return (doc.no_trans || '').toLowerCase().includes(q) ||
                     (doc.lokasi_asal || '').toLowerCase().includes(q) ||
                     (doc.lokasi_tujuan || '').toLowerCase().includes(q) ||
                     (doc.leadtime || '').toLowerCase().includes(q) ||
+                    (doc.status_ttf || '').toLowerCase().includes(q) ||
                     (doc.status_mr || '').toLowerCase().includes(q);
             });
 
@@ -6636,13 +6650,21 @@ function renderWhMatModalData(data) {
             renderWhMatPagination(filtered.length, state.whMatCurrentPage, state.whMatPageSize);
         } else {
             let filtered = rawItems.filter(item => {
+                const isSudah = item.status_code_ttf === 'sudah' || item.status_ttf === 'SUDAH' || item.status_code === 'terpenuhi';
+                if (st === 'sudah' && !isSudah) return false;
+                if (st === 'belum' && isSudah) return false;
                 if (st === 'terpenuhi' && item.status_code !== 'terpenuhi') return false;
-                if (st === 'belum' && item.status_code !== 'belum') return false;
+                if (st === 'tepat_waktu' && (item.leadtime !== 'TEPAT WAKTU' && item.status !== 'TEPAT WAKTU')) return false;
+                if (st === 'belum_kirim' && (item.leadtime !== 'BELUM KIRIM' && item.status !== 'BELUM KIRIM')) return false;
+                if (st === 'terlambat' && (item.leadtime !== 'TERLAMBAT' && item.status !== 'TERLAMBAT')) return false;
                 if (!q) return true;
                 return (item.no_trans || '').toLowerCase().includes(q) ||
                     (item.kode_barang || '').toLowerCase().includes(q) ||
                     (item.nama_barang || '').toLowerCase().includes(q) ||
                     (item.rak || '').toLowerCase().includes(q) ||
+                    (item.leadtime || '').toLowerCase().includes(q) ||
+                    (item.status_ttf || '').toLowerCase().includes(q) ||
+                    (item.status || '').toLowerCase().includes(q) ||
                     (item.lokasi_tujuan || '').toLowerCase().includes(q);
             });
 
@@ -6715,7 +6737,7 @@ function renderWhMatMrDocTable(docs) {
     if (docs.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="12" class="subcon-empty-row">
+                <td colspan="11" class="subcon-empty-row">
                     <i class="fa-solid fa-file-invoice" style="font-size: 2rem; color: #cbd5e1;"></i>
                     <div style="margin-top: 8px; font-weight: 500;">Tidak ada data Dokumen MR yang cocok</div>
                 </td>
@@ -6730,16 +6752,16 @@ function renderWhMatMrDocTable(docs) {
     let html = '';
     pageItems.forEach((doc, idx) => {
         const no = startIdx + idx + 1;
-        const isTerpenuhi = doc.status_code === 'terpenuhi' || doc.status_mr === 'TERPENUHI';
-        const badgeMr = isTerpenuhi
-            ? '<span class="service-status-pill status-live">TERPENUHI</span>'
-            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM TERPENUHI</span>';
+        const isTtfSudah = doc.status_code_ttf === 'sudah' || doc.status_ttf === 'SUDAH' || doc.status_code === 'terpenuhi';
+        const badgeTtf = isTtfSudah
+            ? '<span class="service-status-pill status-live">SUDAH</span>'
+            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM</span>';
 
         let badgeLeadtime = '<span class="service-status-pill status-live">TEPAT WAKTU</span>';
         if (doc.leadtime === 'TERLAMBAT' || doc.status === 'TERLAMBAT') {
             badgeLeadtime = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">TERLAMBAT</span>';
-        } else if (doc.leadtime === 'BELUM DITERIMA' || doc.status === 'BELUM DITERIMA') {
-            badgeLeadtime = '<span class="service-status-pill" style="color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1;">BELUM DITERIMA</span>';
+        } else if (doc.leadtime === 'BELUM KIRIM' || doc.status === 'BELUM KIRIM' || doc.leadtime === 'BELUM DITERIMA' || doc.status === 'BELUM DITERIMA') {
+            badgeLeadtime = '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM KIRIM</span>';
         }
 
         html += `
@@ -6761,9 +6783,8 @@ function renderWhMatMrDocTable(docs) {
                 <td class="text-right font-mono" style="color: var(--kpi-green); font-weight: 600;">${Number(doc.terpenuhi || 0).toLocaleString('id-ID')}</td>
                 <td class="text-right font-mono" style="color: ${doc.sisa > 0 ? '#ef4444' : '#64748b'};">${Number(doc.sisa || 0).toLocaleString('id-ID')}</td>
                 <td class="text-center font-mono" style="font-size: 0.8rem;">${doc.tgl_transfer_label || doc.tgl_transfer || '-'}</td>
-                <td class="text-center font-mono" style="font-size: 0.8rem;">${doc.tgl_terima_label || doc.tgl_terima || '-'}</td>
                 <td class="text-center">${badgeLeadtime}</td>
-                <td class="text-center">${badgeMr}</td>
+                <td class="text-center">${badgeTtf}</td>
             </tr>
         `;
     });
@@ -6778,7 +6799,7 @@ function renderWhMatMrTable(items) {
     if (items.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="15" class="subcon-empty-row">
+                <td colspan="14" class="subcon-empty-row">
                     <i class="fa-solid fa-box-open" style="font-size: 2rem; color: #cbd5e1;"></i>
                     <div style="margin-top: 8px; font-weight: 500;">Tidak ada data Rincian MR yang cocok</div>
                 </td>
@@ -6793,16 +6814,16 @@ function renderWhMatMrTable(items) {
     let html = '';
     pageItems.forEach((item, idx) => {
         const no = startIdx + idx + 1;
-        const isTerpenuhi = item.status_code === 'terpenuhi';
-        const badgeMr = isTerpenuhi
-            ? '<span class="service-status-pill status-live">TERPENUHI</span>'
-            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM TERPENUHI</span>';
+        const isTtfSudah = item.status_code_ttf === 'sudah' || item.status_ttf === 'SUDAH' || item.status_code === 'terpenuhi';
+        const badgeTtf = isTtfSudah
+            ? '<span class="service-status-pill status-live">SUDAH</span>'
+            : '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM</span>';
 
         let badgeLeadtime = '<span class="service-status-pill status-live">TEPAT WAKTU</span>';
-        if (item.status === 'TERLAMBAT') {
+        if (item.leadtime === 'TERLAMBAT' || item.status === 'TERLAMBAT') {
             badgeLeadtime = '<span class="service-status-pill" style="color: #dc2626; background: #fee2e2; border: 1px solid #fecaca;">TERLAMBAT</span>';
-        } else if (item.status !== 'TEPAT WAKTU') {
-            badgeLeadtime = `<span class="service-status-pill" style="color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1;">${item.status}</span>`;
+        } else if (item.leadtime === 'BELUM KIRIM' || item.status === 'BELUM KIRIM' || item.leadtime === 'BELUM DITERIMA' || item.status === 'BELUM DITERIMA') {
+            badgeLeadtime = '<span class="service-status-pill" style="color: #d97706; background: #fef3c7; border: 1px solid #fde68a;">BELUM KIRIM</span>';
         }
 
         html += `
@@ -6819,9 +6840,8 @@ function renderWhMatMrTable(items) {
                 <td class="text-right font-mono" style="color: var(--kpi-green); font-weight: 600;">${Number(item.terpenuhi || 0).toLocaleString('id-ID')}</td>
                 <td class="text-right font-mono" style="color: ${item.sisa > 0 ? '#ef4444' : '#64748b'};">${Number(item.sisa || 0).toLocaleString('id-ID')}</td>
                 <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_transfer_label || item.tgl_transfer || '-'}</td>
-                <td class="text-center font-mono" style="font-size: 0.8rem;">${item.tgl_terima_label || item.tgl_terima || '-'}</td>
                 <td class="text-center">${badgeLeadtime}</td>
-                <td class="text-center">${badgeMr}</td>
+                <td class="text-center">${badgeTtf}</td>
             </tr>
         `;
     });

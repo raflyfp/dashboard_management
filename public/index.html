@@ -924,11 +924,11 @@
                                 <span class="m-val" id="totalWH_MAT">0</span>
                             </div>
                             <div class="metric-box m-success">
-                                <span class="m-lbl">Terpenuhi</span>
+                                <span class="m-lbl">Tepat Waktu</span>
                                 <span class="m-val text-success" id="selesaiWH_MAT">0</span>
                             </div>
                             <div class="metric-box m-warning">
-                                <span class="m-lbl">Belum</span>
+                                <span class="m-lbl">Belum/Lambat</span>
                                 <span class="m-val text-warning" id="belumWH_MAT">0</span>
                             </div>
                         </div>
@@ -4253,7 +4253,7 @@
                         <div class="kpi-icon-mini text-success"><i class="fa-solid fa-circle-check"></i></div>
                         <div>
                             <div class="kpi-num text-success" id="modalKpiWhMatSelesai">0</div>
-                            <div class="kpi-label"><span id="modalKpiWhMatSelesaiLbl">Terpenuhi</span> (<span
+                            <div class="kpi-label"><span id="modalKpiWhMatSelesaiLbl">Tepat Waktu</span> (<span
                                     id="modalKpiWhMatPercent">0%</span>)</div>
                         </div>
                     </div>
@@ -4261,7 +4261,7 @@
                         <div class="kpi-icon-mini text-warning"><i class="fa-solid fa-clock-rotate-left"></i></div>
                         <div>
                             <div class="kpi-num text-warning" id="modalKpiWhMatBelum">0</div>
-                            <div class="kpi-label" id="modalKpiWhMatBelumLbl">Belum Terpenuhi</div>
+                            <div class="kpi-label" id="modalKpiWhMatBelumLbl">Belum / Terlambat</div>
                         </div>
                     </div>
                     <div class="subcon-kpi-card">
@@ -4300,8 +4300,11 @@
                         <select id="selectWhMatStatus" class="purchasing-select"
                             onchange="switchWhMatStatus(this.value)">
                             <option value="all">Semua Status</option>
-                            <option value="terpenuhi">Terpenuhi / Sudah DN Saja</option>
-                            <option value="belum">Belum Terpenuhi / Pending Saja</option>
+                            <option value="sudah">Status TTF: Sudah</option>
+                            <option value="belum">Status TTF: Belum</option>
+                            <option value="tepat_waktu">Leadtime: Tepat Waktu</option>
+                            <option value="belum_kirim">Leadtime: Belum Kirim</option>
+                            <option value="terlambat">Leadtime: Terlambat</option>
                         </select>
                     </div>
                 </div>
@@ -4312,7 +4315,7 @@
                     <div style="display: flex; align-items: center; gap: 8px; margin: 0.4rem 0 0.6rem;">
                         <button class="filter-pill active" id="btnSubViewWhMatMrDoc"
                             onclick="switchWhMatMrSubView('doc')">
-                            <i class="fa-solid fa-file-invoice"></i> Dokumen MR (<span id="countSubViewMrDoc">0</span>
+                            <i class="fa-solid fa-file-invoice"></i> List MR (<span id="countSubViewMrDoc">0</span>
                             MR)
                         </button>
                         <button class="filter-pill" id="btnSubViewWhMatMrItem" onclick="switchWhMatMrSubView('item')">
@@ -4356,23 +4359,19 @@
                                         onclick="sortWhMat('mr_doc', 'tgl_transfer')">
                                         Tgl Transfer <i class="fa-solid fa-sort sort-icon"></i>
                                     </th>
-                                    <th style="width: 95px;" class="text-center sortable-th"
-                                        onclick="sortWhMat('mr_doc', 'tgl_terima')">
-                                        Tgl Terima <i class="fa-solid fa-sort sort-icon"></i>
-                                    </th>
                                     <th style="width: 105px;" class="text-center sortable-th"
                                         onclick="sortWhMat('mr_doc', 'leadtime')">
                                         Leadtime <i class="fa-solid fa-sort sort-icon"></i>
                                     </th>
                                     <th style="width: 110px;" class="text-center sortable-th"
-                                        onclick="sortWhMat('mr_doc', 'status_mr')">
-                                        Status MR <i class="fa-solid fa-sort sort-icon"></i>
+                                        onclick="sortWhMat('mr_doc', 'status_ttf')">
+                                        Status TTF <i class="fa-solid fa-sort sort-icon"></i>
                                     </th>
                                 </tr>
                             </thead>
                             <tbody id="whMatMrDocTableBody">
                                 <tr class="skeleton-row">
-                                    <td colspan="12" class="text-center">Memuat data...</td>
+                                    <td colspan="11" class="text-center">Memuat data...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -4408,20 +4407,19 @@
                                     </th>
                                     <th style="width: 60px;" class="text-right">Sisa</th>
                                     <th style="width: 85px;" class="text-center">Tgl Transfer</th>
-                                    <th style="width: 85px;" class="text-center">Tgl Terima</th>
                                     <th style="width: 95px;" class="text-center sortable-th"
                                         onclick="sortWhMat('mr', 'status')">
                                         Leadtime <i class="fa-solid fa-sort sort-icon"></i>
                                     </th>
                                     <th style="width: 100px;" class="text-center sortable-th"
-                                        onclick="sortWhMat('mr', 'status_mr')">
-                                        Status MR <i class="fa-solid fa-sort sort-icon"></i>
+                                        onclick="sortWhMat('mr', 'status_ttf')">
+                                        Status TTF <i class="fa-solid fa-sort sort-icon"></i>
                                     </th>
                                 </tr>
                             </thead>
                             <tbody id="whMatMrTableBody">
                                 <tr class="skeleton-row">
-                                    <td colspan="15" class="text-center">Memuat data...</td>
+                                    <td colspan="14" class="text-center">Memuat data...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -4587,7 +4585,7 @@
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=2.12.0"></script>
+    <script src="/js/app.js?v=2.12.4"></script>
 </body>
 
 </html>

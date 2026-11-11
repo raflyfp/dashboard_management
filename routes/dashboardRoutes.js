@@ -741,11 +741,13 @@ async function buildDashboardStats(customDates, forceRefresh = false) {
             catatan: 'Realisasi DR lain & DR customer paskot serta realisasi permintaan bahan (MR)',
             icon: 'dolly',
             is_active: Boolean(whMatKpi.total_mr > 0 || (whMatData && whMatData.success)),
-            metric_labels: { total: 'Total MR', selesai: 'Terpenuhi', belum: 'Belum' },
+            metric_labels: { total: 'Total MR', selesai: 'Tepat Waktu', belum: 'Belum/Lambat' },
             unit: 'MR',
             total_tiket: whMatKpi.total_mr ?? 0,
-            selesai: whMatKpi.mr_terpenuhi ?? 0,
-            belum_selesai: whMatKpi.mr_belum_terpenuhi ?? 0,
+            selesai: whMatKpi.mr_tepat_waktu ?? whMatKpi.mr_terpenuhi ?? 0,
+            belum_selesai: (whMatKpi.mr_belum_kirim !== undefined && whMatKpi.mr_terlambat !== undefined)
+                ? (whMatKpi.mr_belum_kirim + whMatKpi.mr_terlambat)
+                : (whMatKpi.mr_belum_terpenuhi ?? 0),
             persentase_selesai: whMatData?.persentase_selesai ?? whMatKpi.persentase_selesai ?? 0,
             persentase_mr: whMatData?.persentase_mr ?? whMatKpi.persentase_mr ?? (whMatData?.month?.persentase_selesai ?? 0),
             persentase_dr: whMatData?.persentase_dr ?? whMatKpi.persentase_dr ?? (whMatData?.dr_month?.persentase_selesai ?? 0),
