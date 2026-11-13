@@ -67,7 +67,11 @@ const RING_CIRCUMFERENCE = 251.32;
 const state = {
     refreshInterval: 30,    // Interval refresh bawaan (detik)
     retryInterval: 5,       // Interval retry cepat saat error / reconnect (detik)
-    countdownTimer: 15,     // Hitung mundur detik
+    countdownTimer: 30,     // Hitung mundur detik
+    nextRefreshTime: 0,     // Target timestamp refresh berikutnya (wall-clock based)
+    lastFetchSuccessTime: 0,// Timestamp fetch sukses terakhir
+    fetchStartTime: 0,      // Timestamp mulai fetch saat ini (watchdog)
+    activeFetchController: null, // AbortController request aktif saat ini
     timerId: null,          // Referensi interval timer
     isFetching: false,      // Penanda sedang memuat
     isOffline: false,       // Status jaringan sedang offline / reconnect
@@ -611,11 +615,14 @@ function initModalDatePickers() {
 // ====================================================================
 // 2. JAM DIGITAL & TANGGAL (WAKTU INDONESIA)
 // ====================================================================
+let updateDigitalClock = null;
+
 function initClock() {
     const clockEl = document.getElementById('digitalClock');
     const dateEl = document.getElementById('digitalDate');
 
-    function updateTime() {
+    updateDigitalClock = function() {
+        if (!clockEl || !dateEl) return;
         const now = new Date();
 
         // Format Waktu: HH:MM:SS WIB
@@ -627,10 +634,10 @@ function initClock() {
         // Format Hari dan Tanggal Bahasa Indonesia
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         dateEl.textContent = now.toLocaleDateString('id-ID', options);
-    }
+    };
 
-    updateTime();
-    setInterval(updateTime, 1000);
+    updateDigitalClock();
+    setInterval(updateDigitalClock, 1000);
 }
 
 // ====================================================================
@@ -764,33 +771,158 @@ function initEventListeners() {
         fetchDashboardStats(true);
     });
 
-    // Auto-sync saat tab browser aktif kembali (misalnya display TV atau pengguna kembali ke tab)
+    // Auto-sync & Wakeup Cerdas saat tab browser aktif kembali
+    // (Mencakup: ganti tab, buka kembali jendela yang diminimalkan, display TV, laptop wake-up dari sleep)
+    const triggerTabWakeup = (source) => {
+        handleTabWakeup(source);
+    };
+
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-            fetchDashboardStats(false);
+            triggerTabWakeup('visibilitychange');
         }
+    });
+
+    window.addEventListener('focus', () => {
+        triggerTabWakeup('window-focus');
+    });
+
+    window.addEventListener('pageshow', () => {
+        triggerTabWakeup('pageshow');
     });
 }
 
+/**
+ * Penanganan saat tab/jendela kembali aktif (Wakeup Handler)
+ * Memastikan jam digital sinkron seketika dan data yang usang langsung diperbarui tanpa stuck
+ */
+function handleTabWakeup(source = 'visibilitychange') {
+    if (document.visibilityState === 'hidden') return;
+
+    // 1. Langsung sinkronkan jam digital seketika tanpa menunggu interval
+    if (typeof updateDigitalClock === 'function') {
+        updateDigitalClock();
+    }
+
+    const now = Date.now();
+    const elapsed = now - (state.lastFetchSuccessTime || 0);
+
+    // 2. Watchdog Recovery: Jika ada fetch sebelumnya yang menggantung saat tab tidur, batalkan paksa
+    if (state.isFetching) {
+        console.warn(`⚠️ [Wakeup (${source})]: Request lama terdeteksi menggantung di background, mereset status isFetching...`);
+        if (state.activeFetchController) {
+            try { state.activeFetchController.abort('WAKEUP_FORCE'); } catch (_) {}
+            state.activeFetchController = null;
+        }
+        state.isFetching = false;
+    }
+
+    // 3. Jika data sudah kedaluwarsa (> interval refresh) atau belum pernah memuat atau sedang offline:
+    // Segera ambil data terbaru seketika tanpa menunggu sisa hitung mundur!
+    const isStale = elapsed >= (state.refreshInterval * 1000) || state.isOffline || !state.servicesData;
+    if (isStale) {
+        console.log(`🔄 [Wakeup (${source})]: Tab dibuka kembali, data usang (${Math.round(elapsed / 1000)}s lalu). Memperbarui seketika...`);
+        fetchDashboardStats(false, false, true);
+    }
+
+    // 4. Reset target hitung mundur berbasis waktu nyata (wall-clock)
+    state.nextRefreshTime = Date.now() + ((state.isOffline ? state.retryInterval : state.refreshInterval) * 1000);
+    state.countdownTimer = state.isOffline ? state.retryInterval : state.refreshInterval;
+    updateCountdownUI();
+}
+
+/**
+ * Worker Heartbeat: Berjalan di background thread terpisah tanpa terkena pembatasan (throttling) browser
+ * saat tab diminimalkan atau pengguna membuka tab lain.
+ */
+let bgWorker = null;
+function initBackgroundWorker() {
+    try {
+        const workerBlob = new Blob([`
+            let timer = null;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    if (timer) clearInterval(timer);
+                    timer = setInterval(function() {
+                        self.postMessage('tick');
+                    }, 1000);
+                } else if (e.data === 'stop') {
+                    if (timer) clearInterval(timer);
+                    timer = null;
+                }
+            };
+        `], { type: 'application/javascript' });
+
+        const workerUrl = URL.createObjectURL(workerBlob);
+        bgWorker = new Worker(workerUrl);
+        bgWorker.onmessage = function() {
+            handleTimerTick();
+        };
+        bgWorker.postMessage('start');
+        console.log('⚡ [Background Worker]: Worker heartbeat aktif (anti-freeze background tab)');
+    } catch (e) {
+        console.warn('⚠️ [Background Worker]: Web Worker tidak aktif, menggunakan fallback timer:', e.message);
+    }
+}
+
+/**
+ * Evaluasi per detik timer & hitung mundur berbasis Wall-Clock Time
+ * (Tidak akan mengalami timer drift walau tab browser diminimalkan berjam-jam)
+ */
+function handleTimerTick() {
+    if (typeof updateDigitalClock === 'function') {
+        updateDigitalClock();
+    }
+
+    const now = Date.now();
+
+    // Watchdog safety: Jika status isFetching menggantung lebih dari 35 detik, pulihkan secara mandiri
+    if (state.isFetching && state.fetchStartTime && (now - state.fetchStartTime > 35000)) {
+        console.warn('⚠️ [Watchdog]: Request menggantung >35 detik, membatalkan dan memulihkan status isFetching...');
+        if (state.activeFetchController) {
+            try { state.activeFetchController.abort('WATCHDOG_TIMEOUT'); } catch (_) {}
+            state.activeFetchController = null;
+        }
+        state.isFetching = false;
+    }
+
+    if (!state.nextRefreshTime) {
+        state.nextRefreshTime = now + ((state.isOffline ? state.retryInterval : state.refreshInterval) * 1000);
+    }
+
+    const remainingMs = state.nextRefreshTime - now;
+    state.countdownTimer = Math.max(0, Math.ceil(remainingMs / 1000));
+    updateCountdownUI();
+
+    if (now >= state.nextRefreshTime) {
+        state.nextRefreshTime = now + ((state.isOffline ? state.retryInterval : state.refreshInterval) * 1000);
+        fetchDashboardStats();
+    }
+}
+
 // ====================================================================
-// 4. LOGIKA AUTO-REFRESH & HITUNG MUNDUR (COUNTDOWN & FAST RECONNECT)
+// 4. LOGIKA AUTO-REFRESH & HITUNG MUNDUR (WALL-CLOCK & ANTI-FREEZE)
 // ====================================================================
 function startAutoRefresh() {
     if (state.timerId) clearInterval(state.timerId);
 
+    state.nextRefreshTime = Date.now() + (state.refreshInterval * 1000);
     state.countdownTimer = state.refreshInterval;
     updateCountdownUI();
 
+    // Fallback timer di thread utama
     state.timerId = setInterval(() => {
-        state.countdownTimer--;
-        updateCountdownUI();
-
-        if (state.countdownTimer <= 0) {
-            // Jika sedang offline gunakan retry cepat (5s), jika normal gunakan interval normal (15s)
-            state.countdownTimer = state.isOffline ? state.retryInterval : state.refreshInterval;
-            fetchDashboardStats();
+        if (!bgWorker) {
+            handleTimerTick();
+        } else {
+            updateCountdownUI();
         }
     }, 1000);
+
+    // Inisialisasi background worker agar tab tidak pernah throttle saat di-minimize atau switch tab
+    if (!bgWorker && typeof Worker !== 'undefined') {
+        initBackgroundWorker();
+    }
 }
 
 function updateCountdownUI() {
@@ -815,20 +947,31 @@ function updateCountdownUI() {
 // ====================================================================
 // 5. MENGAMBIL DATA DARI EXPRESS API (/api/dashboard/stats)
 // ====================================================================
-async function fetchDashboardStats(force = false, isPeriodSwitch = false) {
+async function fetchDashboardStats(force = false, isPeriodSwitch = false, isWakeup = false) {
+    const now = Date.now();
+
+    // Stuck Recovery: Jika isFetching tertahan tapi sudah >30 detik atau ada pemicu baru (period/wakeup/force)
     if (state.isFetching) {
-        if (!isPeriodSwitch) return;
-        // Jika pengguna baru saja mengganti bulan/periode di header, batalkan request lama yang sedang berjalan
-        if (state.activeFetchController) {
-            try { state.activeFetchController.abort('PERIOD_SWITCH'); } catch (_) {}
+        const isStuck = state.fetchStartTime && (now - state.fetchStartTime > 30000);
+        if (isPeriodSwitch || isWakeup || isStuck || force) {
+            console.warn('⚠️ [fetchDashboardStats]: Request sebelumnya dibatalkan untuk memulai pembaruan baru...');
+            if (state.activeFetchController) {
+                try { state.activeFetchController.abort('SUPERSEDED'); } catch (_) {}
+                state.activeFetchController = null;
+            }
+            state.isFetching = false;
+        } else {
+            return; // Request wajar sedang berjalan
         }
     }
+
     state.isFetching = true;
+    state.fetchStartTime = now;
 
     const refreshIcon = document.getElementById('refreshIcon');
     if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
-    // Timeout 35 detik dengan AbortController agar penarikan bulan historis (31 hari penuh) dari ERP tidak terputus prematur
+    // Timeout 35 detik dengan AbortController agar penarikan bulan historis (31 hari penuh) tidak terputus prematur
     const controller = new AbortController();
     state.activeFetchController = controller;
     const timeoutId = setTimeout(() => controller.abort('TIMEOUT'), 35000);
@@ -852,8 +995,9 @@ async function fetchDashboardStats(force = false, isPeriodSwitch = false) {
             throw new Error(data.message || 'Gagal memuat data dari server');
         }
 
-        // Tandai koneksi pulih jika sebelumnya offline
+        // Tandai koneksi pulih & catat waktu sukses terakhir
         state.isOffline = false;
+        state.lastFetchSuccessTime = Date.now();
 
         // Simpan data layanan ke state lokal
         state.servicesData = data.layanan;
@@ -865,7 +1009,8 @@ async function fetchDashboardStats(force = false, isPeriodSwitch = false) {
         try { applyCardDisplayOrder(); } catch (e) { console.error('Error applyCardDisplayOrder:', e); }
         updateSystemStatus(true, Boolean(data._cached));
 
-        // Reset hitung mundur normal setelah fetch sukses
+        // Reset hitung mundur normal setelah fetch sukses berbasis wall-clock
+        state.nextRefreshTime = Date.now() + (state.refreshInterval * 1000);
         state.countdownTimer = state.refreshInterval;
         updateCountdownUI();
 
@@ -881,6 +1026,7 @@ async function fetchDashboardStats(force = false, isPeriodSwitch = false) {
 
         state.isOffline = true;
         // Atur interval retry cepat (5 detik)
+        state.nextRefreshTime = Date.now() + (state.retryInterval * 1000);
         state.countdownTimer = state.retryInterval;
         updateSystemStatus(false);
         updateCountdownUI();
