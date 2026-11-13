@@ -74,6 +74,8 @@ const state = {
     currentServiceModal: null, // Layanan yang sedang dibuka di modal tiket
     currentModalFilter: 'all',  // Filter di modal: all / selesai / belum / ditolak
     ticketSearchQuery: '',  // Pencarian kata kunci di modal tiket
+    ticketCurrentPage: 1,   // Halaman aktif modal tiket
+    ticketPageSize: 10,     // Ukuran per halaman modal tiket
     modalRawTickets: [],    // Data mentah tiket yang sedang dibuka
     servicesData: null,     // Cache data statistik 10 layanan terakhir
     ticketCache: {},        // Cache in-memory tiket per layanan untuk loading instan
@@ -1542,6 +1544,8 @@ async function openTicketModal(serviceCode, serviceTitle) {
 
     if (modal) modal.classList.add('active');
 
+    state.ticketCurrentPage = 1;
+
     // Ambil data tiket untuk tab aktif (default: 'all')
     await loadModalTickets(serviceCode, 'all');
 }
@@ -1550,7 +1554,10 @@ async function loadModalTickets(serviceCode, filterStatus = 'all', force = false
     let queryStatus = filterStatus;
     if (filterStatus === 'ditolak') queryStatus = 'rejected';
 
-    const cacheKey = `${serviceCode}_${queryStatus}`;
+    const selectedMonth = state.selectedMonth || (new Date().getMonth() + 1);
+    const selectedYear = state.selectedYear || new Date().getFullYear();
+
+    const cacheKey = `${serviceCode}_${queryStatus}_${selectedYear}_${selectedMonth}`;
     if (!state.ticketCache) state.ticketCache = {};
     const cached = state.ticketCache[cacheKey];
 
@@ -1567,7 +1574,7 @@ async function loadModalTickets(serviceCode, filterStatus = 'all', force = false
 
     try {
         const forceParam = force ? '&force=true' : '';
-        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=all${forceParam}`;
+        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=all&bulan=${selectedMonth}&tahun=${selectedYear}${forceParam}`;
         const response = await fetch(url);
         const json = await response.json();
 
@@ -1616,6 +1623,7 @@ async function refreshModalTickets() {
 
 function filterModalTickets(filterType) {
     state.currentModalFilter = filterType;
+    state.ticketCurrentPage = 1;
 
     // Update class active pada tab pills di modal tiket
     document.querySelectorAll('#ticketModal .filter-pill').forEach(btn => {
@@ -1633,6 +1641,7 @@ function filterModalTickets(filterType) {
 function resetTicketModalFilter() {
     state.currentModalFilter = 'all';
     state.ticketSearchQuery = '';
+    state.ticketCurrentPage = 1;
     state.ticketSort = { column: 'tanggal', dir: 'desc' };
 
     const searchInput = document.getElementById('ticketSearchInput');
@@ -1651,6 +1660,7 @@ function resetTicketModalFilter() {
 
 function handleSearchTickets(keyword) {
     state.ticketSearchQuery = keyword;
+    state.ticketCurrentPage = 1;
     renderFilteredTickets();
 }
 
@@ -1701,6 +1711,7 @@ function sortTicketTable(column) {
         state.ticketSort.column = column;
         state.ticketSort.dir = column === 'tanggal' ? 'desc' : 'asc';
     }
+    state.ticketCurrentPage = 1;
     updateTicketSortHeaders();
     renderFilteredTickets();
 }
@@ -1735,12 +1746,23 @@ function updateTicketSortHeaders() {
 function renderTicketsTable(tickets) {
     const tbody = document.getElementById('ticketsTableBody');
     const statsText = document.getElementById('modalStatsText');
+    if (!tbody) return;
+
+    const totalItems = (tickets || []).length;
+    const pageSize = state.ticketPageSize || 10;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if ((state.ticketCurrentPage || 1) > totalPages) {
+        state.ticketCurrentPage = totalPages;
+    }
+    const page = state.ticketCurrentPage || 1;
+    const startIdx = (page - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
 
     if (statsText) {
-        statsText.textContent = `Menampilkan ${tickets.length} tiket`;
+        statsText.textContent = totalItems > 0
+            ? `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} tiket`
+            : `Menampilkan 0 tiket`;
     }
-
-    if (!tbody) return;
 
     if (!tickets || tickets.length === 0) {
         tbody.innerHTML = `
@@ -1751,10 +1773,13 @@ function renderTicketsTable(tickets) {
                 </td>
             </tr>
         `;
+        renderTicketPagination(0, 1, pageSize);
         return;
     }
 
-    tbody.innerHTML = tickets.map(t => {
+    const paginatedTickets = tickets.slice(startIdx, endIdx);
+
+    tbody.innerHTML = paginatedTickets.map(t => {
         const badgeInfo = getStatusBadge(t.status, t.status_label);
 
         // Aturan: Jika kategori belum diisi atau 'biasa' -> tampilkan strip '-'
@@ -1778,6 +1803,102 @@ function renderTicketsTable(tickets) {
             </tr>
         `;
     }).join('');
+
+    renderTicketPagination(totalItems, page, pageSize);
+}
+
+function renderTicketPagination(totalItems, currentPage, pageSize) {
+    const pageInfo = document.getElementById('ticketPageInfo');
+    const btnPrev = document.getElementById('btnTicketPrevPage');
+    const btnNext = document.getElementById('btnTicketNextPage');
+    if (!pageInfo && !btnPrev && !btnNext) return;
+
+    const pSize = pageSize || state.ticketPageSize || 10;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pSize));
+    const cPage = currentPage || state.ticketCurrentPage || 1;
+
+    if (pageInfo) {
+        pageInfo.textContent = getPaginationInfoText(cPage, totalPages, totalItems, pSize);
+    }
+    if (btnPrev) btnPrev.disabled = cPage <= 1;
+    if (btnNext) btnNext.disabled = cPage >= totalPages;
+}
+
+function changeTicketPage(delta) {
+    state.ticketCurrentPage = (state.ticketCurrentPage || 1) + delta;
+    renderFilteredTickets();
+}
+
+function changeTicketPageSize(val) {
+    state.ticketPageSize = parseInt(val, 10) || 10;
+    state.ticketCurrentPage = 1;
+    renderFilteredTickets();
+}
+
+function changeSubconPageSize(val) {
+    state.subconPageSize = parseInt(val, 10) || 10;
+    state.subconCurrentPage = 1;
+    renderSubconFilteredTables();
+}
+
+function changePurchasingPageSize(val) {
+    state.purchasingPageSize = parseInt(val, 10) || 10;
+    state.purchasingCurrentPage = 1;
+    if (state.purchasingRawData) renderPurchasingModalData(state.purchasingRawData);
+}
+
+function changeProduksiPageSize(val) {
+    state.produksiPageSize = parseInt(val, 10) || 10;
+    state.produksiCurrentPage = 1;
+    if (state.produksiRawData) renderProduksiUI(state.produksiRawData);
+}
+
+function changeLogistikPageSize(val) {
+    state.logistikPageSize = parseInt(val, 10) || 10;
+    state.logistikCurrentPage = 1;
+    if (state.logistikRawData) renderLogistikModalData(state.logistikRawData);
+}
+
+function changeQaPageSize(val) {
+    state.qaPageSize = parseInt(val, 10) || 10;
+    state.qaCurrentPage = 1;
+    if (state.qaRawData) renderQaModalData(state.qaRawData);
+}
+
+function changeWhFgPageSize(val) {
+    state.whFgPageSize = parseInt(val, 10) || 10;
+    state.whFgCurrentPage = 1;
+    if (state.whFgRawData) renderWhFgModalData(state.whFgRawData);
+}
+
+function changeWhMatPageSize(val) {
+    state.whMatPageSize = parseInt(val, 10) || 10;
+    state.whMatCurrentPage = 1;
+    if (state.whMatRawData) renderWhMatModalData(state.whMatRawData);
+}
+
+function changePbfPageSize(val) {
+    state.pbfPageSize = parseInt(val, 10) || 10;
+    state.pbfCurrentPage = 1;
+    if (state.pbfRawData) renderPbfModalData(state.pbfRawData);
+}
+
+function changeHrPageSize(val) {
+    state.hrPageSize = parseInt(val, 10) || 10;
+    state.hrCurrentPage = 1;
+    if (state.hrRawData) renderHrModalData(state.hrRawData);
+}
+
+function changeDevPageSize(val) {
+    state.devPageSize = parseInt(val, 10) || 10;
+    state.devCurrentPage = 1;
+    if (typeof filterAndRenderDevTable === 'function') filterAndRenderDevTable();
+}
+
+function changeDcPageSize(val) {
+    state.dcPageSize = parseInt(val, 10) || 10;
+    state.dcCurrentPage = 1;
+    if (typeof filterAndRenderDcTable === 'function') filterAndRenderDcTable();
 }
 
 function renderTicketTableLoading(rowCount = 6) {

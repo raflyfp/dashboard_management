@@ -1387,9 +1387,28 @@
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <div class="modal-stats" id="modalStatsText">
-                    Menampilkan 0 tiket
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div class="purchasing-pagination-bar" id="ticketPaginationBar" style="flex: 1; margin: 0; padding: 0; border: none; background: transparent;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                        <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeTicketPageSize(this.value)">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="pagination-info-text" id="ticketPageInfo">
+                        Halaman 1 dari 1 (0 Data)
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="filter-pill" id="btnTicketPrevPage" onclick="changeTicketPage(-1)" disabled>
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <button class="filter-pill" id="btnTicketNextPage" onclick="changeTicketPage(1)" disabled>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
                 <button class="btn-secondary" onclick="closeTicketModal()">Tutup</button>
             </div>
@@ -1609,6 +1628,15 @@
                         </div>
                         <!-- Pagination Controls Subcon -->
                         <div class="purchasing-pagination-bar" id="subconPaginationBar">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                                <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeSubconPageSize(this.value)">
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
                             <div class="pagination-info-text" id="subconPageInfo">
                                 Halaman 1 dari 1 (0 Data)
                             </div>
@@ -2028,6 +2056,15 @@
 
                     <!-- Pagination Controls -->
                     <div class="purchasing-pagination-bar" id="purchasingPaginationBar">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                            <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changePurchasingPageSize(this.value)">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
                         <div class="pagination-info-text" id="purchasingPageInfo">
                             Halaman 1 dari 1 (0 Data)
                         </div>
@@ -2371,6 +2408,15 @@
 
                     <!-- Pagination Controls QA -->
                     <div class="purchasing-pagination-bar" id="qaPaginationBar">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                            <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeQaPageSize(this.value)">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
                         <div class="pagination-info-text" id="qaPageInfo">
                             Halaman 1 dari 1 (0 Data)
                         </div>
@@ -2616,6 +2662,15 @@
 
                     <!-- Pagination Bar PBF -->
                     <div class="purchasing-pagination-bar" id="pbfPaginationBar">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                            <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changePbfPageSize(this.value)">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
                         <div class="pagination-info-text" id="pbfPageInfo">
                             Halaman 1 dari 1 (0 Data)
                         </div>
@@ -2843,6 +2898,15 @@
 
                     <!-- Pagination Controls HR -->
                     <div class="purchasing-pagination-bar" id="hrPaginationBar">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                            <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeHrPageSize(this.value)">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
                         <div class="pagination-info-text" id="hrPageInfo">
                             Halaman 1 dari 1 (0 Data)
                         </div>
@@ -3029,6 +3093,15 @@
 
                 <!-- Pagination Bar Development -->
                 <div class="purchasing-pagination-bar" id="devPaginationBar">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                        <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeDevPageSize(this.value)">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
                     <div class="pagination-info-text" id="devPageInfo">
                         Halaman 1 dari 1 (0 Data)
                     </div>
@@ -3213,6 +3286,15 @@
 
                 <!-- Pagination Bar DC -->
                 <div class="purchasing-pagination-bar" id="dcPaginationBar">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                        <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeDcPageSize(this.value)">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
                     <div class="pagination-info-text" id="dcPageInfo">
                         Halaman 1 dari 1 (0 Data)
                     </div>
@@ -3470,6 +3552,15 @@
 
                     <!-- Pagination Bar -->
                     <div class="purchasing-pagination-bar" id="produksiPaginationBar">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                            <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeProduksiPageSize(this.value)">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
                         <div class="pagination-info-text" id="produksiPageInfo">
                             Halaman 1 dari 1 (0 Data)
                         </div>
@@ -3828,6 +3919,15 @@
 
                 <!-- Baris Navigasi Pagination & Info Baris -->
                 <div class="purchasing-pagination-bar" id="logistikPaginationBar">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                        <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeLogistikPageSize(this.value)">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
                     <div class="pagination-info-text" id="logistikPageInfo">
                         Halaman 1 dari 1 (0 Data)
                     </div>
@@ -4116,6 +4216,15 @@
 
                 <!-- Baris Navigasi Pagination -->
                 <div class="purchasing-pagination-bar" id="whFgPaginationBar">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                        <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeWhFgPageSize(this.value)">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
                     <div class="pagination-info-text" id="whFgPageInfo">
                         Halaman 1 dari 1 (0 Data)
                     </div>
@@ -4545,6 +4654,15 @@
 
                 <!-- Baris Navigasi Pagination -->
                 <div class="purchasing-pagination-bar" id="whMatPaginationBar">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.78rem; color: var(--text-muted);">Tampilkan:</span>
+                        <select class="purchasing-select page-size-select" style="padding: 2px 6px; font-size: 0.78rem; height: auto;" onchange="changeWhMatPageSize(this.value)">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
                     <div class="pagination-info-text" id="whMatPageInfo">
                         Halaman 1 dari 1 (0 Data)
                     </div>
@@ -4585,7 +4703,7 @@
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=2.12.4"></script>
+    <script src="/js/app.js?v=2.12.5"></script>
 </body>
 
 </html>

@@ -16,6 +16,7 @@ const config = require('../config/app.config');
 // In-memory cache untuk meminimalkan beban request ke server ticketing
 const cache = {
     summary: { data: null, timestamp: 0 },
+    summaries: new Map(), // key: YYYY-MM -> { data, timestamp }
     tickets: new Map(), // key: cacheKey -> { data, timestamp }
 };
 
@@ -54,59 +55,98 @@ const httpClient = axios.create({
 const ticketingService = {
     /**
      * Mengambil ringkasan statistik (summary) monitoring ticketing
+     * Mendukung filter per bulan sesuai pemilihan periode dashboard
      * Mengembalikan data KPI dan layanan_monitoring { IT, TK, GA }
      */
-    async getSummary(force = false) {
+    async getSummary(force = false, customDates = null) {
         const now = Date.now();
-        if (!force && cache.summary.data && (now - cache.summary.timestamp < SUMMARY_CACHE_TTL_MS)) {
-            return cache.summary.data;
+
+        // Tentukan target bulan (format YYYY-MM)
+        let targetMonthStr = '';
+        if (customDates) {
+            if (customDates.tglawal) {
+                targetMonthStr = customDates.tglawal.slice(0, 7);
+            } else if (customDates.tahun && customDates.bulan) {
+                targetMonthStr = `${customDates.tahun}-${String(customDates.bulan).padStart(2, '0')}`;
+            }
+        }
+        if (!targetMonthStr) {
+            const nowObj = new Date();
+            targetMonthStr = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}`;
         }
 
-        const targetUrl = buildTicketingUrl();
-        const response = await httpClient.get(targetUrl);
-        const json = response.data;
-
-        if (!json || !json.success) {
-            throw new Error(json?.message || 'Gagal memuat summary dari API Monitoring Ticketing');
+        const cacheKey = `summary_${targetMonthStr}`;
+        if (!force && cache.summaries && cache.summaries.has(cacheKey)) {
+            const cached = cache.summaries.get(cacheKey);
+            if (now - cached.timestamp < SUMMARY_CACHE_TTL_MS) {
+                return cached.data;
+            }
         }
 
-        const rawData = json.data || {};
+        // Ambil tiket seluruh layanan secara paralel untuk agregasi bulanan yang akurat
+        const services = ['IT', 'TK', 'GA'];
+        const ticketsByService = {};
+        await Promise.all(services.map(async (srv) => {
+            try {
+                const res = await ticketingService.getTickets({ service: srv, status: 'all', limit: 'all', force });
+                ticketsByService[srv] = res.tickets || res.data || [];
+            } catch (err) {
+                console.warn(`[TICKETING] Gagal fetch tiket ${srv}:`, err.message);
+                ticketsByService[srv] = [];
+            }
+        }));
 
-        // Bentuk layanan_monitoring map { IT: {...}, TK: {...}, GA: {...} }
-        // agar kompatibel langsung dengan dashboardRoutes & frontend
         const layananMap = {};
-        if (Array.isArray(rawData.per_layanan)) {
-            rawData.per_layanan.forEach(item => {
-                if (item && item.kode) {
-                    layananMap[item.kode] = {
-                        ...item,
-                        total_tiket: item.total_tiket ?? 0,
-                        selesai: item.selesai ?? 0,
-                        belum_selesai: item.belum_selesai ?? 0,
-                        ditolak: item.ditolak ?? 0,
-
-                        persentase_selesai: item.persentase_selesai ?? 0,
-                    };
-                }
+        for (const srv of services) {
+            const allTickets = ticketsByService[srv] || [];
+            // Filter tiket sesuai target bulan (YYYY-MM)
+            const monthTickets = allTickets.filter(t => {
+                const dt = (t.tanggal || t.created_at || '').trim();
+                return dt.startsWith(targetMonthStr);
             });
+
+            const total = monthTickets.length;
+            const selesai = monthTickets.filter(t => t.status === 'closed' || t.status === 'selesai' || t.status_label?.toLowerCase() === 'selesai').length;
+            const ditolak = monthTickets.filter(t => t.status === 'rejected' || t.status === 'ditolak' || t.status_label?.toLowerCase() === 'ditolak').length;
+            const belum = total - selesai - ditolak;
+            const efektif = Math.max(0, total - ditolak);
+            const persentase = efektif > 0 ? Math.round((selesai / efektif) * 1000) / 10 : 0;
+
+            layananMap[srv] = {
+                kode: srv,
+                nama: srv === 'IT' ? 'Layanan IT' : srv === 'TK' ? 'Layanan Teknik' : 'Layanan GA',
+                deskripsi: srv === 'IT' ? 'Information Technology & Software' : srv === 'TK' ? 'Maintenance, Mesin & Utilitas' : 'General Affairs, Fasilitas & Sarpras',
+                icon: srv === 'IT' ? 'laptop' : srv === 'TK' ? 'wrench' : 'building',
+                total_tiket: total,
+                selesai: selesai,
+                belum_selesai: Math.max(0, belum),
+                ditolak: ditolak,
+                total_efektif: efektif,
+                persentase_selesai: persentase,
+                target_month: targetMonthStr
+            };
         }
 
+        const totalAktif = (layananMap.IT.belum_selesai + layananMap.TK.belum_selesai + layananMap.GA.belum_selesai);
         const resultPayload = {
             success: true,
-            message: json.message,
-            server_time: json.meta?.timestamp || new Date().toISOString(),
+            message: 'Berhasil memuat ringkasan monitoring ticketing bulanan',
+            server_time: new Date().toISOString(),
             data: {
-                ...rawData,
-                total_tiket_aktif: rawData.kpi?.total_tiket_aktif ?? 0,
+                total_tickets: layananMap.IT.total_tiket + layananMap.TK.total_tiket + layananMap.GA.total_tiket,
+                total_tiket_aktif: totalAktif,
                 layanan_monitoring: layananMap,
+                per_layanan: Object.values(layananMap),
+                target_month: targetMonthStr
             }
         };
 
+        if (!cache.summaries) cache.summaries = new Map();
+        cache.summaries.set(cacheKey, { data: resultPayload, timestamp: now });
         cache.summary.data = resultPayload;
         cache.summary.timestamp = now;
 
-        // Otomatis pre-warm data tiket di background agar saat tombol "Lihat Detail" ditekan,
-        // responnya langsung instan (0 ms) tanpa menunggu pemanggilan API ke WAN!
+        // Otomatis pre-warm data tiket di background
         setTimeout(() => {
             ticketingService.prewarmTickets().catch(() => { });
         }, 200);
@@ -137,25 +177,31 @@ const ticketingService = {
     },
 
     /**
-     * Mengambil daftar tiket dengan filter spesifik
-     * @param {Object} params - { service, status, limit, search, force }
+     * Mengambil daftar tiket dengan filter spesifik (termasuk bulan & tahun)
+     * @param {Object} params - { service, status, limit, search, bulan, tahun, force }
      */
-    async getTickets({ service, status, limit = 'all', search, force = false } = {}) {
+    async getTickets({ service, status, limit = 'all', search, bulan, tahun, force = false } = {}) {
         const now = Date.now();
         let targetStatus = status || 'all';
         if (targetStatus === 'ditolak') targetStatus = 'rejected';
 
+        let targetMonthStr = '';
+        if (tahun && bulan) {
+            targetMonthStr = `${tahun}-${String(bulan).padStart(2, '0')}`;
+        }
+
         const effectiveLimit = (limit === 'all' || limit === 0 || limit === '0' || !limit) ? 'all' : (parseInt(limit, 10) || 'all');
-        const cacheKey = `${service || 'ALL'}_${targetStatus}_${effectiveLimit}_${search || ''}`;
+        const cacheKey = `${service || 'ALL'}_${targetStatus}_${effectiveLimit}_${search || ''}_${targetMonthStr}`;
 
         const cached = cache.tickets.get(cacheKey);
         if (!force && cached && (now - cached.timestamp < TICKET_CACHE_TTL_MS)) {
             return cached.data;
         }
 
+        // Ambil tiket dari API remote (selalu minta status: all jika filter bulan aktif agar tidak terpotong)
         const targetUrl = buildTicketingUrl({
             service: service || undefined,
-            status: targetStatus,
+            status: targetMonthStr ? 'all' : targetStatus,
             limit: effectiveLimit,
             search: search || undefined
         });
@@ -167,12 +213,36 @@ const ticketingService = {
             throw new Error(json?.message || 'Gagal memuat daftar tiket dari API Monitoring Ticketing');
         }
 
-        const tickets = json.data?.tickets || [];
+        let tickets = json.data?.tickets || [];
+
+        // Filter per bulan jika targetMonthStr ditentukan
+        if (targetMonthStr) {
+            tickets = tickets.filter(t => {
+                const dt = (t.tanggal || t.created_at || '').trim();
+                return dt.startsWith(targetMonthStr);
+            });
+
+            // Terapkan filter status jika diperlukan
+            if (targetStatus && targetStatus !== 'all') {
+                if (targetStatus === 'selesai' || targetStatus === 'closed') {
+                    tickets = tickets.filter(t => t.status === 'closed' || t.status === 'selesai' || t.status_label?.toLowerCase() === 'selesai');
+                } else if (targetStatus === 'rejected' || targetStatus === 'ditolak') {
+                    tickets = tickets.filter(t => t.status === 'rejected' || t.status === 'ditolak' || t.status_label?.toLowerCase() === 'ditolak');
+                } else if (targetStatus === 'belum') {
+                    tickets = tickets.filter(t => 
+                        t.status !== 'closed' && t.status !== 'selesai' && t.status_label?.toLowerCase() !== 'selesai' &&
+                        t.status !== 'rejected' && t.status !== 'ditolak' && t.status_label?.toLowerCase() !== 'ditolak'
+                    );
+                }
+            }
+        }
+
         const resultPayload = {
             success: true,
             data: tickets,
             tickets: tickets,
-            total_tickets: json.data?.total_tickets || tickets.length,
+            total_tickets: tickets.length,
+            target_month: targetMonthStr || null,
             kpi: json.data?.kpi,
             per_layanan: json.data?.per_layanan
         };

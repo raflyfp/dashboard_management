@@ -1091,12 +1091,12 @@ router.get('/stats', async (req, res) => {
  * Mengambil daftar tiket per layanan (IT, Teknik, GA, dll)
  */
 router.get('/tickets', async (req, res) => {
-    const { service, status = 'all', limit = 'all', force } = req.query;
+    const { service, status = 'all', limit = 'all', force, bulan, tahun } = req.query;
     const isForce = force === 'true' || force === true;
     let targetStatus = status;
     if (status === 'ditolak') targetStatus = 'rejected';
 
-    const cacheKey = `${service || 'ALL'}_${targetStatus}_${limit}`;
+    const cacheKey = `${service || 'ALL'}_${targetStatus}_${limit}_${bulan || ''}_${tahun || ''}`;
     const now = Date.now();
 
     // Cache tiket 15 detik agar instan saat dibuka dari frontend, tapi bisa di-bypass dengan ?force=true
@@ -1106,7 +1106,14 @@ router.get('/tickets', async (req, res) => {
     }
 
     try {
-        const result = await ticketingService.getTickets({ service, status: targetStatus, limit, force: isForce });
+        const result = await ticketingService.getTickets({
+            service,
+            status: targetStatus,
+            limit,
+            bulan,
+            tahun,
+            force: isForce
+        });
         const rawTickets = result.data || result.tickets || [];
         const sanitizedTickets = rawTickets.map(t => ({
             ...t,
