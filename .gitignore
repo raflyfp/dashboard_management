@@ -48,3 +48,9 @@ data/
 scratch/
 *.postman_collection.json
 API DASHBOARD SNAM.postman_collection copy.json
+
+# 6. Windows Runner & Auto-Startup Scripts
+start-server.bat
+start-server-hidden.vbs
+restart-server.bat
+*.lnk

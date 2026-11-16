@@ -259,20 +259,21 @@ async function buildDashboardStats(customDates, forceRefresh = false) {
             data_ditampilkan: 'Penyelesaian permintaan layanan sarpras',
             sub_nama: 'Gedung & Sarpras',
             icon: 'building-user',
-            sumber_data: 'Aplikasi ticketing (total masuk vs total selesai)',
+            sumber_data: 'Aplikasi ticketing (total valid vs total selesai)',
             sumber: 'Ticketing',
             is_active: true,
-            metric_labels: { total: 'Total Masuk', selesai: 'Selesai', belum: 'Belum' },
+            metric_labels: { total: 'Total Tiket', selesai: 'Selesai', belum: 'Belum' },
             unit: 'Tiket',
+            total_masuk: rawCards.GA?.total_masuk ?? ((rawCards.GA?.total_tiket ?? 0) + (rawCards.GA?.ditolak ?? 0)),
             total_tiket: rawCards.GA?.total_tiket ?? 0,
             selesai: rawCards.GA?.selesai ?? 0,
             belum_selesai: rawCards.GA?.belum_selesai ?? 0,
             ditolak: rawCards.GA?.ditolak ?? 0,
-            total_efektif: Math.max(0, (rawCards.GA?.total_tiket ?? 0) - (rawCards.GA?.ditolak ?? 0)),
-            persentase_selesai: hitungPersentase(
+            total_efektif: rawCards.GA?.total_tiket ?? 0,
+            persentase_selesai: rawCards.GA?.persentase_selesai ?? hitungPersentase(
                 rawCards.GA?.selesai ?? 0,
                 rawCards.GA?.total_tiket ?? 0,
-                rawCards.GA?.ditolak ?? 0
+                0
             ),
         },
         TK: {
@@ -284,20 +285,21 @@ async function buildDashboardStats(customDates, forceRefresh = false) {
             data_ditampilkan: 'Penyelesaian permintaan layanan mekanik',
             sub_nama: 'Mesin & Utilitas Mekanik',
             icon: 'screwdriver-wrench',
-            sumber_data: 'Aplikasi ticketing (total masuk vs total selesai)',
+            sumber_data: 'Aplikasi ticketing (total valid vs total selesai)',
             sumber: 'Ticketing',
             is_active: true,
-            metric_labels: { total: 'Total Masuk', selesai: 'Selesai', belum: 'Belum' },
+            metric_labels: { total: 'Total Tiket', selesai: 'Selesai', belum: 'Belum' },
             unit: 'Tiket',
+            total_masuk: rawCards.TK?.total_masuk ?? ((rawCards.TK?.total_tiket ?? 0) + (rawCards.TK?.ditolak ?? 0)),
             total_tiket: rawCards.TK?.total_tiket ?? 0,
             selesai: rawCards.TK?.selesai ?? 0,
             belum_selesai: rawCards.TK?.belum_selesai ?? 0,
             ditolak: rawCards.TK?.ditolak ?? 0,
-            total_efektif: Math.max(0, (rawCards.TK?.total_tiket ?? 0) - (rawCards.TK?.ditolak ?? 0)),
-            persentase_selesai: hitungPersentase(
+            total_efektif: rawCards.TK?.total_tiket ?? 0,
+            persentase_selesai: rawCards.TK?.persentase_selesai ?? hitungPersentase(
                 rawCards.TK?.selesai ?? 0,
                 rawCards.TK?.total_tiket ?? 0,
-                rawCards.TK?.ditolak ?? 0
+                0
             ),
         },
         IT: {
@@ -309,20 +311,21 @@ async function buildDashboardStats(customDates, forceRefresh = false) {
             data_ditampilkan: 'Penyelesaian permintaan layanan IT',
             sub_nama: 'Software, Jaringan & Hardware',
             icon: 'laptop-code',
-            sumber_data: 'Aplikasi ticketing (total masuk vs total selesai)',
+            sumber_data: 'Aplikasi ticketing (total valid vs total selesai)',
             sumber: 'Ticketing',
             is_active: true,
-            metric_labels: { total: 'Total Masuk', selesai: 'Selesai', belum: 'Belum' },
+            metric_labels: { total: 'Total Tiket', selesai: 'Selesai', belum: 'Belum' },
             unit: 'Tiket',
+            total_masuk: rawCards.IT?.total_masuk ?? ((rawCards.IT?.total_tiket ?? 0) + (rawCards.IT?.ditolak ?? 0)),
             total_tiket: rawCards.IT?.total_tiket ?? 0,
             selesai: rawCards.IT?.selesai ?? 0,
             belum_selesai: rawCards.IT?.belum_selesai ?? 0,
             ditolak: rawCards.IT?.ditolak ?? 0,
-            total_efektif: Math.max(0, (rawCards.IT?.total_tiket ?? 0) - (rawCards.IT?.ditolak ?? 0)),
-            persentase_selesai: hitungPersentase(
+            total_efektif: rawCards.IT?.total_tiket ?? 0,
+            persentase_selesai: rawCards.IT?.persentase_selesai ?? hitungPersentase(
                 rawCards.IT?.selesai ?? 0,
                 rawCards.IT?.total_tiket ?? 0,
-                rawCards.IT?.ditolak ?? 0
+                0
             ),
         },
 
@@ -917,13 +920,15 @@ async function buildDashboardStats(customDates, forceRefresh = false) {
     servicesResult.BILLING = servicesResult.PROD_ANTISEPTIK;
     servicesResult.SDM = servicesResult.DC;
 
-    // 4. Hitung Akumulasi Global KPI (Persentase mengecualikan tiket ditolak)
+    // 4. Hitung Akumulasi Global KPI (Tiket ditolak TIDAK dihitung ke total)
     const totalSemua = servicesResult.IT.total_tiket + servicesResult.TK.total_tiket + servicesResult.GA.total_tiket;
     const totalSelesai = servicesResult.IT.selesai + servicesResult.TK.selesai + servicesResult.GA.selesai;
     const totalBelum = servicesResult.IT.belum_selesai + servicesResult.TK.belum_selesai + servicesResult.GA.belum_selesai;
     const totalDitolak = servicesResult.IT.ditolak + servicesResult.TK.ditolak + servicesResult.GA.ditolak;
-    const totalEfektifGlobal = Math.max(0, totalSemua - totalDitolak);
-    const persentaseGlobal = hitungPersentase(totalSelesai, totalSemua, totalDitolak);
+    const totalMasukGlobal = (servicesResult.IT.total_masuk || (servicesResult.IT.total_tiket + servicesResult.IT.ditolak)) +
+        (servicesResult.TK.total_masuk || (servicesResult.TK.total_tiket + servicesResult.TK.ditolak)) +
+        (servicesResult.GA.total_masuk || (servicesResult.GA.total_tiket + servicesResult.GA.ditolak));
+    const persentaseGlobal = totalSemua > 0 ? Number(((totalSelesai / totalSemua) * 100).toFixed(1)) : 0;
 
     // Sanitasi tiket perlu_perhatian agar kategori 'biasa' menjadi tanda strip '-'
     const sanitizedPerluPerhatian = (summaryData.perlu_perhatian || []).map(item => ({
@@ -935,11 +940,12 @@ async function buildDashboardStats(customDates, forceRefresh = false) {
         success: true,
         server_time: apiData?.server_time || new Date().toISOString(),
         kpi_global: {
+            total_masuk: totalMasukGlobal,
             total_tiket: totalSemua,
             total_selesai: totalSelesai,
             total_belum_selesai: totalBelum,
             total_ditolak: totalDitolak,
-            total_efektif: totalEfektifGlobal,
+            total_efektif: totalSemua,
             persentase_selesai: persentaseGlobal,
             total_aktif: summaryData.kpi?.total_tiket_aktif ?? summaryData.total_tiket_aktif ?? 0,
         },

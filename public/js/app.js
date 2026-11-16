@@ -1662,12 +1662,12 @@ async function openTicketModal(serviceCode, serviceTitle) {
     const selesaiTiket = sData.selesai || 0;
     const belumTiket = sData.belum_selesai || 0;
     const ditolakTiket = sData.ditolak || 0;
-    const efektifTiket = sData.total_efektif || Math.max(0, totalTiket - ditolakTiket);
+    const totalMasuk = sData.total_masuk || (totalTiket + ditolakTiket);
     const persentase = sData.persentase_selesai || 0;
 
     if (titleEl) titleEl.textContent = `${serviceTitle}`;
     if (subEl) {
-        subEl.innerHTML = `Total: <b>${totalTiket}</b> &bull; Diproses: <b>${efektifTiket}</b> (Selesai: <span style="color:#10b981; font-weight:700;">${selesaiTiket}</span> [${persentase}%], Belum: <span style="color:#f59e0b; font-weight:700;">${belumTiket}</span>) &bull; Ditolak: <span style="color:#ef4444; font-weight:700;">${ditolakTiket}</span>`;
+        subEl.innerHTML = `Total Tiket: <b>${totalTiket}</b> (Selesai: <span style="color:#10b981; font-weight:700;">${selesaiTiket}</span> [${persentase}%], Belum: <span style="color:#f59e0b; font-weight:700;">${belumTiket}</span>) &bull; Ditolak: <span style="color:#ef4444; font-weight:700;">${ditolakTiket}</span> <span style="color:#64748b; font-size:11px;">(Total Masuk: ${totalMasuk})</span>`;
     }
 
     if (ditolakCountEl) {

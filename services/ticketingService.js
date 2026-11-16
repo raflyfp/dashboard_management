@@ -105,11 +105,11 @@ const ticketingService = {
                 return dt.startsWith(targetMonthStr);
             });
 
-            const total = monthTickets.length;
+            const totalMasuk = monthTickets.length;
             const selesai = monthTickets.filter(t => t.status === 'closed' || t.status === 'selesai' || t.status_label?.toLowerCase() === 'selesai').length;
             const ditolak = monthTickets.filter(t => t.status === 'rejected' || t.status === 'ditolak' || t.status_label?.toLowerCase() === 'ditolak').length;
-            const belum = total - selesai - ditolak;
-            const efektif = Math.max(0, total - ditolak);
+            const efektif = Math.max(0, totalMasuk - ditolak);
+            const belum = Math.max(0, efektif - selesai);
             const persentase = efektif > 0 ? Math.round((selesai / efektif) * 1000) / 10 : 0;
 
             layananMap[srv] = {
@@ -117,9 +117,10 @@ const ticketingService = {
                 nama: srv === 'IT' ? 'Layanan IT' : srv === 'TK' ? 'Layanan Teknik' : 'Layanan GA',
                 deskripsi: srv === 'IT' ? 'Information Technology & Software' : srv === 'TK' ? 'Maintenance, Mesin & Utilitas' : 'General Affairs, Fasilitas & Sarpras',
                 icon: srv === 'IT' ? 'laptop' : srv === 'TK' ? 'wrench' : 'building',
-                total_tiket: total,
+                total_masuk: totalMasuk,
+                total_tiket: efektif, // Tiket ditolak TIDAK dihitung ke total tiket
                 selesai: selesai,
-                belum_selesai: Math.max(0, belum),
+                belum_selesai: belum,
                 ditolak: ditolak,
                 total_efektif: efektif,
                 persentase_selesai: persentase,
@@ -133,6 +134,7 @@ const ticketingService = {
             message: 'Berhasil memuat ringkasan monitoring ticketing bulanan',
             server_time: new Date().toISOString(),
             data: {
+                total_masuk: layananMap.IT.total_masuk + layananMap.TK.total_masuk + layananMap.GA.total_masuk,
                 total_tickets: layananMap.IT.total_tiket + layananMap.TK.total_tiket + layananMap.GA.total_tiket,
                 total_tiket_aktif: totalAktif,
                 layanan_monitoring: layananMap,
@@ -229,7 +231,7 @@ const ticketingService = {
                 } else if (targetStatus === 'rejected' || targetStatus === 'ditolak') {
                     tickets = tickets.filter(t => t.status === 'rejected' || t.status === 'ditolak' || t.status_label?.toLowerCase() === 'ditolak');
                 } else if (targetStatus === 'belum') {
-                    tickets = tickets.filter(t => 
+                    tickets = tickets.filter(t =>
                         t.status !== 'closed' && t.status !== 'selesai' && t.status_label?.toLowerCase() !== 'selesai' &&
                         t.status !== 'rejected' && t.status !== 'ditolak' && t.status_label?.toLowerCase() !== 'ditolak'
                     );

@@ -343,10 +343,27 @@ DEVELOPMENT_SPREADSHEET_URL=<YOUR_GOOGLE_SHEET_CSV_URL>
 
 ### Menjalankan Server
 ```bash
-# Mode Produksi
+# Mode Produksi (Console Terminal)
 npm start
 
-# Mode Development (Auto-restart saat file berubah)
+# Mode Development (Auto-restart saat file source berubah)
 npm run dev
 ```
+
+### 🚀 Otomasi Auto-Start Windows & Kontrol Server (Background Runner)
+Untuk menjamin dashboard selalu aktif 24/7 di PC display / server tanpa harus membuka terminal manual setiap kali PC dinyalakan ulang (restart / mati lampu):
+
+1. **Auto-Start Saat Windows Menyala (`start-server-hidden.vbs`)**:
+   - Skrip runner VBScript (`wscript.exe start-server-hidden.vbs`) menjalankan server Node.js di latar belakang (background) tanpa memunculkan jendela hitam terminal (CMD/PowerShell).
+   - Telah ditautkan ke folder Startup pengguna:  
+     `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Dashboard_Management.lnk`
+   - Begitu PC menyala dan pengguna login Windows, server otomatis berjalan di port `3000`.
+
+2. **Restart Cepat 1-Klik (`restart-server.bat`)**:
+   - Jika ada pembaruan kode atau server perlu di-reload, cukup jalankan `restart-server.bat` (atau klik shortcut **Restart Dashboard** di Desktop).
+   - Skrip ini otomatis mematikan proses Node lama yang sedang menggunakan port 3000 lalu menyalakan kembali server secara silent di background.
+
+3. **Menjalankan Manual dengan Terminal Aktif (`start-server.bat`)**:
+   - Jika ingin memantau log secara real-time di jendela command prompt, klik ganda `start-server.bat`.
+
 Buka di browser: **`http://localhost:3000`**
