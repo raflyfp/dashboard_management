@@ -179,10 +179,10 @@ const ticketingService = {
     },
 
     /**
-     * Mengambil daftar tiket dengan filter spesifik (termasuk bulan & tahun)
-     * @param {Object} params - { service, status, limit, search, bulan, tahun, force }
+     * Mengambil daftar tiket dengan filter spesifik (termasuk rentang tanggal startDate, endDate, bulan & tahun)
+     * @param {Object} params - { service, status, limit, search, bulan, tahun, startDate, endDate, force }
      */
-    async getTickets({ service, status, limit = 'all', search, bulan, tahun, force = false } = {}) {
+    async getTickets({ service, status, limit = 'all', search, bulan, tahun, startDate, endDate, force = false } = {}) {
         const now = Date.now();
         let targetStatus = status || 'all';
         if (targetStatus === 'ditolak') targetStatus = 'rejected';
@@ -193,17 +193,17 @@ const ticketingService = {
         }
 
         const effectiveLimit = (limit === 'all' || limit === 0 || limit === '0' || !limit) ? 'all' : (parseInt(limit, 10) || 'all');
-        const cacheKey = `${service || 'ALL'}_${targetStatus}_${effectiveLimit}_${search || ''}_${targetMonthStr}`;
+        const cacheKey = `${service || 'ALL'}_${targetStatus}_${effectiveLimit}_${search || ''}_${targetMonthStr}_${startDate || ''}_${endDate || ''}`;
 
         const cached = cache.tickets.get(cacheKey);
         if (!force && cached && (now - cached.timestamp < TICKET_CACHE_TTL_MS)) {
             return cached.data;
         }
 
-        // Ambil tiket dari API remote (selalu minta status: all jika filter bulan aktif agar tidak terpotong)
+        // Ambil tiket dari API remote (selalu minta status: all jika filter tanggal/bulan aktif agar tidak terpotong)
         const targetUrl = buildTicketingUrl({
             service: service || undefined,
-            status: targetMonthStr ? 'all' : targetStatus,
+            status: (targetMonthStr || startDate || endDate) ? 'all' : targetStatus,
             limit: effectiveLimit,
             search: search || undefined
         });
@@ -217,25 +217,51 @@ const ticketingService = {
 
         let tickets = json.data?.tickets || [];
 
-        // Filter per bulan jika targetMonthStr ditentukan
-        if (targetMonthStr) {
+        // 1. Filter per rentang tanggal (startDate & endDate) atau per bulan jika targetMonthStr ditentukan
+        if (startDate || endDate) {
+            tickets = tickets.filter(t => {
+                const dt = (t.tanggal || t.created_at || '').trim();
+                const tgl = dt.slice(0, 10);
+                if (startDate && tgl < startDate) return false;
+                if (endDate && tgl > endDate) return false;
+                return true;
+            });
+        } else if (targetMonthStr) {
             tickets = tickets.filter(t => {
                 const dt = (t.tanggal || t.created_at || '').trim();
                 return dt.startsWith(targetMonthStr);
             });
+        }
 
-            // Terapkan filter status jika diperlukan
-            if (targetStatus && targetStatus !== 'all') {
-                if (targetStatus === 'selesai' || targetStatus === 'closed') {
-                    tickets = tickets.filter(t => t.status === 'closed' || t.status === 'selesai' || t.status_label?.toLowerCase() === 'selesai');
-                } else if (targetStatus === 'rejected' || targetStatus === 'ditolak') {
-                    tickets = tickets.filter(t => t.status === 'rejected' || t.status === 'ditolak' || t.status_label?.toLowerCase() === 'ditolak');
-                } else if (targetStatus === 'belum') {
-                    tickets = tickets.filter(t =>
-                        t.status !== 'closed' && t.status !== 'selesai' && t.status_label?.toLowerCase() !== 'selesai' &&
-                        t.status !== 'rejected' && t.status !== 'ditolak' && t.status_label?.toLowerCase() !== 'ditolak'
-                    );
-                }
+        // 2. Hitung statistik untuk rentang tanggal/periode ini sebelum difilter per tab status
+        const totalMasuk = tickets.length;
+        const totalSelesai = tickets.filter(t => t.status === 'closed' || t.status === 'selesai' || t.status_label?.toLowerCase() === 'selesai').length;
+        const totalDitolak = tickets.filter(t => t.status === 'rejected' || t.status === 'ditolak' || t.status_label?.toLowerCase() === 'ditolak').length;
+        const totalEfektif = Math.max(0, totalMasuk - totalDitolak);
+        const totalBelum = Math.max(0, totalEfektif - totalSelesai);
+        const persentase = totalEfektif > 0 ? Math.round((totalSelesai / totalEfektif) * 1000) / 10 : 0;
+
+        const stats = {
+            total_masuk: totalMasuk,
+            total_tiket: totalEfektif,
+            total_efektif: totalEfektif,
+            selesai: totalSelesai,
+            belum_selesai: totalBelum,
+            ditolak: totalDitolak,
+            persentase_selesai: persentase
+        };
+
+        // 3. Terapkan filter status tab jika diminta
+        if (targetStatus && targetStatus !== 'all') {
+            if (targetStatus === 'selesai' || targetStatus === 'closed') {
+                tickets = tickets.filter(t => t.status === 'closed' || t.status === 'selesai' || t.status_label?.toLowerCase() === 'selesai');
+            } else if (targetStatus === 'rejected' || targetStatus === 'ditolak') {
+                tickets = tickets.filter(t => t.status === 'rejected' || t.status === 'ditolak' || t.status_label?.toLowerCase() === 'ditolak');
+            } else if (targetStatus === 'belum') {
+                tickets = tickets.filter(t =>
+                    t.status !== 'closed' && t.status !== 'selesai' && t.status_label?.toLowerCase() !== 'selesai' &&
+                    t.status !== 'rejected' && t.status !== 'ditolak' && t.status_label?.toLowerCase() !== 'ditolak'
+                );
             }
         }
 
@@ -244,7 +270,10 @@ const ticketingService = {
             data: tickets,
             tickets: tickets,
             total_tickets: tickets.length,
+            stats: stats,
             target_month: targetMonthStr || null,
+            startDate: startDate || null,
+            endDate: endDate || null,
             kpi: json.data?.kpi,
             per_layanan: json.data?.per_layanan
         };

@@ -77,6 +77,9 @@ const state = {
     isOffline: false,       // Status jaringan sedang offline / reconnect
     currentServiceModal: null, // Layanan yang sedang dibuka di modal tiket
     currentModalFilter: 'all',  // Filter di modal: all / selesai / belum / ditolak
+    currentTicketRange: 'month',// Filter rentang tanggal modal tiket (month, week, today, all, custom)
+    ticketDateStart: '',        // Tanggal awal filter modal tiket
+    ticketDateEnd: '',          // Tanggal akhir filter modal tiket
     ticketSearchQuery: '',  // Pencarian kata kunci di modal tiket
     ticketCurrentPage: 1,   // Halaman aktif modal tiket
     ticketPageSize: 10,     // Ukuran per halaman modal tiket
@@ -535,6 +538,9 @@ function setDateInputValue(id, val) {
  * Otomatis menyinkronkan modal yang sedang terbuka saat filter bulan di header diubah
  */
 function refreshOpenModalOnPeriodChange() {
+    if (document.getElementById('ticketModal')?.classList.contains('active') && typeof setTicketQuickDate === 'function') {
+        setTicketQuickDate(state.currentTicketRange || 'month');
+    }
     if (document.getElementById('qaModal')?.classList.contains('active') && typeof setQaQuickDate === 'function') {
         setQaQuickDate(state.currentQaRange || 'month');
     }
@@ -577,6 +583,7 @@ function initModalDatePickers() {
     if (typeof flatpickr === 'undefined') return;
 
     const dateInputIds = [
+        'ticketDateStart', 'ticketDateEnd',
         'subconDateStart', 'subconDateEnd',
         'hrDateStart', 'hrDateEnd',
         'purchasingDateStart', 'purchasingDateEnd',
@@ -1651,33 +1658,19 @@ async function openTicketModal(serviceCode, serviceTitle) {
 
     const modal = document.getElementById('ticketModal');
     const titleEl = document.getElementById('modalServiceTitle');
-    const subEl = document.getElementById('modalServiceSubtitle');
     const iconEl = document.getElementById('modalServiceIcon');
     const searchInput = document.getElementById('ticketSearchInput');
-    const ditolakCountEl = document.getElementById('modalDitolakCount');
 
     // Ambil data statistik layanan dari memori
     const sData = (state.servicesData && state.servicesData[serviceCode]) || {};
-    const totalTiket = sData.total_tiket || 0;
-    const selesaiTiket = sData.selesai || 0;
-    const belumTiket = sData.belum_selesai || 0;
-    const ditolakTiket = sData.ditolak || 0;
-    const totalMasuk = sData.total_masuk || (totalTiket + ditolakTiket);
-    const persentase = sData.persentase_selesai || 0;
+    updateTicketModalSubtitle(sData);
 
     if (titleEl) titleEl.textContent = `${serviceTitle}`;
-    if (subEl) {
-        subEl.innerHTML = `Total Tiket: <b>${totalTiket}</b> (Selesai: <span style="color:#10b981; font-weight:700;">${selesaiTiket}</span> [${persentase}%], Belum: <span style="color:#f59e0b; font-weight:700;">${belumTiket}</span>) &bull; Ditolak: <span style="color:#ef4444; font-weight:700;">${ditolakTiket}</span> <span style="color:#64748b; font-size:11px;">(Total Masuk: ${totalMasuk})</span>`;
-    }
-
-    if (ditolakCountEl) {
-        ditolakCountEl.textContent = ditolakTiket;
-    }
-
     if (searchInput) searchInput.value = '';
+    state.ticketSearchQuery = '';
 
-    // Reset tombol filter aktif ke 'all'
-    document.querySelectorAll('#ticketModal .filter-pill').forEach(btn => {
+    // Reset tombol filter status aktif ke 'all'
+    document.querySelectorAll('#ticketModal .ticket-status-pills .filter-pill').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-filter') === 'all');
     });
 
@@ -1692,8 +1685,100 @@ async function openTicketModal(serviceCode, serviceTitle) {
 
     state.ticketCurrentPage = 1;
 
-    // Ambil data tiket untuk tab aktif (default: 'all')
-    await loadModalTickets(serviceCode, 'all');
+    // Set rentang tanggal cepat default ('month' / Bulan Ini)
+    setTicketQuickDate(state.currentTicketRange || 'month');
+}
+
+/**
+ * Mengatur rentang tanggal cepat modal tiket (Bulan Ini, 7 Hari, Hari Ini, Semua)
+ */
+function setTicketQuickDate(preset = 'month') {
+    state.currentTicketRange = preset;
+    state.ticketCurrentPage = 1;
+
+    const { startDate, endDate } = getActivePeriodDates(preset);
+    state.ticketDateStart = startDate;
+    state.ticketDateEnd = endDate;
+
+    setDateInputValue('ticketDateStart', startDate);
+    setDateInputValue('ticketDateEnd', endDate);
+
+    // Update active class pada pill range
+    const pills = document.querySelectorAll('.ticket-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    const btnMap = {
+        'month': 'btnQuickTicketMonth',
+        'week': 'btnQuickTicketWeek',
+        'today': 'btnQuickTicketToday',
+        'all': 'btnQuickTicketAll'
+    };
+    const activeBtn = document.getElementById(btnMap[preset]);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    if (state.currentServiceModal) {
+        loadModalTickets(state.currentServiceModal, state.currentModalFilter || 'all');
+    }
+}
+
+/**
+ * Handle perubahan tanggal manual pada input Date Picker Modal Tiket
+ */
+function handleTicketDateChange(field) {
+    const startInput = document.getElementById('ticketDateStart');
+    const endInput = document.getElementById('ticketDateEnd');
+
+    if (!startInput || !endInput) return;
+
+    let start = startInput.value;
+    let end = endInput.value;
+
+    if (start && end && start > end) {
+        if (field === 'start') {
+            endInput.value = start;
+            end = start;
+        } else {
+            startInput.value = end;
+            start = end;
+        }
+    }
+
+    state.ticketDateStart = start;
+    state.ticketDateEnd = end;
+    state.currentTicketRange = 'custom';
+    state.ticketCurrentPage = 1;
+
+    // Hapus active pill preset
+    const pills = document.querySelectorAll('.ticket-range-pills .filter-pill');
+    pills.forEach(p => p.classList.remove('active'));
+
+    if (state.currentServiceModal) {
+        loadModalTickets(state.currentServiceModal, state.currentModalFilter || 'all');
+    }
+}
+
+/**
+ * Update Subtitle & Badge Ditolak pada Modal Tiket berdasarkan statistik aktual
+ */
+function updateTicketModalSubtitle(stats) {
+    const subEl = document.getElementById('modalServiceSubtitle');
+    const ditolakCountEl = document.getElementById('modalDitolakCount');
+
+    if (!stats) return;
+    const totalTiket = stats.total_tiket ?? 0;
+    const selesaiTiket = stats.selesai ?? 0;
+    const belumTiket = stats.belum_selesai ?? 0;
+    const ditolakTiket = stats.ditolak ?? 0;
+    const totalMasuk = stats.total_masuk || (totalTiket + ditolakTiket);
+    const persentase = stats.persentase_selesai ?? 0;
+
+    if (subEl) {
+        subEl.innerHTML = `Total Tiket: <b>${totalTiket}</b> (Selesai: <span style="color:#10b981; font-weight:700;">${selesaiTiket}</span> [${persentase}%], Belum: <span style="color:#f59e0b; font-weight:700;">${belumTiket}</span>) &bull; Ditolak: <span style="color:#ef4444; font-weight:700;">${ditolakTiket}</span> <span style="color:#64748b; font-size:11px;">(Total Masuk: ${totalMasuk})</span>`;
+    }
+
+    if (ditolakCountEl) {
+        ditolakCountEl.textContent = ditolakTiket;
+    }
 }
 
 async function loadModalTickets(serviceCode, filterStatus = 'all', force = false) {
@@ -1702,14 +1787,17 @@ async function loadModalTickets(serviceCode, filterStatus = 'all', force = false
 
     const selectedMonth = state.selectedMonth || (new Date().getMonth() + 1);
     const selectedYear = state.selectedYear || new Date().getFullYear();
+    const startDate = state.ticketDateStart || '';
+    const endDate = state.ticketDateEnd || '';
 
-    const cacheKey = `${serviceCode}_${queryStatus}_${selectedYear}_${selectedMonth}`;
+    const cacheKey = `${serviceCode}_${queryStatus}_${selectedYear}_${selectedMonth}_${startDate}_${endDate}`;
     if (!state.ticketCache) state.ticketCache = {};
     const cached = state.ticketCache[cacheKey];
 
     // Jika data tab ini sudah ada di cache & tidak dipaksa refresh, tampilkan langsung instan (0 ms)!
     if (!force && cached) {
         state.modalRawTickets = cached.data;
+        if (cached.stats) updateTicketModalSubtitle(cached.stats);
         renderFilteredTickets();
         if (Date.now() - cached.timestamp < 15000) {
             return;
@@ -1720,7 +1808,8 @@ async function loadModalTickets(serviceCode, filterStatus = 'all', force = false
 
     try {
         const forceParam = force ? '&force=true' : '';
-        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=all&bulan=${selectedMonth}&tahun=${selectedYear}${forceParam}`;
+        const dateParams = `&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+        const url = `/api/dashboard/tickets?service=${serviceCode}&status=${queryStatus}&limit=all&bulan=${selectedMonth}&tahun=${selectedYear}${dateParams}${forceParam}`;
         const response = await fetch(url);
         const json = await response.json();
 
@@ -1731,11 +1820,13 @@ async function loadModalTickets(serviceCode, filterStatus = 'all', force = false
         const tickets = json.data || [];
         state.ticketCache[cacheKey] = {
             data: tickets,
+            stats: json.stats,
             timestamp: Date.now()
         };
 
         if (state.currentServiceModal === serviceCode && state.currentModalFilter === filterStatus) {
             state.modalRawTickets = tickets;
+            if (json.stats) updateTicketModalSubtitle(json.stats);
             renderFilteredTickets();
         }
 
@@ -1772,7 +1863,7 @@ function filterModalTickets(filterType) {
     state.ticketCurrentPage = 1;
 
     // Update class active pada tab pills di modal tiket
-    document.querySelectorAll('#ticketModal .filter-pill').forEach(btn => {
+    document.querySelectorAll('#ticketModal .ticket-status-pills .filter-pill').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-filter') === filterType);
     });
 
@@ -1793,15 +1884,13 @@ function resetTicketModalFilter() {
     const searchInput = document.getElementById('ticketSearchInput');
     if (searchInput) searchInput.value = '';
 
-    document.querySelectorAll('#ticketModal .filter-pill').forEach(btn => {
+    document.querySelectorAll('#ticketModal .ticket-status-pills .filter-pill').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-filter') === 'all');
     });
 
     updateTicketSortHeaders();
 
-    if (state.currentServiceModal) {
-        loadModalTickets(state.currentServiceModal, 'all');
-    }
+    setTicketQuickDate('month');
 }
 
 function handleSearchTickets(keyword) {

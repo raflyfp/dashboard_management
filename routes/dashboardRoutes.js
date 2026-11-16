@@ -1095,14 +1095,18 @@ router.get('/stats', async (req, res) => {
 /**
  * GET /api/dashboard/tickets
  * Mengambil daftar tiket per layanan (IT, Teknik, GA, dll)
+ * Query params: service, status, limit, force, bulan, tahun, start_date, end_date
  */
 router.get('/tickets', async (req, res) => {
-    const { service, status = 'all', limit = 'all', force, bulan, tahun } = req.query;
+    const { service, status = 'all', limit = 'all', force, bulan, tahun, start_date, end_date, tglawal, tglakhir } = req.query;
     const isForce = force === 'true' || force === true;
     let targetStatus = status;
     if (status === 'ditolak') targetStatus = 'rejected';
 
-    const cacheKey = `${service || 'ALL'}_${targetStatus}_${limit}_${bulan || ''}_${tahun || ''}`;
+    const startDate = start_date || tglawal || '';
+    const endDate = end_date || tglakhir || '';
+
+    const cacheKey = `${service || 'ALL'}_${targetStatus}_${limit}_${bulan || ''}_${tahun || ''}_${startDate}_${endDate}`;
     const now = Date.now();
 
     // Cache tiket 15 detik agar instan saat dibuka dari frontend, tapi bisa di-bypass dengan ?force=true
@@ -1118,6 +1122,8 @@ router.get('/tickets', async (req, res) => {
             limit,
             bulan,
             tahun,
+            startDate,
+            endDate,
             force: isForce
         });
         const rawTickets = result.data || result.tickets || [];
@@ -1129,6 +1135,7 @@ router.get('/tickets', async (req, res) => {
         const responsePayload = {
             success: true,
             total_data: sanitizedTickets.length,
+            stats: result.stats || null,
             data: sanitizedTickets
         };
 

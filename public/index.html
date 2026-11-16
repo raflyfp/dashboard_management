@@ -1247,7 +1247,7 @@
     <!-- 4. MODAL DIALOG DAFTAR SEMUA TIKET PER LAYANAN (FLAT PUTIH)  -->
     <!-- ============================================================ -->
     <div class="modal-overlay" id="ticketModal" aria-hidden="true">
-        <div class="modal-card">
+        <div class="modal-card modal-card-xl">
 
             <div class="modal-header modal-header-stacked">
                 <div class="modal-header-top">
@@ -1264,9 +1264,78 @@
                     </button>
                 </div>
 
-                <div class="modal-header-actions">
+                <!-- Bar Filter Tanggal: Date Range Picker, Presets, Reset, Search & Sync -->
+                <div class="subcon-filter-bar"
+                    style="margin-top: 0.4rem; padding: 0.55rem 0.8rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <div
+                        style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                        <!-- Left Group: Date Range Picker + Quick Presets + Reset -->
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                            <div class="prod-date-picker-group">
+                                <div class="prod-date-input-wrap">
+                                    <span>Dari:</span>
+                                    <input type="text" id="ticketDateStart" class="prod-date-input flatpickr-date"
+                                        readonly title="Tanggal Awal" onchange="handleTicketDateChange('start')"
+                                        autocomplete="off">
+                                </div>
+                                <div class="prod-date-input-wrap">
+                                    <span>s/d:</span>
+                                    <input type="text" id="ticketDateEnd" class="prod-date-input flatpickr-date"
+                                        readonly title="Tanggal Akhir" onchange="handleTicketDateChange('end')"
+                                        autocomplete="off">
+                                </div>
+                            </div>
+
+                            <!-- Shortcut Presets Cepat -->
+                            <div class="filter-pills ticket-range-pills" style="margin: 0;">
+                                <button class="filter-pill active" id="btnQuickTicketMonth"
+                                    onclick="setTicketQuickDate('month')">
+                                    <i class="fa-solid fa-calendar-days"></i> Bulan Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickTicketWeek"
+                                    onclick="setTicketQuickDate('week')">
+                                    <i class="fa-solid fa-calendar-week"></i> 7 Hari
+                                </button>
+                                <button class="filter-pill" id="btnQuickTicketToday"
+                                    onclick="setTicketQuickDate('today')">
+                                    <i class="fa-solid fa-clock"></i> Hari Ini
+                                </button>
+                                <button class="filter-pill" id="btnQuickTicketAll"
+                                    onclick="setTicketQuickDate('all')">
+                                    <i class="fa-solid fa-layer-group"></i> Semua
+                                </button>
+                            </div>
+
+                            <!-- Tombol Reset Filter -->
+                            <button class="filter-reset-btn" id="btnResetTicketFilter"
+                                onclick="resetTicketModalFilter()" title="Reset Filter ke Default">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+
+                        <!-- Right Group: Search Box + Refresh Button -->
+                        <div
+                            style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 380px; justify-content: flex-end;">
+                            <div class="search-box" style="flex: 1; margin: 0;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="ticketSearchInput"
+                                    placeholder="Cari No Tiket / Judul / Pelapor..."
+                                    oninput="handleSearchTickets(this.value)">
+                            </div>
+
+                            <!-- Refresh Button -->
+                            <button class="modal-refresh-btn" id="btnRefreshTickets" onclick="refreshModalTickets()"
+                                title="Perbarui Data (Ambil data paling terkini)">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bar Status Filter Tiket -->
+                <div class="modal-header-actions" style="margin-top: 0.4rem; padding-top: 0;">
                     <!-- Filter Tab: Semua / Selesai / Belum Selesai / Ditolak -->
-                    <div class="filter-pills">
+                    <div class="filter-pills ticket-status-pills">
                         <button class="filter-pill active" data-filter="all" onclick="filterModalTickets('all')">Semua
                             Tiket</button>
                         <button class="filter-pill" data-filter="selesai"
@@ -1278,25 +1347,6 @@
                             <i class="fa-solid fa-ban"></i> Ditolak (<span id="modalDitolakCount">0</span>)
                         </button>
                     </div>
-
-                    <!-- Tombol Reset Filter -->
-                    <button class="filter-reset-btn" id="btnResetTicketFilter" onclick="resetTicketModalFilter()"
-                        title="Reset Filter ke Default">
-                        <i class="fa-solid fa-rotate-left"></i> Reset
-                    </button>
-
-                    <!-- Search Input -->
-                    <div class="search-box">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="ticketSearchInput" placeholder="Cari No Tiket / Judul / Pelapor..."
-                            oninput="handleSearchTickets(this.value)">
-                    </div>
-
-                    <!-- Refresh Button -->
-                    <button class="modal-refresh-btn" id="btnRefreshTickets" onclick="refreshModalTickets()"
-                        title="Perbarui Data (Ambil data paling terkini)">
-                        <i class="fa-solid fa-arrows-rotate"></i>
-                    </button>
                 </div>
             </div>
 
@@ -4703,7 +4753,7 @@
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- Script Utama Dashboard -->
-    <script src="/js/app.js?v=2.12.7"></script>
+    <script src="/js/app.js?v=2.12.8"></script>
 </body>
 
 </html>
