@@ -46,7 +46,7 @@ function buildTicketingUrl(params = {}) {
  * Buat instance Axios dengan konfigurasi timeout
  */
 const httpClient = axios.create({
-    timeout: config.ticketing.timeoutMs || 10000,
+    timeout: config.ticketing.timeoutMs || 20000,
     headers: {
         'Accept': 'application/json',
     }
@@ -83,18 +83,26 @@ const ticketingService = {
             }
         }
 
-        // Ambil tiket seluruh layanan secara paralel untuk agregasi bulanan yang akurat
+        // Ambil tiket seluruh layanan sekaligus (1 HTTP call untuk efisiensi & menghindari timeout WAN)
         const services = ['IT', 'TK', 'GA'];
-        const ticketsByService = {};
-        await Promise.all(services.map(async (srv) => {
-            try {
-                const res = await ticketingService.getTickets({ service: srv, status: 'all', limit: 'all', force });
-                ticketsByService[srv] = res.tickets || res.data || [];
-            } catch (err) {
-                console.warn(`[TICKETING] Gagal fetch tiket ${srv}:`, err.message);
-                ticketsByService[srv] = [];
+        const ticketsByService = { IT: [], TK: [], GA: [] };
+        
+        try {
+            const res = await ticketingService.getTickets({ service: 'ALL', status: 'all', limit: 'all', force });
+            const allTickets = res.tickets || res.data || [];
+            allTickets.forEach(t => {
+                const srv = String(t.service || t.kategori || '').toUpperCase().trim();
+                if (ticketsByService[srv]) {
+                    ticketsByService[srv].push(t);
+                }
+            });
+        } catch (err) {
+            console.warn(`[TICKETING] Gagal fetch tiket ALL:`, err.message);
+            // Fallback: Jika ada cache sebelumnya, kembalikan cache daripada mengembalikan 0
+            if (cache.summaries && cache.summaries.has(cacheKey)) {
+                return cache.summaries.get(cacheKey).data;
             }
-        }));
+        }
 
         const layananMap = {};
         for (const srv of services) {
@@ -201,8 +209,9 @@ const ticketingService = {
         }
 
         // Ambil tiket dari API remote (selalu minta status: all jika filter tanggal/bulan aktif agar tidak terpotong)
+        const isAllService = !service || service.toUpperCase() === 'ALL';
         const targetUrl = buildTicketingUrl({
-            service: service || undefined,
+            service: isAllService ? undefined : service,
             status: (targetMonthStr || startDate || endDate) ? 'all' : targetStatus,
             limit: effectiveLimit,
             search: search || undefined

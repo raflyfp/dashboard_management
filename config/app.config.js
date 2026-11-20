@@ -28,7 +28,7 @@ module.exports = {
     ticketing: {
         url: ticketingUrl,
         baseUrl: ticketingUrl, // Backward-compatibility
-        timeoutMs: 10000,
+        timeoutMs: 20000,
     },
 
     // Konfigurasi API Subcon Laravel
