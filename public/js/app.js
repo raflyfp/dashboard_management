@@ -4462,13 +4462,15 @@ function setLogistikQuickDate(preset = 'month') {
     state.currentLogistikRange = preset;
     state.logistikCurrentPage = 1;
 
-    const { startDate, endDate } = getActivePeriodDates(preset);
+    const { startDate, endDate, lastDayOfMonth } = getActivePeriodDates(preset);
+    // Untuk Logistik, target pengiriman jatuh tempo pesanan mencakup hingga akhir bulan (monthEnd)
+    const effectiveEndDate = (preset === 'month' || preset === 'all') ? lastDayOfMonth : endDate;
 
     state.logistikDateStart = startDate;
-    state.logistikDateEnd = endDate;
+    state.logistikDateEnd = effectiveEndDate;
 
     setDateInputValue('logistikDateStart', startDate);
-    setDateInputValue('logistikDateEnd', endDate);
+    setDateInputValue('logistikDateEnd', effectiveEndDate);
 
     // Update active class pada pill
     const pills = document.querySelectorAll('.logistik-range-pills .filter-pill');

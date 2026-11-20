@@ -85,7 +85,8 @@ function getDateParams(customMonth, customYear) {
     const day = isCurrent ? String(now.getDate()).padStart(2, '0') : String(lastDay).padStart(2, '0');
     const today = `${year}-${month}-${day}`;
     const monthStart = `${year}-${month}-01`;
-    return { today, monthStart };
+    const monthEnd = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+    return { today, monthStart, monthEnd };
 }
 
 /**
@@ -480,17 +481,20 @@ class LogistikService {
      * Ringkasan KPI untuk kartu utama dashboard (Berdasarkan Rincian Barang Terpenuhi)
      */
     async getSummary(force = false, customDates = null) {
-        const { today, monthStart } = (customDates && customDates.tglawal)
-            ? { today: customDates.tglakhir, monthStart: customDates.tglawal }
+        const { today, monthStart, monthEnd } = (customDates && customDates.tglawal)
+            ? { today: customDates.tglakhir, monthStart: customDates.tglawal, monthEnd: customDates.tglakhirFull || customDates.tglakhir }
             : (customDates && (customDates.bulan || customDates.tahun))
                 ? getDateParams(customDates.bulan, customDates.tahun)
                 : getDateParams();
 
         try {
-            // Ambil data lengkap (termasuk rincian barang) Hari Ini dan Bulan Ini secara paralel
+            // Ambil data lengkap (termasuk rincian barang) Hari Ini dan Bulan Ini secara paralel.
+            // Catatan: Pemenuhan Order di Atena ERP difilter berdasarkan tgl_jatuh_tempo pesanan,
+            // sehingga untuk periode bulan berjalan harus mencakup sampai akhir bulan (monthEnd)
+            // agar pesanan dengan target pengiriman akhir bulan tidak terpotong.
             const [resToday, resMonth] = await Promise.allSettled([
                 this.fetchData(force, { tglawal: today, tglakhir: today }),
-                this.fetchData(force, { tglawal: monthStart, tglakhir: today })
+                this.fetchData(force, { tglawal: monthStart, tglakhir: monthEnd })
             ]);
 
             const emptyKpi = {
@@ -566,7 +570,7 @@ class LogistikService {
             tglakhir,
         } = options;
 
-        const { today, monthStart } = getDateParams();
+        const { today, monthStart, monthEnd } = getDateParams();
         let dateParams = {};
 
         if (tglawal && tglakhir) {
@@ -578,7 +582,7 @@ class LogistikService {
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             dateParams = { tglawal: formatDate(sevenDaysAgo), tglakhir: today };
         } else if (range === 'month') {
-            dateParams = { tglawal: monthStart, tglakhir: today };
+            dateParams = { tglawal: monthStart, tglakhir: monthEnd };
         } else if (range === 'last_month') {
             const now = new Date();
             const year = now.getFullYear();
@@ -590,8 +594,8 @@ class LogistikService {
             const e = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
             dateParams = { tglawal: s, tglakhir: e };
         } else if (range === 'all') {
-            // Sejak awal tahun / periode aktif
-            dateParams = { tglawal: '2026-01-01', tglakhir: today };
+            // Sejak awal tahun / periode aktif sampai akhir bulan
+            dateParams = { tglawal: '2026-01-01', tglakhir: monthEnd };
         }
 
         const data = await this.fetchData(force, dateParams);
